@@ -287,11 +287,11 @@ async function analyze() {
   let priceContext = '';
   try {
     const yahooSym = currentMkt === 'tw' ? sym + '.TW' : sym;
-    const pr = await fetch(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=1d`,
-      { headers: { 'User-Agent': 'Mozilla/5.0' } }
-    );
-    const pd = await pr.json();
+    const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=1d`;
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`;
+    const pr = await fetch(proxyUrl);
+    const proxyData = await pr.json();
+    const pd = JSON.parse(proxyData.contents);
     const meta = pd?.chart?.result?.[0]?.meta;
     if (meta?.regularMarketPrice) {
       livePrice = {
