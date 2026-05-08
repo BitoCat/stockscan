@@ -3,90 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#060912">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="交易大師">
 <title>交易大師 · 首頁</title>
+<link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="css/base.css">
 <style>
-  .welcome-banner {
-    background: linear-gradient(135deg, rgba(0,212,255,.08), rgba(155,89,182,.06));
-    border: 1px solid rgba(0,212,255,.2);
-    border-radius: 12px; padding: 16px 20px; margin-bottom: 20px;
-    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-  }
-  .welcome-name { font-size: 15px; font-weight: 700; }
-  .welcome-name span { color: var(--accent); }
-  .plan-badge {
-    font-family: 'Share Tech Mono',monospace; font-size: 10px; letter-spacing: 2px;
-    padding: 4px 12px; border-radius: 20px; border: 1px solid;
-  }
-  .plan-free { border-color: var(--muted); color: var(--muted); }
-  .plan-pro  { border-color: var(--warn);  color: var(--warn); background: rgba(243,156,18,.08); }
-  .plan-admin{ border-color: var(--red);   color: var(--red);  background: rgba(231,76,60,.08); }
-
-  .usage-bar-wrap { margin-bottom: 20px; }
-  .usage-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
-  .usage-bar-bg { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
-  .usage-bar-fill { height: 100%; border-radius: 2px; transition: width .5s; }
-  .fill-ok   { background: linear-gradient(90deg, var(--accent), var(--green)); }
-  .fill-warn { background: linear-gradient(90deg, var(--warn), var(--red)); }
-
-  /* Search */
-  .search-card { padding: 18px; margin-bottom: 16px; }
-  .mkt-grp { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 12px; width: fit-content; }
-  .mbt { background: transparent; border: none; color: var(--muted); font-family: 'Noto Sans TC',sans-serif; font-size: 13px; padding: 9px 18px; cursor: pointer; transition: all .2s; }
-  .mbt.active { background: var(--accent); color: #000; font-weight: 700; }
-  .mbt:hover:not(.active) { color: var(--accent); }
-  .inp-row { display: flex; gap: 8px; }
-  .mono-inp {
-    flex: 1; background: rgba(255,255,255,.04); border: 1px solid var(--border);
-    border-radius: 8px; color: #fff; font-family: 'Share Tech Mono',monospace;
-    font-size: 16px; letter-spacing: 2px; padding: 10px 14px; outline: none; transition: all .2s;
-  }
-  .mono-inp::placeholder { color: var(--muted); font-size: 12px; letter-spacing: 1px; font-family: 'Noto Sans TC',sans-serif; }
-  .mono-inp:focus { border-color: var(--accent); box-shadow: 0 0 10px rgba(0,212,255,.15); }
-
-  /* Result */
-  .res-card { display: none; }
-  .res-card.show { display: block; animation: fadeUp .35s ease; }
-  .res-header {
-    padding: 16px 18px; border-bottom: 1px solid var(--border);
-    display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;
-  }
-  .sid { font-family: 'Bebas Neue',sans-serif; font-size: 36px; letter-spacing: 3px; color: #fff; line-height: 1; }
-  .sname { font-size: 11px; color: var(--muted); margin-top: 2px; }
-
-  .ring-svg text { font-family: 'Bebas Neue',sans-serif; }
-
-  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(120px,1fr)); gap: 1px; background: var(--border); }
-  .met { background: var(--panel2); padding: 12px 14px; }
-  .met-l { font-size: 9px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
-  .met-v { font-family: 'Share Tech Mono',monospace; font-size: 17px; color: #fff; }
-  .met-v.up { color: var(--green); } .met-v.dn { color: var(--red); } .met-v.yw { color: var(--warn); }
-  .met-s { font-size: 10px; color: var(--muted); margin-top: 2px; }
-
-  .analysis-section { padding: 16px 18px; }
-  .signal-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
-  .sig { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; line-height: 1.5; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
-  .dot.bull { background: var(--green); box-shadow: 0 0 6px var(--green); }
-  .dot.bear { background: var(--red);   box-shadow: 0 0 6px var(--red); }
-  .dot.neutral { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
-  .ai-text { font-size: 13px; line-height: 1.85; color: var(--text); white-space: pre-wrap; }
-  .res-foot { padding: 10px 18px; background: rgba(0,0,0,.3); border-top: 1px solid var(--border); font-family: 'Share Tech Mono',monospace; font-size: 9px; color: var(--muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
-
-  /* Watchlist mini */
-  .wl-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
-  .wl-row:last-child { border-bottom: none; }
-  .wl-sym { font-family: 'Share Tech Mono',monospace; font-size: 15px; color: #fff; }
-  .wl-name { font-size: 11px; color: var(--muted); }
-  .wl-right { display: flex; align-items: center; gap: 10px; }
+.welcome-banner { background:linear-gradient(135deg,rgba(0,212,255,.08),rgba(155,89,182,.06)); border:1px solid rgba(0,212,255,.2); border-radius:12px; padding:16px 20px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.welcome-name { font-size:15px; font-weight:700; }
+.welcome-name span { color:var(--accent); }
+.section-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; margin-bottom:16px; overflow:hidden; }
+.section-header { padding:12px 16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+.section-title { font-size:13px; font-weight:700; }
+.section-more { font-size:11px; color:var(--accent); text-decoration:none; }
+.item-row { padding:10px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; transition:background .2s; }
+.item-row:last-child { border-bottom:none; }
+.item-row:hover { background:rgba(255,255,255,.03); }
+.item-icon { font-size:18px; flex-shrink:0; }
+.item-title { font-size:13px; line-height:1.4; flex:1; }
+.item-meta { font-size:10px; color:var(--muted); flex-shrink:0; }
+.item-badge { font-size:10px; padding:2px 7px; border-radius:6px; flex-shrink:0; }
+.badge-bull { background:rgba(46,204,113,.15); color:var(--green); }
+.badge-bear { background:rgba(231,76,60,.15); color:var(--red); }
+.badge-neutral { background:rgba(255,255,255,.08); color:var(--muted); }
+.quick-btns { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+.quick-btn { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px; text-decoration:none; color:inherit; text-align:center; transition:all .2s; }
+.quick-btn:hover { border-color:var(--accent); }
+.quick-btn .qi { font-size:28px; margin-bottom:6px; }
+.quick-btn .ql { font-size:13px; font-weight:600; }
+.quick-btn .qd { font-size:11px; color:var(--muted); margin-top:2px; }
+.free-banner { background:rgba(243,156,18,.06); border:1px solid rgba(243,156,18,.3); border-radius:12px; padding:16px; margin-bottom:16px; text-align:center; }
 </style>
 </head>
 <body>
-
 <nav class="topnav">
   <a class="logo" href="index.html">
     <span class="logo-main">交易<span>大師</span></span>
@@ -99,464 +49,203 @@
 </nav>
 
 <div class="page-wrap">
-
   <!-- Welcome -->
-  <div class="welcome-banner" id="welcome-banner">
+  <div class="welcome-banner">
     <div>
       <div class="welcome-name">歡迎回來，<span id="user-name">—</span> 👋</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:3px">今日市場分析已就緒</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px" id="user-sub">載入中...</div>
     </div>
-    <div id="banner-right"></div>
-  </div>
-
-  <!-- Usage bar (free only) -->
-  <div class="usage-bar-wrap" id="usage-wrap" style="display:none">
-    <div class="usage-label">
-      <span>今日 AI 健診使用量</span>
-      <span id="usage-txt">0 / 5</span>
-    </div>
-    <div class="usage-bar-bg">
-      <div class="usage-bar-fill fill-ok" id="usage-fill" style="width:0%"></div>
-    </div>
+    <div id="pts-area"></div>
   </div>
 
   <!-- 免費用戶引導 -->
-  <div id="free-guide" style="display:none;margin-bottom:20px">
-    <div style="background:linear-gradient(135deg,rgba(0,212,255,.08),rgba(155,89,182,.06));border:1px solid rgba(0,212,255,.25);border-radius:14px;padding:20px">
-      <div style="font-size:15px;font-weight:700;margin-bottom:14px">👋 歡迎加入交易大師！</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.8">
-        您目前是免費會員，請按照以下步驟開通所有功能：
-      </div>
-      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
-        <div style="display:flex;align-items:flex-start;gap:12px">
-          <div style="background:var(--accent);color:#000;font-weight:700;font-size:12px;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
-          <div>
-            <div style="font-size:13px;font-weight:600">聯繫管理員申請 Groq Key</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">點擊下方按鈕，填寫申請表單，管理員會在 24 小時內回覆</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:flex-start;gap:12px">
-          <div style="background:rgba(0,212,255,.3);color:#fff;font-weight:700;font-size:12px;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
-          <div>
-            <div style="font-size:13px;font-weight:600">收到 Groq Key 後一鍵套用</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">前往「管理員」頁面查看回覆，點「⚡ 一鍵套用」即可</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:flex-start;gap:12px">
-          <div style="background:rgba(0,212,255,.3);color:#fff;font-weight:700;font-size:12px;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
-          <div>
-            <div style="font-size:13px;font-weight:600">管理員開通您的帳號</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">開通後即可使用 AI 股票健診、新聞、觀察名單全部功能 🎉</div>
-          </div>
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <a href="contact.html" class="btn btn-primary btn-sm" style="text-decoration:none">✉️ 立即申請 Groq Key</a>
-        <a href="contact.html#history" class="btn btn-ghost btn-sm" style="text-decoration:none">📋 查看申請狀態</a>
-      </div>
+  <div id="free-guide" style="display:none">
+    <div class="free-banner">
+      <div style="font-size:14px;font-weight:700;margin-bottom:8px">🔒 您的帳號尚未開通</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.7">請聯繫管理員申請 Groq Key 並開通帳號<br>開通後即可使用所有功能</div>
+      <a href="contact.html" class="btn btn-primary btn-sm" style="text-decoration:none">✉️ 聯繫管理員開通</a>
     </div>
   </div>
 
-  <!-- Search -->
-  <div class="sec-head">🔍 AI 股票健診</div>
-  <div class="card search-card">
-    <div class="mkt-grp">
-      <button class="mbt active" id="mbt-tw" onclick="setMkt('tw')">🇹🇼 台股</button>
-      <button class="mbt" id="mbt-us" onclick="setMkt('us')">🇺🇸 美股</button>
-    </div>
-    <div class="inp-row">
-      <input class="mono-inp" id="stock-inp" placeholder="輸入股票代號，如 2330 或 NVDA"
-        onkeydown="if(event.key==='Enter')analyze()" />
-      <button class="btn btn-primary" id="analyze-btn" onclick="analyze()">診斷</button>
-    </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-      <span class="chip-label" style="font-size:10px;color:var(--muted);align-self:center">熱門</span>
-      <span class="chip" onclick="quickPick('2330','tw')">2330 台積電</span>
-      <span class="chip" onclick="quickPick('2317','tw')">2317 鴻海</span>
-      <span class="chip" onclick="quickPick('0050','tw')">0050</span>
-      <span class="chip" onclick="quickPick('NVDA','us')">NVDA</span>
-      <span class="chip" onclick="quickPick('AAPL','us')">AAPL</span>
-      <span class="chip" onclick="quickPick('TSLA','us')">TSLA</span>
-    </div>
+  <!-- 快速入口 -->
+  <div class="quick-btns" id="quick-btns" style="display:none">
+    <a href="diagnosis.html" class="quick-btn">
+      <div class="qi">🔍</div>
+      <div class="ql">AI 股票健診</div>
+      <div class="qd">即時技術分析</div>
+    </a>
+    <a href="daily.html" class="quick-btn">
+      <div class="qi">📊</div>
+      <div class="ql">每日盤面解析</div>
+      <div class="qd">專業市場分析</div>
+    </a>
+    <a href="watchlist.html" class="quick-btn">
+      <div class="qi">⭐</div>
+      <div class="ql">觀察名單</div>
+      <div class="qd">追蹤心儀股票</div>
+    </a>
+    <a href="tutorial.html" class="quick-btn">
+      <div class="qi">📚</div>
+      <div class="ql">投資教學</div>
+      <div class="qd">提升交易技巧</div>
+    </a>
   </div>
 
-  <!-- Loading -->
-  <div class="spinner-wrap" id="loading" style="display:none">
-    <div class="spinner"></div>
-    <div class="spinner-txt">AI 分析中...</div>
+  <!-- 最新公告 -->
+  <div class="section-card" id="sec-announce" style="display:none">
+    <div class="section-header">
+      <div class="section-title">📢 最新公告</div>
+      <a href="announcement.html" class="section-more">查看全部 →</a>
+    </div>
+    <div id="list-announce"><div style="padding:16px;font-size:12px;color:var(--muted);text-align:center">載入中...</div></div>
   </div>
 
-  <!-- Error -->
-  <div id="err-box" style="display:none;background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.3);border-radius:10px;padding:14px 18px;color:var(--red);font-size:13px;margin-bottom:16px;text-align:center"></div>
-
-  <!-- Result -->
-  <div class="card res-card" id="res-card">
-    <div class="res-header">
-      <div>
-        <div class="sid" id="r-id"></div>
-        <div class="sname" id="r-name"></div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
-        <div id="r-ring"></div>
-        <div id="r-grade" class="grade g-hold"></div>
-      </div>
+  <!-- 最新盤面解析 -->
+  <div class="section-card" id="sec-daily" style="display:none">
+    <div class="section-header">
+      <div class="section-title">📊 最新盤面解析</div>
+      <a href="daily.html" class="section-more">查看全部 →</a>
     </div>
-    <div class="metrics-grid" id="r-metrics"></div>
-    <div class="analysis-section">
-      <div class="sec-head">📡 關鍵信號</div>
-      <div class="signal-list" id="r-signals"></div>
-      <div class="sec-head">🧠 AI 深度分析</div>
-      <div class="ai-text" id="r-analysis"></div>
-      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-green btn-sm" id="save-btn" onclick="saveToWatchlist()">＋ 加入觀察名單</button>
-      </div>
-    </div>
-    <div class="res-foot">
-      <span id="r-time"></span>
-      <span>⚠ 僅供參考，不構成投資建議</span>
-    </div>
+    <div id="list-daily"><div style="padding:16px;font-size:12px;color:var(--muted);text-align:center">載入中...</div></div>
   </div>
 
-  <!-- Watchlist preview -->
-  <div style="margin-top:24px">
-    <div class="sec-head" style="display:flex;justify-content:space-between;align-items:center">
-      <span>⭐ 我的觀察名單</span>
-      <a href="watchlist.html" style="font-size:11px;color:var(--accent);text-decoration:none">查看全部 →</a>
+  <!-- 精選新聞 -->
+  <div class="section-card" id="sec-news" style="display:none">
+    <div class="section-header">
+      <div class="section-title">📰 精選新聞</div>
+      <a href="news.html" class="section-more">查看全部 →</a>
     </div>
-    <div class="card" style="padding:14px 18px">
-      <div id="wl-preview"><div style="font-size:12px;color:var(--muted);text-align:center;padding:12px">加入股票後會顯示在這裡</div></div>
+    <div id="list-news"><div style="padding:16px;font-size:12px;color:var(--muted);text-align:center">載入中...</div></div>
+  </div>
+
+  <!-- 精選教學 -->
+  <div class="section-card" id="sec-tutorial" style="display:none">
+    <div class="section-header">
+      <div class="section-title">📚 精選教學</div>
+      <a href="tutorial.html" class="section-more">查看全部 →</a>
     </div>
+    <div id="list-tutorial"><div style="padding:16px;font-size:12px;color:var(--muted);text-align:center">載入中...</div></div>
   </div>
 
 </div>
 
-<!-- Bottom tab bar -->
 <nav class="tabbar">
   <a class="tb active" href="index.html"><span class="ti">🏠</span>首頁</a>
-  <a class="tb" href="watchlist.html"><span class="ti">⭐</span>觀察名單</a>
-  <a class="tb" href="news.html"><span class="ti">📰</span>新聞</a>
+  <a class="tb" href="diagnosis.html"><span class="ti">🔍</span>健診</a>
   <a class="tb" href="daily.html"><span class="ti">📊</span>盤面</a>
-  <a class="tb" href="tutorial.html"><span class="ti">📚</span>教學</a>
-  <a class="tb" href="contact.html"><span class="ti">✉️</span>管理員</a>
+  <a class="tb" href="news.html"><span class="ti">📰</span>新聞</a>
   <a class="tb" href="profile.html"><span class="ti">👤</span>我的</a>
 </nav>
 
 <div id="toast"></div>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
 <script>
-let currentUser = null, currentProfile = null, currentMkt = 'tw', lastResult = null;
+let currentUser = null, currentProfile = null;
 
-// ── Init ──
 (async () => {
   currentUser = await requireAuth();
   if (!currentUser) return;
   currentProfile = await getProfile(currentUser.id);
-  
-  // 每日自動補點
-  const bonusGiven = await dailyBonus(currentUser.id);
-  if (bonusGiven) showToast('🎁 每日登入補點 +100 點！', 'success');
-
   if (!currentProfile) {
-    // Auto-create profile if missing (first login via Google etc.)
-    await sb.from('profiles').upsert({
-      id: currentUser.id,
-      display_name: currentUser.user_metadata?.display_name || currentUser.email.split('@')[0],
-      plan: currentUser.user_metadata?.plan || 'free',
-      daily_count: 0,
-      last_date: new Date().toDateString()
-    });
+    await sb.from('profiles').upsert({ id: currentUser.id, display_name: currentUser.user_metadata?.display_name || currentUser.email.split('@')[0], plan: 'free', daily_count: 0, last_date: new Date().toDateString() });
     currentProfile = await getProfile(currentUser.id);
   }
+  const bonusGiven = await dailyBonus(currentUser.id);
+  if (bonusGiven) showToast('🎁 每日登入補點 +100 點！', 'success');
   renderHeader();
-  loadWatchlistPreview();
+  loadContent();
 })();
 
 function renderHeader() {
   const p = currentProfile;
   document.getElementById('user-name').textContent = p.display_name || '會員';
-  const planEl = document.getElementById('nav-plan');
-  planEl.textContent = p.plan === 'admin' ? 'ADMIN' : p.plan === 'pro' ? 'PRO' : 'FREE';
-  planEl.className = 'plan-badge plan-' + p.plan;
-
-  // 顯示免費用戶引導
-  const guideEl = document.getElementById('free-guide');
-  if (guideEl) guideEl.style.display = p.plan === 'free' ? 'block' : 'none';
-
+  const nb = document.getElementById('nav-plan');
+  nb.textContent = planLabel(p.plan || 'free');
+  nb.className = 'plan-badge ' + planBadge(p.plan || 'free');
   if (p.plan === 'free') {
-    const used = getDailyCount();
-    document.getElementById('usage-wrap').style.display = 'block';
-    document.getElementById('usage-txt').textContent = used + ' / 5';
-    const pct = (used / 5) * 100;
-    const fill = document.getElementById('usage-fill');
-    fill.style.width = pct + '%';
-    fill.className = 'usage-bar-fill ' + (pct >= 80 ? 'fill-warn' : 'fill-ok');
+    document.getElementById('user-sub').textContent = '免費會員・聯繫管理員開通功能';
+    document.getElementById('free-guide').style.display = 'block';
+  } else {
+    document.getElementById('user-sub').textContent = '今日市場資訊已就緒';
+    document.getElementById('quick-btns').style.display = 'grid';
+    getPoints(currentUser.id).then(pts => {
+      document.getElementById('pts-area').innerHTML = '<div style="font-family:Share Tech Mono,monospace;font-size:14px;color:var(--accent)">' + pts + ' <span style="font-size:10px;color:var(--muted)">點</span></div>';
+    });
   }
 }
 
-function getDailyCount() {
-  const stored = JSON.parse(localStorage.getItem('daily') || '{"date":"","count":0}');
-  const today = new Date().toDateString();
-  if (stored.date !== today) { localStorage.setItem('daily', JSON.stringify({date:today,count:0})); return 0; }
-  return stored.count;
-}
-function incDailyCount() {
-  const today = new Date().toDateString();
-  const c = getDailyCount() + 1;
-  localStorage.setItem('daily', JSON.stringify({date:today, count:c}));
-}
+async function loadContent() {
+  if (currentProfile?.plan === 'free') return;
 
-function setMkt(m) {
-  currentMkt = m;
-  document.getElementById('mbt-tw').classList.toggle('active', m==='tw');
-  document.getElementById('mbt-us').classList.toggle('active', m==='us');
-}
-function quickPick(sym, mkt) { setMkt(mkt); document.getElementById('stock-inp').value = sym; analyze(); }
-
-async function analyze() {
-  const sym = document.getElementById('stock-inp').value.trim().toUpperCase();
-  if (!sym) return;
-
-  // 檢查方案權限
-  if (currentProfile?.plan === 'free') {
-    showErr('此功能需要開通會員才能使用，請聯繫管理員開通。');
-    return;
+  // 公告
+  const annRes = await sb.from('announcements').select('*').eq('show_on_home', true).order('is_pinned', {ascending:false}).order('published_at', {ascending:false}).limit(3);
+  if (annRes.data?.length) {
+    document.getElementById('sec-announce').style.display = 'block';
+    document.getElementById('list-announce').innerHTML = annRes.data.map(a =>
+      "<a href='announcement.html' class='item-row'>" +
+      "<div class='item-icon'>" + (a.is_pinned ? '📌' : '📢') + "</div>" +
+      "<div class='item-title'>" + a.title + "</div>" +
+      "<div class='item-meta'>" + timeAgo(a.published_at) + "</div>" +
+      "</a>"
+    ).join('');
   }
 
-  // Check points
-  const pts = await getPoints(currentUser.id);
-  if (pts < 1) {
-    showErr('點數不足！請前往「點數」頁面儲值。');
-    return;
+  // 盤面解析
+  const dailyRes = await sb.from('daily_analysis').select('*').eq('show_on_home', true).order('published_at', {ascending:false}).limit(3);
+  if (dailyRes.data?.length) {
+    document.getElementById('sec-daily').style.display = 'block';
+    document.getElementById('list-daily').innerHTML = dailyRes.data.map(d =>
+      "<a href='daily.html' class='item-row'>" +
+      "<div class='item-icon'>" + (d.sentiment==='bull'?'📈':d.sentiment==='bear'?'📉':'📊') + "</div>" +
+      "<div class='item-title'>" + d.title + "</div>" +
+      "<div class='item-meta'>" + timeAgo(d.published_at) + "</div>" +
+      "</a>"
+    ).join('');
   }
 
-  const key = getAIKey();
-  if (!key) { showErr('請先在「我的」頁面設定 AI Key，或聯絡管理員'); return; }
-
-  toggleLoad(true);
-  document.getElementById('res-card').classList.remove('show');
-  hideErr();
-
-  // 抓取即時股價 + 60天歷史K線
-  let livePrice = null;
-  let priceContext = '';
-  try {
-    const yahooSym = currentMkt === 'tw' ? sym + '.TW' : sym;
-    const yahooUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=3mo`;
-    const proxies = [
-      `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,
-      `https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`,
-      `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(yahooUrl)}`
-    ];
-    let pd = null;
-    for (const proxyUrl of proxies) {
-      try {
-        const r = await fetch(proxyUrl, {signal: AbortSignal.timeout(5000)});
-        const raw = await r.json();
-        pd = raw?.contents ? JSON.parse(raw.contents) : raw;
-        if (pd?.chart?.result?.[0]?.meta?.regularMarketPrice) break;
-      } catch(e2) { continue; }
-    }
-    const result = pd?.chart?.result?.[0];
-    const meta = result?.meta;
-    const closes = result?.indicators?.quote?.[0]?.close || [];
-    const highs = result?.indicators?.quote?.[0]?.high || [];
-    const lows = result?.indicators?.quote?.[0]?.low || [];
-    const volumes = result?.indicators?.quote?.[0]?.volume || [];
-
-    if (meta?.regularMarketPrice && closes.length > 0) {
-      const validCloses = closes.filter(c => c != null);
-
-      // 計算移動平均線
-      const ma = (arr, n) => {
-        if (arr.length < n) return null;
-        const slice = arr.slice(-n).filter(v => v != null);
-        return (slice.reduce((a,b) => a+b, 0) / slice.length).toFixed(2);
-      };
-      const ma5  = ma(validCloses, 5);
-      const ma20 = ma(validCloses, 20);
-      const ma60 = ma(validCloses, 60);
-
-      // 計算 RSI(14)
-      const calcRSI = (arr, period=14) => {
-        if (arr.length < period+1) return null;
-        const slice = arr.slice(-(period+1)).filter(v => v != null);
-        let gains = 0, losses = 0;
-        for (let i=1; i<slice.length; i++) {
-          const diff = slice[i] - slice[i-1];
-          if (diff > 0) gains += diff; else losses -= diff;
-        }
-        const avgGain = gains / period;
-        const avgLoss = losses / period;
-        if (avgLoss === 0) return 100;
-        const rs = avgGain / avgLoss;
-        return (100 - 100/(1+rs)).toFixed(1);
-      };
-      const rsi = calcRSI(validCloses);
-
-      // 計算 MACD
-      const ema = (arr, n) => {
-        const k = 2/(n+1);
-        let e = arr[0];
-        for (let i=1; i<arr.length; i++) e = arr[i]*k + e*(1-k);
-        return e;
-      };
-      const validC = validCloses.filter(v=>v!=null);
-      let macd = null, signal = null;
-      if (validC.length >= 26) {
-        const ema12 = ema(validC.slice(-26), 12);
-        const ema26 = ema(validC, 26);
-        macd = (ema12 - ema26).toFixed(3);
-        signal = (ema(validC.slice(-9), 9) - ema26).toFixed(3);
-      }
-
-      // 支撐位/壓力位（近20天高低點）
-      const recent20H = highs.slice(-20).filter(v=>v!=null);
-      const recent20L = lows.slice(-20).filter(v=>v!=null);
-      const resistance = recent20H.length ? Math.max(...recent20H).toFixed(2) : null;
-      const support = recent20L.length ? Math.min(...recent20L).toFixed(2) : null;
-
-      // 近5日均量
-      const avgVol = volumes.slice(-5).filter(v=>v!=null);
-      const avgVolume = avgVol.length ? Math.round(avgVol.reduce((a,b)=>a+b,0)/avgVol.length) : null;
-
-      const today = new Date();
-      const dateStr = today.getFullYear() + '年' + (today.getMonth()+1) + '月' + today.getDate() + '日';
-
-      livePrice = {
-        name: meta.shortName || meta.longName || sym,
-        price: meta.regularMarketPrice,
-        high: meta.regularMarketDayHigh,
-        low: meta.regularMarketDayLow,
-        prev: meta.previousClose,
-        changePct: (((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100).toFixed(2),
-        ma5, ma20, ma60, rsi, macd, signal,
-        support, resistance, avgVolume, date: dateStr
-      };
-
-      priceContext = "\n\n[即時技術分析資料 " + dateStr + "]" +
-        "\n公司名稱: " + livePrice.name +
-        "\n目前股價: " + livePrice.price +
-        "\n漲跌幅: " + livePrice.changePct + "%" +
-        "\n今日高低: " + livePrice.high + " / " + livePrice.low +
-        "\nMA5: " + (ma5||'N/A') + " MA20: " + (ma20||'N/A') + " MA60: " + (ma60||'N/A') +
-        "\nRSI(14): " + (rsi||'N/A') +
-        "\nMACD: " + (macd||'N/A') + " Signal: " + (signal||'N/A') +
-        "\n近20日支撐: " + (support||'N/A') + " 壓力: " + (resistance||'N/A') +
-        "\n近5日均量: " + (avgVolume||'N/A') +
-        "\n[請根據以上真實技術指標進行分析，支撐壓力位直接使用上方數據]";
-    }
-  } catch(e) { console.log('股價抓取失敗', e); }
-
-  const market = currentMkt === 'tw' ? '台灣股市(台股)' : '美國股市(美股)';
-  const companyHint = livePrice?.name ? "公司名稱是" + livePrice.name + "，" : "";
-  const prompt = "你是頂級股票分析師，擁有20年經驗。" + companyHint + "請對" + market + "股票代號「" + sym + "」進行分析。" + priceContext + "\n\n請只輸出純JSON，不含任何markdown符號，格式如下：\n{\"stockName\":\"公司全名\",\"sector\":\"產業別\",\"healthScore\":75,\"grade\":\"強力買進\",\"trend\":\"上升\",\"peRatio\":\"估計PE\",\"support\":\"支撐位\",\"resistance\":\"壓力位\",\"signals\":[{\"type\":\"bull\",\"text\":\"多頭信號\"},{\"type\":\"bear\",\"text\":\"空頭風險\"},{\"type\":\"neutral\",\"text\":\"中性觀察\"}],\"analysis\":\"600字以上深度分析，包含公司簡介、基本面、技術面、產業競爭、短中長期展望、風險提示\"}\ngrade must be one of: 強力買進、買進、谷底反彈機會、觀察等待、持有、減碼、避開";
-  try {
-    const raw = await callAI(prompt, 2500);
-    const m = raw.match(/```json\s*([\s\S]*?)\s*```/);
-    const obj = JSON.parse(m ? m[1] : raw);
-    // 把即時股價加進結果
-    if (livePrice?.price) {
-      obj.currentPrice = livePrice.price;
-      obj.changePct = livePrice.changePct;
-      obj.stockName = livePrice.name;
-    }
-    lastResult = { ...obj, symbol: sym, market: currentMkt };
-    await deductPoint(currentUser.id, `AI 健診：${sym}`);
-    renderResult(sym, obj);
-    const newPts = await getPoints(currentUser.id);
-    document.getElementById('pts-display') && (document.getElementById('pts-display').textContent = newPts + ' 點');
-  } catch(e) {
-    showErr('分析失敗：' + e.message);
+  // 新聞
+  const newsRes = await sb.from('news').select('*').eq('show_on_home', true).order('published_at', {ascending:false}).limit(4);
+  if (newsRes.data?.length) {
+    document.getElementById('sec-news').style.display = 'block';
+    document.getElementById('list-news').innerHTML = newsRes.data.map(n =>
+      "<a href='news.html' class='item-row'>" +
+      "<div class='item-icon'>" + (n.sentiment==='bull'?'📈':n.sentiment==='bear'?'📉':'📰') + "</div>" +
+      "<div class='item-title'>" + n.title + "</div>" +
+      "<div class='item-badge badge-" + (n.sentiment||'neutral') + "'>" + (n.sentiment==='bull'?'偏多':n.sentiment==='bear'?'偏空':'中性') + "</div>" +
+      "</a>"
+    ).join('');
   }
-  toggleLoad(false);
+
+  // 教學
+  const tutRes = await sb.from('tutorials').select('*').eq('show_on_home', true).order('published_at', {ascending:false}).limit(3);
+  if (tutRes.data?.length) {
+    document.getElementById('sec-tutorial').style.display = 'block';
+    document.getElementById('list-tutorial').innerHTML = tutRes.data.map(t =>
+      "<a href='tutorial.html' class='item-row'>" +
+      "<div class='item-icon'>" + (t.cover_emoji||'📚') + "</div>" +
+      "<div class='item-title'>" + t.title + "</div>" +
+      "<div class='item-meta'>" + timeAgo(t.published_at) + "</div>" +
+      "</a>"
+    ).join('');
+  }
 }
 
-function renderResult(sym, d) {
-  document.getElementById('r-id').textContent = sym;
-  document.getElementById('r-name').textContent = (d.stockName||'') + (d.sector ? ' · '+d.sector : '');
-
-  const score = parseInt(d.healthScore)||50;
-  const color = score>=75?'#2ecc71':score>=50?'#00d4ff':score>=35?'#f39c12':'#e74c3c';
-  const r=34, circ=2*Math.PI*r, dash=(score/100)*circ;
-  document.getElementById('r-ring').innerHTML = `<svg width="84" height="84" viewBox="0 0 84 84" class="ring-svg">
-    <circle cx="42" cy="42" r="${r}" fill="none" stroke="#1c2d50" stroke-width="6"/>
-    <circle cx="42" cy="42" r="${r}" fill="none" stroke="${color}" stroke-width="6"
-      stroke-dasharray="${dash} ${circ}" stroke-dashoffset="${circ/4}" stroke-linecap="round"
-      style="filter:drop-shadow(0 0 6px ${color})"/>
-    <text x="42" y="44" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="white">${score}</text>
-    <text x="42" y="57" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="7" fill="#4a6080">HEALTH</text>
-  </svg>`;
-
-  const grade = d.grade||'—';
-  const gEl = document.getElementById('r-grade');
-  gEl.textContent = grade;
-  gEl.className = 'grade ' + gradeClass(grade);
-
-  const mets = [
-    {l:'趨勢', v: d.trend||'—', c: d.trend?.includes('上')?'up':d.trend?.includes('下')?'dn':''},
-    {l: d.currentPrice?'即時股價':'本益比', v: d.currentPrice ? String(d.currentPrice) : (d.peRatio||'—'), c: d.changePct>0?'up':d.changePct<0?'dn':'', s: d.currentPrice ? (d.changePct>0?'▲':'▼')+d.changePct+'%' : '估計值'},
-    {l:'支撐位', v: d.support||'—', c:'up', s:'參考'},
-    {l:'壓力位', v: d.resistance||'—', c:'dn', s:'參考'},
-  ];
-  document.getElementById('r-metrics').innerHTML = mets.map(m=>
-    `<div class="met"><div class="met-l">${m.l}</div><div class="met-v ${m.c}">${m.v}</div>${m.s?`<div class="met-s">${m.s}</div>`:''}</div>`).join('');
-
-  document.getElementById('r-signals').innerHTML = (d.signals||[]).map(s=>
-    `<div class="sig"><div class="dot ${s.type}"></div><span>${s.text}</span></div>`).join('');
-  document.getElementById('r-analysis').textContent = d.analysis||'';
-  document.getElementById('r-time').textContent = '診斷：' + new Date().toLocaleString('zh-TW');
-  document.getElementById('res-card').classList.add('show');
-  document.getElementById('res-card').scrollIntoView({behavior:'smooth',block:'nearest'});
+function timeAgo(iso) {
+  if (!iso) return '—';
+  const d = (Date.now() - new Date(iso)) / 1000;
+  if (d < 3600) return Math.floor(d/60) + '分鐘前';
+  if (d < 86400) return Math.floor(d/3600) + '小時前';
+  return Math.floor(d/86400) + '天前';
 }
 
-function gradeClass(g) {
-  if (g.includes('強力買進')||g.includes('買進')) return 'g-buy';
-  if (g.includes('谷底')) return 'g-rebound';
-  if (g.includes('觀察')) return 'g-watch';
-  if (g.includes('持有')) return 'g-hold';
-  return 'g-avoid';
+function showToast(msg, type) {
+  type = type || '';
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  setTimeout(function() { t.className = ''; }, 2800);
 }
-
-async function saveToWatchlist() {
-  if (!lastResult) return;
-  const btn = document.getElementById('save-btn');
-  btn.disabled = true;
-  const { error } = await sb.from('watchlist').upsert({
-    user_id: currentUser.id,
-    symbol: lastResult.symbol,
-    market: lastResult.market,
-    name: lastResult.stockName,
-    sector: lastResult.sector,
-    grade: lastResult.grade,
-    health_score: lastResult.healthScore,
-    added_at: new Date().toISOString()
-  }, { onConflict: 'user_id,symbol' });
-  if (error) { showToast('❌ 儲存失敗', 'error'); btn.disabled=false; }
-  else { showToast('✅ 已加入觀察名單', 'success'); loadWatchlistPreview(); }
-}
-
-async function loadWatchlistPreview() {
-  if (!currentUser) return;
-  const { data } = await sb.from('watchlist').select('*').eq('user_id', currentUser.id).order('added_at',{ascending:false}).limit(3);
-  const el = document.getElementById('wl-preview');
-  if (!data || !data.length) { el.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center;padding:12px">尚無觀察股票</div>'; return; }
-  el.innerHTML = data.map(w => `<div class="wl-row">
-    <div><div class="wl-sym">${w.symbol}</div><div class="wl-name">${w.name||''}</div></div>
-    <div class="wl-right">
-      <span class="grade ${gradeClass(w.grade||'')} " style="font-size:11px;padding:3px 10px">${w.grade||'—'}</span>
-    </div>
-  </div>`).join('');
-}
-
-function toggleLoad(on) {
-  document.getElementById('loading').style.display = on ? 'block' : 'none';
-  document.getElementById('analyze-btn').disabled = on;
-}
-function showErr(msg) { const e=document.getElementById('err-box'); e.textContent=msg; e.style.display='block'; }
-function hideErr() { document.getElementById('err-box').style.display='none'; }
-function showToast(msg, type='') { const t=document.getElementById('toast'); t.textContent=msg; t.className='show '+type; setTimeout(()=>t.className='',2800); }
 </script>
 </body>
 </html>
