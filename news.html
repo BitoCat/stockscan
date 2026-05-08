@@ -174,8 +174,8 @@ function renderNews(items, tab) {
       <div class="news-title">${n.title}</div>
       <div class="ai-summary show">
         <strong style="color:var(--accent);font-size:11px">🤖 重點摘要</strong><br>
-        ${(n.summary || '').replace(/
-/g, '<br>')}
+        ${(n.summary || '').replace(/\n/g, '<br>')}
+
       </div>
       <div class="news-foot">
         <span style="font-size:11px;color:${sentColor}">${sentIcon} ${sentLabel}</span>
