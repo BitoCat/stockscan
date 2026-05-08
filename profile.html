@@ -215,183 +215,157 @@ let currentUser = null, currentProfile = null;
 function renderProfile() {
   const p = currentProfile;
   if (!p) return;
-  const initial = (p.display_name||p.email||'?')[0].toUpperCase();
-  document.getElementById('av').textContent = initial;
-  document.getElementById('p-name').textContent = p.display_name || '—';
-  document.getElementById('p-email').textContent = currentUser.email;
-  document.getElementById('cur-name').textContent = p.display_name || '—';
-
-  const planLabel = p.plan==='admin'?'ADMIN':p.plan==='pro'?'PRO':'FREE';
-  const planCls   = p.plan==='admin'?'plan-admin':p.plan==='pro'?'plan-pro':'plan-free';
-  document.getElementById('p-badge').innerHTML = `<span class="plan-badge ${planCls}" style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;padding:4px 12px;border-radius:20px;border:1px solid">${planLabel}</span>`;
-
-  document.getElementById('opt-free').classList.toggle('current', p.plan==='free');
-  document.getElementById('opt-tw').classList.toggle('current',   p.plan==='tw');
-  document.getElementById('opt-us').classList.toggle('current',   p.plan==='us');
-  document.getElementById('opt-all').classList.toggle('current',  p.plan==='all'||p.plan==='admin');
-
-  if (p.plan === 'admin') {
-    document.getElementById('admin-panel').classList.add('show');
+  const initial = (p.display_name||p.email||"?")[0].toUpperCase();
+  document.getElementById("av").textContent = initial;
+  document.getElementById("p-name").textContent = p.display_name || "—";
+  document.getElementById("p-email").textContent = currentUser.email;
+  document.getElementById("cur-name").textContent = p.display_name || "—";
+  const pl = p.plan==="admin"?"ADMIN":p.plan==="pro"?"PRO":"FREE";
+  const pc = p.plan==="admin"?"plan-admin":p.plan==="pro"?"plan-pro":"plan-free";
+  document.getElementById("p-badge").innerHTML = "<span class='plan-badge "+pc+"' style='font-family:Share Tech Mono,monospace;font-size:10px;letter-spacing:2px;padding:4px 12px;border-radius:20px;border:1px solid'>"+pl+"</span>";
+  document.getElementById("opt-free").classList.toggle("current", p.plan==="free");
+  document.getElementById("opt-tw").classList.toggle("current", p.plan==="tw");
+  document.getElementById("opt-us").classList.toggle("current", p.plan==="us");
+  document.getElementById("opt-all").classList.toggle("current", p.plan==="all"||p.plan==="admin");
+  if (p.plan === "admin") {
+    document.getElementById("admin-panel").classList.add("show");
+    loadMessages();
   }
 }
 
 function loadSavedKey() {
-  const k = localStorage.getItem('ai_key') || '';
-  document.getElementById('ai-key-inp').value = k;
+  const k = localStorage.getItem("ai_key") || "";
+  document.getElementById("ai-key-inp").value = k;
   if (k) document.getElementById("key-status").innerHTML = "<span style='color:var(--green)'>已設定 API Key</span>";
 }
 
 function saveKey() {
-  const k = document.getElementById('ai-key-inp').value.trim();
-  if (!k) { showToast('請輸入 API Key', 'error'); return; }
-  if (!k.startsWith('sk-ant-') && !k.startsWith('gsk_')) { showToast('Key 格式不正確（應以 sk-ant- 或 gsk_ 開頭）', 'error'); return; }
-  localStorage.setItem('ai_key', k);
+  const k = document.getElementById("ai-key-inp").value.trim();
+  if (!k) { showToast("請輸入 API Key", "error"); return; }
+  if (!k.startsWith("sk-ant-") && !k.startsWith("gsk_")) { showToast("Key 格式不正確", "error"); return; }
+  localStorage.setItem("ai_key", k);
   document.getElementById("key-status").innerHTML = "<span style='color:var(--green)'>已儲存</span>";
-  showToast('✅ API Key 已儲存', 'success');
+  showToast("API Key 已儲存", "success");
 }
 
 function toggleKeyVis() {
-  const inp = document.getElementById('ai-key-inp');
-  inp.type = inp.type === 'password' ? 'text' : 'password';
+  const inp = document.getElementById("ai-key-inp");
+  inp.type = inp.type === "password" ? "text" : "password";
 }
 
 async function changeName() {
-  const name = prompt('輸入新的顯示名稱：', currentProfile?.display_name || '');
+  const name = prompt("輸入新的顯示名稱：", currentProfile?.display_name || "");
   if (!name || !name.trim()) return;
-  const { error } = await sb.from('profiles').update({ display_name: name.trim() }).eq('id', currentUser.id);
-  if (error) { showToast('❌ 更新失敗', 'error'); return; }
+  const { error } = await sb.from("profiles").update({ display_name: name.trim() }).eq("id", currentUser.id);
+  if (error) { showToast("更新失敗", "error"); return; }
   currentProfile.display_name = name.trim();
   renderProfile();
-  showToast('✅ 名稱已更新', 'success');
+  showToast("名稱已更新", "success");
 }
 
-// ── Admin: load members ──
 async function loadMembers() {
-  const { data, error } = await sb.from('profiles').select('*').order('created_at',{ascending:false});
-  if (error) { showToast('載入失敗', 'error'); return; }
-  document.getElementById('member-count').textContent = data.length;
-  document.getElementById('members-list').innerHTML = data.map(m => `
-    <div class="member-row">
-      <div>
-        <div class="member-email">${m.display_name || '—'}</div>
-        <div class="member-name">${m.id.substring(0,8)}…</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <select class="plan-select" onchange="updatePlan('${m.id}',this.value)">
-          <option value="free"  ${m.plan==='free' ?'selected':''}>🆓 免費</option>
-          <option value="tw"    ${m.plan==='tw'   ?'selected':''}>🇹🇼 台股</option>
-          <option value="us"    ${m.plan==='us'   ?'selected':''}>🇺🇸 美股</option>
-          <option value="all"   ${m.plan==='all'  ?'selected':''}>🌏 全市場</option>
-          <option value="admin" ${m.plan==='admin'?'selected':''}>👑 Admin</option>
-        </select>
-        <button class="btn btn-green btn-sm" onclick="addPointsForUser('${m.id}','${(m.display_name||'用戶').replace(/'/g,'')}')">＋點數</button>
-      </div>
-    </div>`).join('');
+  const { data, error } = await sb.from("profiles").select("*").order("created_at",{ascending:false});
+  if (error) { showToast("載入失敗", "error"); return; }
+  document.getElementById("member-count").textContent = data.length;
+  document.getElementById("members-list").innerHTML = data.map(m =>
+    "<div class='member-row'>" +
+    "<div><div class='member-email'>"+(m.display_name||"—")+"</div><div class='member-name'>"+m.id.substring(0,8)+"…</div></div>" +
+    "<div style='display:flex;align-items:center;gap:8px;flex-wrap:wrap'>" +
+    "<select class='plan-select' onchange='updatePlan(""+m.id+"",this.value)'>" +
+    "<option value='free' "+(m.plan==="free"?"selected":"")+">免費</option>" +
+    "<option value='tw' "+(m.plan==="tw"?"selected":"")+">台股</option>" +
+    "<option value='us' "+(m.plan==="us"?"selected":"")+">美股</option>" +
+    "<option value='all' "+(m.plan==="all"?"selected":"")+">全市場</option>" +
+    "<option value='admin' "+(m.plan==="admin"?"selected":"")+">Admin</option>" +
+    "</select>" +
+    "<button class='btn btn-green btn-sm' onclick='addPointsForUser(""+m.id+"",""+(m.display_name||"用戶").replace(/"/g,"")+"")'>+點數</button>" +
+    "</div></div>"
+  ).join("");
 }
 
 async function updatePlan(uid, plan) {
-  const { error } = await sb.from('profiles').update({ plan }).eq('id', uid);
-  if (error) showToast('更新失敗', 'error');
-  else showToast('✅ 方案已更新', 'success');
+  const { error } = await sb.from("profiles").update({ plan }).eq("id", uid);
+  if (error) showToast("更新失敗", "error");
+  else showToast("方案已更新", "success");
 }
 
-// ── Admin: post news ──
 async function postNews() {
-  const title   = document.getElementById('news-title').value.trim();
-  const summary = document.getElementById('news-summary').value.trim();
-  const category= document.getElementById('news-cat').value;
-  const sentiment=document.getElementById('news-sent').value;
-  const source  = document.getElementById('news-source').value.trim();
-  const url     = document.getElementById('news-url').value.trim();
-  if (!title) { showToast('請填寫標題', 'error'); return; }
-
-  const { error } = await sb.from('news').insert({ title, summary, category, sentiment, source: source||'StockScan', url: url||null, published_at: new Date().toISOString() });
-  if (error) { showToast('❌ 發布失敗：'+error.message, 'error'); return; }
-  showToast('✅ 新聞已發布', 'success');
-  document.getElementById('news-title').value = '';
-  document.getElementById('news-summary').value = '';
-  document.getElementById('news-url').value = '';
+  const title = document.getElementById("news-title").value.trim();
+  const summary = document.getElementById("news-summary").value.trim();
+  const category = document.getElementById("news-cat").value;
+  const sentiment = document.getElementById("news-sent").value;
+  const source = document.getElementById("news-source").value.trim();
+  const url = document.getElementById("news-url").value.trim();
+  if (!title) { showToast("請填寫標題", "error"); return; }
+  const { error } = await sb.from("news").insert({ title, summary, category, sentiment, source: source||"StockScan", url: url||null, published_at: new Date().toISOString() });
+  if (error) { showToast("發布失敗："+error.message, "error"); return; }
+  showToast("新聞已發布", "success");
+  document.getElementById("news-title").value = "";
+  document.getElementById("news-summary").value = "";
+  document.getElementById("news-url").value = "";
 }
 
-// ── 管理員手動加點 ──
 async function manualAddPoints() {
-  const email  = document.getElementById('pts-email').value.trim();
-  const amount = parseInt(document.getElementById('pts-amount').value);
-  const note   = document.getElementById('pts-note').value.trim() || '管理員儲值';
-  if (!email || !amount || amount < 1) { showToast('請填寫 Email 和點數', 'error'); return; }
-
-  // 查找用戶 ID
-  const { data: profiles } = await sb.from('profiles').select('id, display_name').ilike('id', '%');
-  // 透過 auth admin 查 email → 改用已知 profile id
-  // 簡化做法：讓管理員從會員列表複製 ID 填入
-  // 這裡改成直接輸入 user_id 或 email 模糊比對
-  const { data: users } = await sb.from('profiles').select('id, display_name');
-  // 先嘗試從 point_logs 找，或直接讓管理員輸入 user ID
-  // 最實用做法：在會員列表旁加「加點」按鈕
-  showToast('請從下方會員列表點選「加點」按鈕', '');
+  showToast("請從下方會員列表點選加點按鈕", "");
 }
 
-// ── 從會員列表加點 ──
 async function addPointsForUser(userId, displayName) {
-  const amount = parseInt(prompt(`幫 ${displayName} 加幾點？`, '300'));
+  const amount = parseInt(prompt("幫 "+displayName+" 加幾點？", "300"));
   if (!amount || amount < 1) return;
-  const note = prompt('備註（如：ATM轉帳）', 'ATM轉帳確認') || '管理員儲值';
+  const note = prompt("備註", "管理員儲值") || "管理員儲值";
   const ok = await addPoints(userId, amount, note);
-  if (ok) showToast(`✅ 已幫 ${displayName} 加 ${amount} 點`, 'success');
-  else showToast('❌ 加點失敗', 'error');
+  if (ok) showToast("已幫 "+displayName+" 加 "+amount+" 點", "success");
+  else showToast("加點失敗", "error");
 }
 
 async function loadMessages() {
   const { data, error } = await sb.from("messages").select("*").order("created_at", { ascending: false });
   if (error) { showToast("載入失敗", "error"); return; }
-  const pending = (data || []).filter(m => m.status === "pending").length;
+  const pending = (data||[]).filter(m => m.status === "pending").length;
   const badge = document.getElementById("msg-badge");
-  badge.textContent = pending;
-  badge.style.display = pending > 0 ? "inline" : "none";
-  if (!data || !data.length) {
-    document.getElementById("messages-list").innerHTML = "<div style='font-size:12px;color:var(--muted);text-align:center;padding:16px'>暫無訊息</div>";
-    return;
-  }
-  document.getElementById("messages-list").innerHTML = data.map(m => {
+  if (badge) { badge.textContent = pending; badge.style.display = pending > 0 ? "inline" : "none"; }
+  const el = document.getElementById("messages-list");
+  if (!data || !data.length) { el.innerHTML = "<div style='font-size:12px;color:var(--muted);text-align:center;padding:16px'>暫無訊息</div>"; return; }
+  el.innerHTML = data.map(m => {
     const isPending = m.status === "pending";
-    return "<div style='border:1px solid " + (isPending ? "rgba(243,156,18,.4)" : "var(--border)") + ";border-radius:10px;padding:12px;margin-bottom:10px'>" +
+    return "<div style='border:1px solid "+(isPending?"rgba(243,156,18,.4)":"var(--border)")+";border-radius:10px;padding:12px;margin-bottom:10px'>" +
       "<div style='display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:6px'>" +
-      "<div><span style='font-size:13px;font-weight:600'>" + (m.display_name||"用戶") + "</span>" +
-      "<span style='font-size:10px;color:var(--muted);margin-left:8px'>" + timeAgoAdmin(m.created_at) + "</span></div>" +
-      "<span style='font-size:10px;padding:2px 8px;border-radius:8px;border:1px solid;" + (isPending ? "color:var(--warn);border-color:rgba(243,156,18,.4)" : "color:var(--green);border-color:rgba(46,204,113,.4)") + "'>" + (isPending ? "待處理" : "已回覆") + "</span></div>" +
-      "<div style='font-size:12px;color:var(--accent);margin-bottom:4px'>" + m.subject + "</div>" +
-      "<div style='font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6'>" + m.content + "</div>" +
+      "<div><span style='font-size:13px;font-weight:600'>"+(m.display_name||"用戶")+"</span>" +
+      "<span style='font-size:10px;color:var(--muted);margin-left:8px'>"+timeAgoAdmin(m.created_at)+"</span></div>" +
+      "<span style='font-size:10px;padding:2px 8px;border-radius:8px;border:1px solid;"+(isPending?"color:var(--warn);border-color:rgba(243,156,18,.4)":"color:var(--green);border-color:rgba(46,204,113,.4)")+"'>"+(isPending?"待處理":"已回覆")+"</span></div>" +
+      "<div style='font-size:12px;color:var(--accent);margin-bottom:4px'>"+m.subject+"</div>" +
+      "<div style='font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6'>"+m.content+"</div>" +
       (isPending ?
         "<div style='display:flex;flex-direction:column;gap:8px'>" +
-        "<textarea id='reply-" + m.id + "' class='key-inp' placeholder='回覆內容...' rows='2' style='font-family:Noto Sans TC,sans-serif;font-size:12px;resize:vertical;letter-spacing:0'></textarea>" +
-        "<input id='groqkey-" + m.id + "' class='key-inp' placeholder='Groq Key (optional, gsk_...)' style='font-size:12px;letter-spacing:0;font-family:monospace'>" +
-        "<div style='display:flex;gap:8px;flex-wrap:wrap'>" +
-        "<div style='display:flex;gap:8px;flex-wrap:wrap'>" +
-        "<button class='btn btn-green btn-sm' onclick='replyMessage(\"" + m.id + "\")'>&#10003; 回覆</button>" +
-        "<button class='btn btn-primary btn-sm' onclick='fillGroqKey(\"" + m.id + "\")'>&#128273; 填入Key</button></div></div>"
+        "<textarea id='reply-"+m.id+"' class='key-inp' placeholder='回覆內容...' rows='2' style='font-family:sans-serif;font-size:12px;resize:vertical;letter-spacing:0'></textarea>" +
+        "<input id='groqkey-"+m.id+"' class='key-inp' placeholder='Groq Key (optional)' style='font-size:12px;letter-spacing:0;font-family:monospace'>" +
+        "<div style='display:flex;gap:8px'>" +
+        "<button class='btn btn-green btn-sm' onclick='replyMessage(""+m.id+"")'>回覆</button>" +
+        "<button class='btn btn-primary btn-sm' onclick='fillGroqKey(""+m.id+"")'>填入Key</button></div></div>"
+        :
         "<div style='font-size:12px;background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);border-radius:6px;padding:8px'>" +
-        "<div style='color:var(--accent);font-size:10px;margin-bottom:4px'>已回覆內容</div>" + (m.admin_reply||"") +
-        (m.groq_key ? "<div style='color:var(--green);font-size:11px;margin-top:4px'>🔑 已附上 Groq Key</div>" : "") + "</div>"
-      ) + "</div>";
+        "<div style='color:var(--accent);font-size:10px;margin-bottom:4px'>已回覆</div>"+(m.admin_reply||"") +
+        (m.groq_key ? "<div style='color:var(--green);font-size:11px;margin-top:4px'>已附上 Groq Key</div>" : "")+"</div>"
+      )+"</div>";
   }).join("");
 }
 
 function fillGroqKey(msgId) {
   const myKey = localStorage.getItem("ai_key") || "";
-  if (!myKey) { showToast("請先在 AI 設定填入你的 Groq Key", "error"); return; }
-  document.getElementById("groqkey-" + msgId).value = myKey;
+  if (!myKey) { showToast("請先設定你的 Groq Key", "error"); return; }
+  document.getElementById("groqkey-"+msgId).value = myKey;
   showToast("已填入 Groq Key", "success");
 }
 
 async function replyMessage(msgId) {
-  const reply = document.getElementById("reply-" + msgId).value.trim();
-  const groqKey = document.getElementById("groqkey-" + msgId).value.trim();
+  const reply = document.getElementById("reply-"+msgId).value.trim();
+  const groqKey = document.getElementById("groqkey-"+msgId).value.trim();
   if (!reply) { showToast("請填寫回覆內容", "error"); return; }
   const updateData = { status: "replied", admin_reply: reply, replied_at: new Date().toISOString() };
   if (groqKey) updateData.groq_key = groqKey;
   const { error } = await sb.from("messages").update(updateData).eq("id", msgId);
-  if (error) { showToast("回覆失敗：" + error.message, "error"); return; }
-  showToast("✅ 已回覆用戶", "success");
+  if (error) { showToast("回覆失敗："+error.message, "error"); return; }
+  showToast("已回覆用戶", "success");
   loadMessages();
 }
 
@@ -403,7 +377,13 @@ function timeAgoAdmin(iso) {
   return Math.floor(d/86400) + "天前";
 }
 
-function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='show '+type;setTimeout(()=>t.className='',2500);}
+function showToast(msg, type) {
+  type = type || "";
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "show " + type;
+  setTimeout(function(){ t.className = ""; }, 2500);
+}
 </script>
 </body>
 </html>
