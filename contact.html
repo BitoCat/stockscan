@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>StockScan · 聯繫我們</title>
+<link rel="stylesheet" href="css/base.css">
+<style>
+.msg-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;}
+.msg-status{font-size:10px;padding:3px 10px;border-radius:10px;border:1px solid;font-family:"Share Tech Mono",monospace;letter-spacing:1px;}
+.status-pending{border-color:rgba(243,156,18,.4);color:var(--warn);background:rgba(243,156,18,.08);}
+.status-replied{border-color:rgba(46,204,113,.4);color:var(--green);background:rgba(46,204,113,.08);}
+.msg-subject{font-size:14px;font-weight:600;margin:8px 0 4px;}
+.msg-content{font-size:12px;color:var(--muted);line-height:1.7;}
+.reply-box{background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.2);border-radius:8px;padding:12px;margin-top:10px;}
+.reply-label{font-size:10px;color:var(--accent);letter-spacing:2px;margin-bottom:6px;font-family:"Share Tech Mono",monospace;}
+.reply-text{font-size:13px;line-height:1.7;white-space:pre-wrap;}
+.key-box{background:rgba(46,204,113,.06);border:1px solid rgba(46,204,113,.3);border-radius:8px;padding:12px;margin-top:8px;}
+.key-display{font-family:monospace;font-size:12px;color:var(--green);word-break:break-all;margin:6px 0;}
+.form-group{margin-bottom:14px;}
+.form-label{font-size:12px;color:var(--muted);margin-bottom:6px;display:block;}
+.form-input{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:#fff;font-family:"Noto Sans TC",sans-serif;font-size:13px;padding:10px 14px;outline:none;transition:all .2s;box-sizing:border-box;}
+.form-input:focus{border-color:var(--accent);}
+.form-textarea{resize:vertical;min-height:100px;}
+.tab-row{display:flex;gap:8px;margin-bottom:20px;}
+.tab-btn{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:13px;padding:10px;cursor:pointer;transition:all .2s;font-family:"Noto Sans TC",sans-serif;}
+.tab-btn.active{background:rgba(0,212,255,.1);border-color:var(--accent);color:var(--accent);font-weight:600;}
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;}
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <a class="logo" href="index.html"><span class="logo-main">STOCK<span>SCAN</span></span><span class="logo-ver">PRO</span></a>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span id="nav-plan" class="plan-badge plan-free">FREE</span>
+    <button class="btn btn-ghost btn-sm" onclick="signOut()">登出</button>
+  </div>
+</nav>
+<div class="page-wrap">
+  <div class="tab-row">
+    <button class="tab-btn active" id="tab-new" onclick="setTab('new')">✉️ 新增申請</button>
+    <button class="tab-btn" id="tab-history" onclick="setTab('history')">📋 我的訊息</button>
+  </div>
+
+  <div id="panel-new">
+    <div class="sec-head">📨 聯繫客服 / 申請 Groq Key</div>
+    <div class="card" style="padding:18px">
+      <div class="form-group">
+        <label class="form-label">主旨</label>
+        <select class="form-input" id="msg-subject">
+          <option value="申請 Groq Key">🔑 申請 Groq Key</option>
+          <option value="方案升級諮詢">💎 方案升級諮詢</option>
+          <option value="功能問題回報">🐛 功能問題回報</option>
+          <option value="其他">💬 其他問題</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">訊息內容</label>
+        <textarea class="form-input form-textarea" id="msg-content" placeholder="請描述您的需求或問題..."></textarea>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="sendMessage()">📤 送出申請</button>
+      <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:10px">通常在 24 小時內回覆</div>
+    </div>
+    <div class="card" style="padding:16px;margin-top:16px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">📖 Groq Key 使用說明</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.8">
+        1. 向客服申請 Groq Key<br>
+        2. 收到後前往「我的」→「AI 設定」<br>
+        3. 貼上 Key（格式：gsk_...）點儲存<br>
+        4. 即可使用 AI 股票健診功能 🎉
+      </div>
+    </div>
+  </div>
+
+  <div id="panel-history" style="display:none">
+    <div class="sec-head">📋 我的申請記錄</div>
+    <div id="msg-list"><div class="empty-state">載入中...</div></div>
+  </div>
+</div>
+
+<nav class="tabbar">
+  <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
+  <a class="tb" href="watchlist.html"><span class="ti">⭐</span>觀察名單</a>
+  <a class="tb" href="news.html"><span class="ti">📰</span>新聞</a>
+  <a class="tb active" href="contact.html"><span class="ti">✉️</span>客服</a>
+  <a class="tb" href="profile.html"><span class="ti">👤</span>我的</a>
+</nav>
+<div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script>
+let cu = null, cp = null;
+
+(async () => {
+  cu = await requireAuth();
+  if (!cu) return;
+  cp = await getProfile(cu.id);
+  const nb = document.getElementById("nav-plan");
+  nb.textContent = planLabel(cp?.plan || "free");
+  nb.className = "plan-badge " + planBadge(cp?.plan || "free");
+})();
+
+function setTab(tab) {
+  document.getElementById("tab-new").classList.toggle("active", tab === "new");
+  document.getElementById("tab-history").classList.toggle("active", tab === "history");
+  document.getElementById("panel-new").style.display = tab === "new" ? "block" : "none";
+  document.getElementById("panel-history").style.display = tab === "history" ? "block" : "none";
+  if (tab === "history") loadHistory();
+}
+
+async function sendMessage() {
+  const subject = document.getElementById("msg-subject").value;
+  const content = document.getElementById("msg-content").value.trim();
+  if (!content) { showToast("請填寫訊息內容", "error"); return; }
+  const btn = document.querySelector("#panel-new .btn-primary");
+  btn.disabled = true; btn.textContent = "送出中...";
+  const { error } = await sb.from("messages").insert({
+    user_id: cu.id,
+    display_name: cp?.display_name || cu.email,
+    subject, content, status: "pending",
+    created_at: new Date().toISOString()
+  });
+  if (error) { showToast("送出失敗：" + error.message, "error"); }
+  else {
+    showToast("✅ 申請已送出，我們將盡快回覆！", "success");
+    document.getElementById("msg-content").value = "";
+    setTimeout(() => setTab("history"), 1500);
+  }
+  btn.disabled = false; btn.textContent = "📤 送出申請";
+}
+
+async function loadHistory() {
+  const { data, error } = await sb.from("messages").select("*").eq("user_id", cu.id).order("created_at", { ascending: false });
+  const el = document.getElementById("msg-list");
+  if (error || !data?.length) {
+    el.innerHTML = "<div class=\"empty-state\">尚無申請記錄</div>";
+    return;
+  }
+  el.innerHTML = data.map(m => {
+    const ago = timeAgo(m.created_at);
+    return "<div class=\"msg-card\">" +
+      "<div style=\"display:flex;justify-content:space-between;align-items:center\">" +
+      "<span class=\"msg-status " + (m.status === "replied" ? "status-replied" : "status-pending") + "\">" +
+      (m.status === "replied" ? "✅ 已回覆" : "⏳ 待處理") + "</span>" +
+      "<span style=\"font-size:10px;color:var(--muted)\">" + ago + "</span></div>" +
+      "<div class=\"msg-subject\">" + m.subject + "</div>" +
+      "<div class=\"msg-content\">" + m.content + "</div>" +
+      (m.admin_reply ? "<div class=\"reply-box\"><div class=\"reply-label\">ADMIN REPLY</div><div class=\"reply-text\">" + m.admin_reply + "</div></div>" : "") +
+      (m.groq_key ? "<div class=\"key-box\"><div class=\"reply-label\" style=\"color:var(--green)\">YOUR GROQ KEY</div><div class=\"key-display\">" + m.groq_key + "</div><button class=\"btn btn-green btn-sm\" onclick=\"applyKey('" + m.groq_key + "')\">⚡ 一鍵套用</button></div>" : "") +
+      "</div>";
+  }).join("");
+}
+
+function applyKey(key) {
+  localStorage.setItem("ai_key", key);
+  showToast("✅ Groq Key 已套用！", "success");
+  setTimeout(() => window.location.href = "index.html", 2000);
+}
+
+function timeAgo(iso) {
+  if (!iso) return "—";
+  const d = (Date.now() - new Date(iso)) / 1000;
+  if (d < 3600) return Math.floor(d/60) + "分鐘前";
+  if (d < 86400) return Math.floor(d/3600) + "小時前";
+  return Math.floor(d/86400) + "天前";
+}
+</script>
+</body>
+</html>
