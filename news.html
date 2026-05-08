@@ -126,22 +126,13 @@ async function loadNews(tab, force = false) {
 
   const cfg = TAB_CONFIG[tab];
   const today = new Date().toLocaleDateString('zh-TW');
-  const sourceList = cfg.sources.join('、');
-  const prompt = `你是專業財經新聞編輯。今天是${today}。
-
-針對「${cfg.label}」主題，${cfg.prompt_hint}。
-模擬來自以下媒體的新聞：${sourceList}
-
-輸出12則重要新聞，JSON格式，不含其他文字：
-[{"title":"具體新聞標題含公司名或數字","source":"媒體名稱","lang":"中或EN","summary":"• 重點一\n• 重點二\n• 重點三","sentiment":"bull或bear或neutral","searchUrl":"https://www.google.com/search?q=標題關鍵字"}]
-
-規則：
-- 中文來源約6則、英文約6則
-- 標題必須具體，如「台積電Q2法說：CoWoS產能季增40%」
-- summary用條列式3點，繁體中文
-- searchUrl用Google搜尋該新聞關鍵字
-- sentiment準確反映內容
-- 只輸出JSON陣列`;
+  const sourceList = cfg.sources.join(', ');
+  const prompt = "你是專業財經新聞編輯。今天是" + today + "。\n\n" +
+    "針對「" + cfg.label + "」主題，" + cfg.prompt_hint + "。\n" +
+    "模擬來自以下媒體的新聞：" + sourceList + "\n\n" +
+    "輸出12則重要新聞，只輸出JSON陣列，不含其他文字：\n" +
+    "[{\"title\":\"具體新聞標題含公司名或數字\",\"source\":\"媒體名稱\",\"lang\":\"中或EN\",\"summary\":\"重點一\\n重點二\\n重點三\",\"sentiment\":\"bull或bear或neutral\",\"searchUrl\":\"https://www.google.com/search?q=關鍵字\"}]\n\n" +
+    "規則：中文來源約6則、英文約6則；標題具體含公司名數字；summary繁體中文3點；sentiment準確；只輸出JSON";
 
   try {
     const raw = await callAI(prompt, 2000);
