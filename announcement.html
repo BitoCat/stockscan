@@ -125,7 +125,7 @@ function setOS(os) {
 }
 
 async function loadAnnouncements() {
-  const res = await sb.from("news").select("*").order("published_at", { ascending: false }).limit(20);
+  const res = await sb.from("announcements").select("*").order("published_at", { ascending: false }).limit(20);
   const el = document.getElementById("ann-list");
   if (res.error || !res.data || !res.data.length) {
     el.innerHTML = "<div style='text-align:center;padding:32px;color:var(--muted);font-size:13px'>暫無公告</div>";
@@ -135,12 +135,11 @@ async function loadAnnouncements() {
   for (const n of res.data) {
     const ago = timeAgo(n.published_at);
     const sentIcon = n.sentiment === "bull" ? "📈" : n.sentiment === "bear" ? "📉" : "📌";
-    html += "<div class='ann-card'>";
-    html += "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px'>";
-    html += "<span class='news-source'>" + (n.source || "交易大師") + "</span>";
-    html += "<span style='font-size:11px;color:var(--muted)'>" + ago + "</span></div>";
-    html += "<div class='ann-title'>" + sentIcon + " " + n.title + "</div>";
-    if (n.summary) html += "<div class='ann-body'>" + n.summary + "</div>";
+    const pinIcon = n.is_pinned ? "📌 " : "";
+    html += "<div class='ann-card" + (n.is_pinned ? " pinned" : "") + "'>";
+    if (n.is_pinned) html += "<div class='ann-pin'>📌 置頂</div>";
+    html += "<div class='ann-title'>" + pinIcon + n.title + "</div>";
+    if (n.content) html += "<div class='ann-body'>" + n.content + "</div>";
     if (n.url) html += "<div style='margin-top:10px'><a href='" + n.url + "' target='_blank' style='font-size:12px;color:var(--accent);text-decoration:none'>閱讀全文 →</a></div>";
     html += "<div class='ann-date'>" + ago + "</div></div>";
   }
