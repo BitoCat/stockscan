@@ -267,20 +267,25 @@ async function loadMembers() {
   const { data, error } = await sb.from("profiles").select("*").order("created_at",{ascending:false});
   if (error) { showToast("載入失敗", "error"); return; }
   document.getElementById("member-count").textContent = data.length;
-  document.getElementById("members-list").innerHTML = data.map(m =>
-    "<div class='member-row'>" +
-    "<div><div class='member-email'>"+(m.display_name||"—")+"</div><div class='member-name'>"+m.id.substring(0,8)+"…</div></div>" +
-    "<div style='display:flex;align-items:center;gap:8px;flex-wrap:wrap'>" +
-    "<select class='plan-select' onchange='updatePlan(this.dataset.uid,this.value)' data-uid='"+m.id+"'>" +
-    "<option value='free' "+(m.plan==="free"?"selected":"")+">免費</option>" +
-    "<option value='tw' "+(m.plan==="tw"?"selected":"")+">台股</option>" +
-    "<option value='us' "+(m.plan==="us"?"selected":"")+">美股</option>" +
-    "<option value='all' "+(m.plan==="all"?"selected":"")+">全市場</option>" +
-    "<option value='admin' "+(m.plan==="admin"?"selected":"")+">Admin</option>" +
-    "</select>" +
-    "<button class='btn btn-green btn-sm' onclick='addPointsForUser(this.dataset.uid,this.dataset.name)' data-uid='"+m.id+"' data-name='"+(m.display_name||"user").replace(/'/g,"")+"'">+points</button>" +
-    "</div></div>"
-  ).join("");
+  let html = "";
+  for (const m of data) {
+    const name = (m.display_name || "—").replace(/"/g, "");
+    const uid = m.id;
+    html += "<div class='member-row'>";
+    html += "<div><div class='member-email'>" + name + "</div>";
+    html += "<div class='member-name'>" + uid.substring(0,8) + "...</div></div>";
+    html += "<div style='display:flex;align-items:center;gap:8px;flex-wrap:wrap'>";
+    html += "<select class='plan-select' data-uid='" + uid + "' onchange='updatePlan(this.dataset.uid,this.value)'>";
+    html += "<option value='free'" + (m.plan==="free"?" selected":"") + ">免費</option>";
+    html += "<option value='tw'" + (m.plan==="tw"?" selected":"") + ">台股</option>";
+    html += "<option value='us'" + (m.plan==="us"?" selected":"") + ">美股</option>";
+    html += "<option value='all'" + (m.plan==="all"?" selected":"") + ">全市場</option>";
+    html += "<option value='admin'" + (m.plan==="admin"?" selected":"") + ">Admin</option>";
+    html += "</select>";
+    html += "<button class='btn btn-green btn-sm' data-uid='" + uid + "' data-name='" + name + "' onclick='addPointsForUser(this.dataset.uid,this.dataset.name)'>+點數</button>";
+    html += "</div></div>";
+  }
+  document.getElementById("members-list").innerHTML = html;
 }
 
 async function updatePlan(uid, plan) {
