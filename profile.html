@@ -193,7 +193,8 @@
       <div class="sec-head" style="margin-bottom:12px">📢 發布公告</div>
       <div style="display:flex;flex-direction:column;gap:10px">
         <input class="key-inp" id="ann-title" placeholder="公告標題" style="font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0">
-        <textarea class="key-inp" id="ann-content" placeholder="公告內容" rows="4" style="resize:vertical;font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0"></textarea>
+        <div style="display:flex;gap:6px;margin-bottom:4px"><span style="font-size:11px;color:var(--muted)">支援 Markdown 語法</span><button class="btn btn-ghost btn-sm" onclick="insertImageToEditor('ann-content')" type="button">🖼 插入圖片</button></div>
+        <textarea class="key-inp" id="ann-content" placeholder="支援 Markdown：**粗體** # 標題 ![圖片](url)" rows="6" style="resize:vertical;font-family:monospace;font-size:12px;letter-spacing:0"></textarea>
         <input class="key-inp" id="ann-url" placeholder="相關連結（選填）" style="font-size:12px;letter-spacing:0">
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="ann-pinned"> 置頂顯示</label>
         <button class="btn btn-green btn-sm" onclick="postAnnouncement()">📤 發布公告</button>
@@ -205,7 +206,8 @@
       <div class="sec-head" style="margin-bottom:12px">📚 發布教學文章</div>
       <div style="display:flex;flex-direction:column;gap:10px">
         <input class="key-inp" id="tut-title" placeholder="教學標題" style="font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0">
-        <textarea class="key-inp" id="tut-content" placeholder="教學內容" rows="5" style="resize:vertical;font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0"></textarea>
+        <div style="display:flex;gap:6px;margin-bottom:4px"><span style="font-size:11px;color:var(--muted)">支援 Markdown 語法</span><button class="btn btn-ghost btn-sm" onclick="insertImageToEditor('tut-content')" type="button">🖼 插入圖片</button></div>
+        <textarea class="key-inp" id="tut-content" placeholder="支援 Markdown：**粗體** # 標題 ![圖片](url)" rows="8" style="resize:vertical;font-family:monospace;font-size:12px;letter-spacing:0"></textarea>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <select class="plan-select" id="tut-cat">
             <option value="basic">📖 基礎入門</option>
@@ -225,7 +227,8 @@
       <div class="sec-head" style="margin-bottom:12px">📊 每日盤面解析</div>
       <div style="display:flex;flex-direction:column;gap:10px">
         <input class="key-inp" id="da-title" placeholder="標題，如：2025/05/08 台股盤前解析" style="font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0">
-        <textarea class="key-inp" id="da-content" placeholder="盤面解析內容..." rows="6" style="resize:vertical;font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0"></textarea>
+        <div style="display:flex;gap:6px;margin-bottom:4px"><span style="font-size:11px;color:var(--muted)">支援 Markdown 語法</span><button class="btn btn-ghost btn-sm" onclick="insertImageToEditor('da-content')" type="button">🖼 插入圖片</button></div>
+        <textarea class="key-inp" id="da-content" placeholder="支援 Markdown：**粗體** # 標題 ![圖片](url)" rows="8" style="resize:vertical;font-family:monospace;font-size:12px;letter-spacing:0"></textarea>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <select class="plan-select" id="da-market">
             <option value="tw">🇹🇼 台股</option>
@@ -371,6 +374,37 @@ async function postNews() {
   document.getElementById("news-title").value = "";
   document.getElementById("news-summary").value = "";
   document.getElementById("news-url").value = "";
+}
+
+async function uploadImage(file) {
+  if (!file) return null;
+  const ext = file.name.split(".").pop();
+  const fileName = Date.now() + "." + ext;
+  const { data, error } = await sb.storage.from("images").upload(fileName, file, { upsert: true });
+  if (error) { showToast("圖片上傳失敗: " + error.message, "error"); return null; }
+  const { data: urlData } = sb.storage.from("images").getPublicUrl(fileName);
+  return urlData.publicUrl;
+}
+
+async function insertImageToEditor(editorId) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.onchange = async function() {
+    const file = input.files[0];
+    if (!file) return;
+    showToast("上傳中...", "");
+    const url = await uploadImage(file);
+    if (url) {
+      const ta = document.getElementById(editorId);
+      const pos = ta.selectionStart;
+      const before = ta.value.substring(0, pos);
+      const after = ta.value.substring(pos);
+      ta.value = before + "\n![圖片說明](" + url + ")\n" + after;
+      showToast("圖片已插入", "success");
+    }
+  };
+  input.click();
 }
 
 async function postAnnouncement() {

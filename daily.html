@@ -17,6 +17,15 @@
 .mkt-filter { display:flex; gap:8px; margin-bottom:16px; }
 .mf-btn { flex:1; background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:8px; color:var(--muted); font-size:13px; padding:8px; cursor:pointer; text-align:center; transition:all .2s; font-family:Noto Sans TC,sans-serif; }
 .mf-btn.active { background:rgba(0,212,255,.1); border-color:var(--accent); color:var(--accent); font-weight:600; }
+.md-content img { max-width:100%; border-radius:8px; margin:10px 0; }
+.md-content h1,.md-content h2,.md-content h3 { color:#fff; margin:16px 0 8px; }
+.md-content p { margin-bottom:10px; line-height:1.8; }
+.md-content ul,.md-content ol { padding-left:20px; margin-bottom:10px; }
+.md-content li { margin-bottom:4px; line-height:1.7; }
+.md-content strong { color:var(--accent); }
+.md-content code { background:rgba(0,212,255,.1); padding:2px 6px; border-radius:4px; font-family:monospace; font-size:12px; }
+.md-content blockquote { border-left:3px solid var(--accent); padding-left:12px; color:var(--muted); margin:10px 0; }
+.md-content hr { border:none; border-top:1px solid var(--border); margin:16px 0; }
 </style>
 </head>
 <body>
@@ -45,6 +54,7 @@
 </nav>
 <div id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="js/supabase.js"></script>
 <script>
 let cu = null, cp = null, allData = [], currentMkt = "all";
@@ -93,7 +103,7 @@ function renderDaily() {
       "<span style='font-size:11px;color:" + sentColor + "'>" + sentIcon + "</span>" +
       "<span style='font-size:11px;color:var(--muted)'>" + mktLabel + "</span>" +
       "</div></div>" +
-      "<div class='daily-body'>" + (d.content || "") + "</div>" +
+      "<div class='daily-body md-content'>" + marked.parse(d.content || "") + "</div>" +
       "<div class='daily-date'>" + timeAgo(d.published_at) + "</div>" +
       "</div>";
   }).join("");
