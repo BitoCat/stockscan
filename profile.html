@@ -166,7 +166,7 @@
       <div id="messages-list"><div style="font-size:12px;color:var(--muted);text-align:center;padding:16px">點擊重新整理載入</div></div>
     </div>
 
-      <div class="sec-head" style="margin-bottom:12px">📰 發布新聞</div>
+      <div class="sec-head" style="margin-bottom:12px">📰 發布市場新聞</div>
       <div style="display:flex;flex-direction:column;gap:10px">
         <input class="key-inp" id="news-title" placeholder="新聞標題" style="font-family:'Noto Sans TC',sans-serif;font-size:13px;letter-spacing:0">
         <textarea class="key-inp" id="news-summary" placeholder="摘要（選填）" rows="2" style="resize:vertical;font-family:'Noto Sans TC',sans-serif;font-size:13px;letter-spacing:0"></textarea>
@@ -185,6 +185,60 @@
           <input class="key-inp" id="news-url" placeholder="連結（選填）" style="flex:1;min-width:120px;font-size:12px">
         </div>
         <button class="btn btn-green btn-sm" onclick="postNews()">📤 發布新聞</button>
+      </div>
+    </div>
+
+    <!-- 發布公告 -->
+    <div class="card" style="padding:16px;margin-bottom:16px">
+      <div class="sec-head" style="margin-bottom:12px">📢 發布公告</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <input class="key-inp" id="ann-title" placeholder="公告標題" style="font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0">
+        <textarea class="key-inp" id="ann-content" placeholder="公告內容" rows="4" style="resize:vertical;font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0"></textarea>
+        <input class="key-inp" id="ann-url" placeholder="相關連結（選填）" style="font-size:12px;letter-spacing:0">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="ann-pinned"> 置頂顯示</label>
+        <button class="btn btn-green btn-sm" onclick="postAnnouncement()">📤 發布公告</button>
+      </div>
+    </div>
+
+    <!-- 發布教學 -->
+    <div class="card" style="padding:16px;margin-bottom:16px">
+      <div class="sec-head" style="margin-bottom:12px">📚 發布教學文章</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <input class="key-inp" id="tut-title" placeholder="教學標題" style="font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0">
+        <textarea class="key-inp" id="tut-content" placeholder="教學內容" rows="5" style="resize:vertical;font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0"></textarea>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select class="plan-select" id="tut-cat">
+            <option value="basic">📖 基礎入門</option>
+            <option value="technical">📈 技術分析</option>
+            <option value="fundamental">💰 基本面分析</option>
+            <option value="strategy">🎯 交易策略</option>
+            <option value="risk">🛡 風險管理</option>
+          </select>
+          <input class="key-inp" id="tut-emoji" placeholder="封面Emoji" style="width:100px;font-size:18px;text-align:center">
+        </div>
+        <button class="btn btn-green btn-sm" onclick="postTutorial()">📤 發布教學</button>
+      </div>
+    </div>
+
+    <!-- 每日盤面解析 -->
+    <div class="card" style="padding:16px;margin-bottom:16px">
+      <div class="sec-head" style="margin-bottom:12px">📊 每日盤面解析</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <input class="key-inp" id="da-title" placeholder="標題，如：2025/05/08 台股盤前解析" style="font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0">
+        <textarea class="key-inp" id="da-content" placeholder="盤面解析內容..." rows="6" style="resize:vertical;font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0"></textarea>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select class="plan-select" id="da-market">
+            <option value="tw">🇹🇼 台股</option>
+            <option value="us">🇺🇸 美股</option>
+            <option value="both">🌏 全市場</option>
+          </select>
+          <select class="plan-select" id="da-sent">
+            <option value="bull">📈 偏多</option>
+            <option value="neutral">中性</option>
+            <option value="bear">📉 偏空</option>
+          </select>
+        </div>
+        <button class="btn btn-green btn-sm" onclick="postDailyAnalysis()">📤 發布解析</button>
       </div>
     </div>
   </div>
@@ -316,6 +370,45 @@ async function postNews() {
   document.getElementById("news-title").value = "";
   document.getElementById("news-summary").value = "";
   document.getElementById("news-url").value = "";
+}
+
+async function postAnnouncement() {
+  const title = document.getElementById("ann-title").value.trim();
+  const content = document.getElementById("ann-content").value.trim();
+  const url = document.getElementById("ann-url").value.trim() || null;
+  const is_pinned = document.getElementById("ann-pinned").checked;
+  if (!title) { showToast("請填寫標題", "error"); return; }
+  const res = await sb.from("announcements").insert({ title, content, url, is_pinned, published_at: new Date().toISOString() });
+  if (res.error) { showToast("發布失敗: " + res.error.message, "error"); return; }
+  showToast("公告已發布", "success");
+  document.getElementById("ann-title").value = "";
+  document.getElementById("ann-content").value = "";
+}
+
+async function postTutorial() {
+  const title = document.getElementById("tut-title").value.trim();
+  const content = document.getElementById("tut-content").value.trim();
+  const category = document.getElementById("tut-cat").value;
+  const cover_emoji = document.getElementById("tut-emoji").value.trim() || "📚";
+  if (!title) { showToast("請填寫標題", "error"); return; }
+  const res = await sb.from("tutorials").insert({ title, content, category, cover_emoji, published_at: new Date().toISOString() });
+  if (res.error) { showToast("發布失敗", "error"); return; }
+  showToast("教學已發布", "success");
+  document.getElementById("tut-title").value = "";
+  document.getElementById("tut-content").value = "";
+}
+
+async function postDailyAnalysis() {
+  const title = document.getElementById("da-title").value.trim();
+  const content = document.getElementById("da-content").value.trim();
+  const market = document.getElementById("da-market").value;
+  const sentiment = document.getElementById("da-sent").value;
+  if (!title || !content) { showToast("請填寫標題和內容", "error"); return; }
+  const res = await sb.from("daily_analysis").insert({ title, content, market, sentiment, published_at: new Date().toISOString() });
+  if (res.error) { showToast("發布失敗", "error"); return; }
+  showToast("盤面解析已發布", "success");
+  document.getElementById("da-title").value = "";
+  document.getElementById("da-content").value = "";
 }
 
 async function addPointsForUser(userId, displayName) {
