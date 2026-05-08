@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>交易大師 · 公告</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/base.css">
+<style>
+.ann-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:12px; }
+.ann-card.pinned { border-color:rgba(0,212,255,.4); background:rgba(0,212,255,.04); }
+.ann-pin { font-size:10px; color:var(--accent); font-family:'Share Tech Mono',monospace; letter-spacing:2px; margin-bottom:8px; }
+.ann-title { font-size:15px; font-weight:700; margin-bottom:8px; }
+.ann-body { font-size:13px; color:var(--text); line-height:1.85; white-space:pre-wrap; }
+.ann-date { font-size:10px; color:var(--muted); margin-top:10px; }
+.install-step { display:flex; align-items:flex-start; gap:12px; margin-bottom:14px; }
+.step-num { background:var(--accent); color:#000; font-weight:700; font-size:12px; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.step-text { font-size:13px; line-height:1.7; }
+.step-text strong { color:#fff; }
+.os-tabs { display:flex; gap:8px; margin-bottom:16px; }
+.os-tab { flex:1; background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:8px; color:var(--muted); font-size:13px; padding:8px; cursor:pointer; text-align:center; transition:all .2s; font-family:'Noto Sans TC',sans-serif; }
+.os-tab.active { background:rgba(0,212,255,.1); border-color:var(--accent); color:var(--accent); font-weight:600; }
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <a class="logo" href="index.html"><span class="logo-main">交易<span>大師</span></span><span class="logo-ver">PRO</span></a>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span id="nav-plan" class="plan-badge plan-free">FREE</span>
+    <button class="btn btn-ghost btn-sm" onclick="signOut()">登出</button>
+  </div>
+</nav>
+<div class="page-wrap">
+
+  <!-- 置頂：安裝說明 -->
+  <div class="ann-card pinned">
+    <div class="ann-pin">📌 置頂公告</div>
+    <div class="ann-title">📱 如何將交易大師加入手機桌面</div>
+    <div style="margin-bottom:14px">
+      <div class="os-tabs">
+        <button class="os-tab active" id="tab-ios" onclick="setOS('ios')">🍎 iPhone / iPad</button>
+        <button class="os-tab" id="tab-android" onclick="setOS('android')">🤖 Android</button>
+      </div>
+
+      <div id="guide-ios">
+        <div class="install-step">
+          <div class="step-num">1</div>
+          <div class="step-text">用 <strong>Safari</strong> 開啟交易大師網站<br><span style="font-size:11px;color:var(--accent)">bitocat.github.io/stockscan</span></div>
+        </div>
+        <div class="install-step">
+          <div class="step-num">2</div>
+          <div class="step-text">點底部工具列的 <strong>分享按鈕</strong>（方塊加箭頭 ↑）</div>
+        </div>
+        <div class="install-step">
+          <div class="step-num">3</div>
+          <div class="step-text">在選單中找到 <strong>「加入主畫面」</strong> 並點選</div>
+        </div>
+        <div class="install-step">
+          <div class="step-num">4</div>
+          <div class="step-text">名稱確認為「<strong>交易大師</strong>」，點右上角 <strong>「新增」</strong></div>
+        </div>
+        <div style="background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.3);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--green)">
+          ✅ 完成！桌面會出現交易大師圖示，開啟後就像 App 一樣全螢幕運行
+        </div>
+      </div>
+
+      <div id="guide-android" style="display:none">
+        <div class="install-step">
+          <div class="step-num">1</div>
+          <div class="step-text">用 <strong>Chrome</strong> 開啟交易大師網站<br><span style="font-size:11px;color:var(--accent)">bitocat.github.io/stockscan</span></div>
+        </div>
+        <div class="install-step">
+          <div class="step-num">2</div>
+          <div class="step-text">點右上角 <strong>三點選單（⋮）</strong></div>
+        </div>
+        <div class="install-step">
+          <div class="step-num">3</div>
+          <div class="step-text">選擇 <strong>「新增至主畫面」</strong> 或 <strong>「安裝應用程式」</strong></div>
+        </div>
+        <div class="install-step">
+          <div class="step-num">4</div>
+          <div class="step-text">點 <strong>「新增」</strong> 確認安裝</div>
+        </div>
+        <div style="background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.3);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--green)">
+          ✅ 完成！主畫面會出現交易大師圖示
+        </div>
+      </div>
+    </div>
+    <div class="ann-date">系統公告</div>
+  </div>
+
+  <!-- 官方公告列表 -->
+  <div class="sec-head">📢 最新公告</div>
+  <div id="ann-list"><div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入公告...</div></div></div>
+
+</div>
+<nav class="tabbar">
+  <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
+  <a class="tb" href="watchlist.html"><span class="ti">⭐</span>觀察名單</a>
+  <a class="tb" href="news.html"><span class="ti">📰</span>新聞</a>
+  <a class="tb active" href="announcement.html"><span class="ti">📢</span>公告</a>
+  <a class="tb" href="profile.html"><span class="ti">👤</span>我的</a>
+</nav>
+<div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script>
+let cu = null, cp = null;
+
+(async () => {
+  cu = await requireAuth();
+  if (!cu) return;
+  cp = await getProfile(cu.id);
+  const nb = document.getElementById("nav-plan");
+  nb.textContent = planLabel(cp?.plan || "free");
+  nb.className = "plan-badge " + planBadge(cp?.plan || "free");
+  loadAnnouncements();
+})();
+
+function setOS(os) {
+  document.getElementById("tab-ios").classList.toggle("active", os === "ios");
+  document.getElementById("tab-android").classList.toggle("active", os === "android");
+  document.getElementById("guide-ios").style.display = os === "ios" ? "block" : "none";
+  document.getElementById("guide-android").style.display = os === "android" ? "block" : "none";
+}
+
+async function loadAnnouncements() {
+  const res = await sb.from("news").select("*").order("published_at", { ascending: false }).limit(20);
+  const el = document.getElementById("ann-list");
+  if (res.error || !res.data || !res.data.length) {
+    el.innerHTML = "<div style='text-align:center;padding:32px;color:var(--muted);font-size:13px'>暫無公告</div>";
+    return;
+  }
+  let html = "";
+  for (const n of res.data) {
+    const ago = timeAgo(n.published_at);
+    const sentIcon = n.sentiment === "bull" ? "📈" : n.sentiment === "bear" ? "📉" : "📌";
+    html += "<div class='ann-card'>";
+    html += "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px'>";
+    html += "<span class='news-source'>" + (n.source || "交易大師") + "</span>";
+    html += "<span style='font-size:11px;color:var(--muted)'>" + ago + "</span></div>";
+    html += "<div class='ann-title'>" + sentIcon + " " + n.title + "</div>";
+    if (n.summary) html += "<div class='ann-body'>" + n.summary + "</div>";
+    if (n.url) html += "<div style='margin-top:10px'><a href='" + n.url + "' target='_blank' style='font-size:12px;color:var(--accent);text-decoration:none'>閱讀全文 →</a></div>";
+    html += "<div class='ann-date'>" + ago + "</div></div>";
+  }
+  el.innerHTML = html;
+}
+
+function timeAgo(iso) {
+  if (!iso) return "—";
+  const d = (Date.now() - new Date(iso)) / 1000;
+  if (d < 3600) return Math.floor(d/60) + "分鐘前";
+  if (d < 86400) return Math.floor(d/3600) + "小時前";
+  return Math.floor(d/86400) + "天前";
+}
+</script>
+</body>
+</html>
