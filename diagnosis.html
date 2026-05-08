@@ -163,6 +163,8 @@ async function analyze() {
     const proxies = [
       "https://corsproxy.io/?" + encodeURIComponent(yahooUrl),
       "https://api.allorigins.win/get?url=" + encodeURIComponent(yahooUrl),
+      "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(yahooUrl),
+      "https://thingproxy.freeboard.io/fetch/" + encodeURIComponent(yahooUrl),
     ];
     let pd = null;
     for (const proxyUrl of proxies) {
@@ -189,12 +191,21 @@ async function analyze() {
       const validC=validCloses.filter(v=>v!=null);
       let macd=null;
       if(validC.length>=26){const e12=ema(validC.slice(-26),12),e26=ema(validC,26);macd=(e12-e26).toFixed(3);}
+      // 短線（5日）
+      const r5h=highs.slice(-5).filter(v=>v!=null), r5l=lows.slice(-5).filter(v=>v!=null);
+      const support_s=r5l.length?Math.min(...r5l).toFixed(2):null;
+      const resistance_s=r5h.length?Math.max(...r5h).toFixed(2):null;
+      // 中線（20日）
       const r20h=highs.slice(-20).filter(v=>v!=null), r20l=lows.slice(-20).filter(v=>v!=null);
-      const resistance=r20h.length?Math.max(...r20h).toFixed(2):null;
       const support=r20l.length?Math.min(...r20l).toFixed(2):null;
+      const resistance=r20h.length?Math.max(...r20h).toFixed(2):null;
+      // 長線（60日）
+      const r60h=highs.slice(-60).filter(v=>v!=null), r60l=lows.slice(-60).filter(v=>v!=null);
+      const support_l=r60l.length?Math.min(...r60l).toFixed(2):null;
+      const resistance_l=r60h.length?Math.max(...r60h).toFixed(2):null;
       const today=new Date(); const dateStr=today.getFullYear()+"年"+(today.getMonth()+1)+"月"+today.getDate()+"日";
-      livePrice = { name:meta.shortName||meta.longName||sym, price:meta.regularMarketPrice, high:meta.regularMarketDayHigh, low:meta.regularMarketDayLow, prev:meta.previousClose, changePct:(((meta.regularMarketPrice-meta.previousClose)/meta.previousClose)*100).toFixed(2), ma5,ma20,ma60,rsi,macd,support,resistance,date:dateStr };
-      priceContext = "\n\n[即時技術分析資料 "+dateStr+"]\n公司名稱: "+livePrice.name+"\n目前股價: "+livePrice.price+"\n漲跌幅: "+livePrice.changePct+"%\nMA5: "+(ma5||'N/A')+" MA20: "+(ma20||'N/A')+" MA60: "+(ma60||'N/A')+"\nRSI(14): "+(rsi||'N/A')+"\nMACD: "+(macd||'N/A')+"\n近20日支撐: "+(support||'N/A')+" 壓力: "+(resistance||'N/A')+"\n[請根據以上真實技術指標進行分析]";
+      livePrice = { name:meta.shortName||meta.longName||sym, price:meta.regularMarketPrice, high:meta.regularMarketDayHigh, low:meta.regularMarketDayLow, prev:meta.previousClose, changePct:(((meta.regularMarketPrice-meta.previousClose)/meta.previousClose)*100).toFixed(2), ma5,ma20,ma60,rsi,macd,support,resistance,support_s,resistance_s,support_l,resistance_l,date:dateStr };
+      priceContext = "\n\n[即時技術分析資料 "+dateStr+"]\n公司名稱: "+livePrice.name+"\n目前股價: "+livePrice.price+"\n漲跌幅: "+livePrice.changePct+"%\nMA5: "+(ma5||'N/A')+" MA20: "+(ma20||'N/A')+" MA60: "+(ma60||'N/A')+"\nRSI(14): "+(rsi||'N/A')+"\nMACD: "+(macd||'N/A')+"\n短線支撐: "+(support_s||'N/A')+" 短線壓力: "+(resistance_s||'N/A')+"\n中線支撐: "+(support||'N/A')+" 中線壓力: "+(resistance||'N/A')+"\n長線支撐: "+(support_l||'N/A')+" 長線壓力: "+(resistance_l||'N/A')+"\n[請根據以上真實技術指標進行分析]";
     }
   } catch(e) { console.log('股價抓取失敗', e); }
 
@@ -231,8 +242,12 @@ function renderResult(sym, d) {
   const mets=[
     {l:'趨勢',v:d.trend||'—',c:d.trend?.includes('上')?'up':d.trend?.includes('下')?'dn':''},
     {l:d.currentPrice?'即時股價':'本益比',v:d.currentPrice?String(d.currentPrice):(d.peRatio||'—'),c:d.changePct>0?'up':d.changePct<0?'dn':'',s:d.currentPrice?(d.changePct>0?'▲':'▼')+d.changePct+'%':'估計值'},
-    {l:'支撐位',v:d.support||'—',c:'up',s:'參考'},
-    {l:'壓力位',v:d.resistance||'—',c:'dn',s:'參考'},
+    {l:'短線支撐',v:d.support_s||d.support||'—',c:'up',s:'5日'},
+    {l:'短線壓力',v:d.resistance_s||d.resistance||'—',c:'dn',s:'5日'},
+    {l:'中線支撐',v:d.support||'—',c:'up',s:'20日'},
+    {l:'中線壓力',v:d.resistance||'—',c:'dn',s:'20日'},
+    {l:'長線支撐',v:d.support_l||'—',c:'up',s:'60日'},
+    {l:'長線壓力',v:d.resistance_l||'—',c:'dn',s:'60日'},
   ];
   document.getElementById('r-metrics').innerHTML=mets.map(m=>'<div class="met"><div class="met-l">'+m.l+'</div><div class="met-v '+m.c+'">'+m.v+'</div>'+(m.s?'<div class="met-s">'+m.s+'</div>':'')+'</div>').join('');
   document.getElementById('r-signals').innerHTML=(d.signals||[]).map(s=>'<div class="sig"><div class="dot '+s.type+'"></div><span>'+s.text+'</span></div>').join('');
