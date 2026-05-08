@@ -84,7 +84,7 @@ function showToast(msg, type = '') {
 
 // ── AI 呼叫（支援 Groq 和 Anthropic）──────
 // Groq key 以 gsk_ 開頭，Anthropic 以 sk-ant- 開頭
-async function callAI(prompt, maxTokens = 1000) {
+async function callAI(prompt, maxTokens = 2500) {
   const key = getAIKey();
   if (!key) throw new Error('請先設定 AI Key');
 
