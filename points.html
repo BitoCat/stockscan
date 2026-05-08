@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockScan · 購買點數</title>
+<link rel="stylesheet" href="css/base.css">
+<style>
+  /* ── 點數餘額大卡 ── */
+  .balance-card {
+    background: linear-gradient(135deg, #0b1020 0%, #0f1e38 50%, #0b1020 100%);
+    border: 1px solid rgba(0,212,255,.3);
+    border-radius: 16px; padding: 28px 24px; margin-bottom: 24px;
+    position: relative; overflow: hidden; text-align: center;
+  }
+  .balance-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(0,212,255,.12), transparent 70%);
+    pointer-events: none;
+  }
+  .balance-label { font-family: 'Share Tech Mono',monospace; font-size: 10px; letter-spacing: 3px; color: var(--muted); margin-bottom: 10px; }
+  .balance-num {
+    font-family: 'Bebas Neue', sans-serif; font-size: 72px; line-height: 1;
+    color: #fff; text-shadow: 0 0 40px rgba(0,212,255,.5);
+  }
+  .balance-num span { color: var(--accent); font-size: 40px; vertical-align: middle; margin-right: 6px; }
+  .balance-sub { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .balance-history-btn {
+    display: inline-block; margin-top: 14px;
+    font-size: 12px; color: var(--accent); cursor: pointer; text-decoration: underline;
+  }
+
+  /* ── 方案卡片 ── */
+  .plans-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 24px; }
+
+  .plan-card {
+    background: var(--panel); border: 2px solid var(--border);
+    border-radius: 14px; padding: 20px 16px; cursor: pointer;
+    transition: all .25s; position: relative; text-align: center;
+  }
+  .plan-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,212,255,.15); }
+  .plan-card.selected { border-color: var(--accent); background: rgba(0,212,255,.06); box-shadow: 0 0 24px rgba(0,212,255,.2); }
+  .plan-card.popular { border-color: var(--warn); }
+  .plan-card.popular:hover { border-color: var(--warn); box-shadow: 0 8px 24px rgba(243,156,18,.2); }
+  .plan-card.popular.selected { border-color: var(--warn); background: rgba(243,156,18,.06); }
+
+  .popular-badge {
+    position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
+    background: var(--warn); color: #000; font-size: 10px; font-weight: 700;
+    padding: 3px 14px; border-radius: 20px; letter-spacing: 1px; white-space: nowrap;
+  }
+  .discount-badge {
+    position: absolute; top: 12px; right: 12px;
+    background: rgba(46,204,113,.15); border: 1px solid var(--green);
+    color: var(--green); font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 6px;
+  }
+
+  .plan-points { font-family: 'Bebas Neue',sans-serif; font-size: 48px; color: #fff; line-height: 1; }
+  .plan-points span { font-size: 20px; color: var(--muted); }
+  .plan-unit { font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+  .plan-price { font-family: 'Share Tech Mono',monospace; font-size: 24px; color: var(--accent); }
+  .plan-price.popular-price { color: var(--warn); }
+  .plan-per { font-size: 10px; color: var(--muted); margin-top: 4px; }
+  .plan-divider { height: 1px; background: var(--border); margin: 12px 0; }
+  .plan-feature { font-size: 12px; color: var(--text); line-height: 1.8; }
+  .plan-feature .hi { color: var(--accent); font-weight: 700; }
+
+  /* ── 購買按鈕區 ── */
+  .buy-section { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+  .selected-summary { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+  .selected-summary .ss-left { font-size: 14px; }
+  .selected-summary .ss-price { font-family: 'Bebas Neue',sans-serif; font-size: 32px; color: var(--accent); }
+
+  .payment-methods { display: flex; flex-direction: column; gap: 8px; }
+  .pay-btn {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 16px; border-radius: 10px; cursor: pointer; transition: all .2s;
+    border: 1px solid var(--border); background: rgba(255,255,255,.03);
+    font-size: 14px; color: var(--text);
+  }
+  .pay-btn:hover { border-color: var(--accent); background: rgba(0,212,255,.05); }
+  .pay-btn .pay-icon { font-size: 20px; }
+  .pay-btn .pay-arrow { color: var(--muted); }
+
+  /* ── 轉帳資訊 ── */
+  .transfer-box {
+    display: none; background: rgba(0,212,255,.05);
+    border: 1px solid rgba(0,212,255,.2); border-radius: 10px; padding: 16px; margin-top: 12px;
+  }
+  .transfer-box.show { display: block; animation: fadeUp .3s ease; }
+  .transfer-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 13px; }
+  .transfer-row:last-child { border-bottom: none; }
+  .transfer-label { color: var(--muted); }
+  .transfer-value { font-family: 'Share Tech Mono',monospace; color: #fff; letter-spacing: 1px; }
+  .copy-btn { font-size: 11px; color: var(--accent); cursor: pointer; padding: 2px 8px; border: 1px solid rgba(0,212,255,.3); border-radius: 4px; }
+  .copy-btn:hover { background: rgba(0,212,255,.1); }
+  .transfer-note { font-size: 11px; color: var(--warn); margin-top: 10px; line-height: 1.6; }
+
+  /* ── 使用記錄 ── */
+  .history-panel { display: none; }
+  .history-panel.show { display: block; }
+  .hist-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .hist-row:last-child { border-bottom: none; }
+  .hist-type { display: flex; align-items: center; gap: 8px; }
+  .hist-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .hist-desc { color: var(--text); }
+  .hist-date { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .hist-pts { font-family: 'Share Tech Mono',monospace; font-size: 14px; }
+  .hist-pts.plus { color: var(--green); }
+  .hist-pts.minus { color: var(--red); }
+
+  /* ── FAQ ── */
+  .faq-item { border-bottom: 1px solid var(--border); padding: 14px 0; }
+  .faq-item:last-child { border-bottom: none; }
+  .faq-q { font-size: 13px; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .faq-a { font-size: 12px; color: var(--muted); line-height: 1.7; margin-top: 8px; display: none; }
+  .faq-a.open { display: block; animation: fadeUp .2s ease; }
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <a class="logo" href="index.html">
+    <span class="logo-main">STOCK<span>SCAN</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--accent)" id="nav-pts">— 點</span>
+    <button class="btn btn-ghost btn-sm" onclick="signOut()">登出</button>
+  </div>
+</nav>
+
+<div class="page-wrap">
+
+  <!-- 點數餘額 -->
+  <div class="balance-card">
+    <div class="balance-label">我的 AI 分析點數</div>
+    <div class="balance-num"><span>◈</span><span id="bal-num">—</span></div>
+    <div class="balance-sub">每次 AI 股票健診消耗 <strong style="color:#fff">1 點</strong></div>
+    <div class="balance-history-btn" onclick="toggleHistory()">查看使用記錄 ▾</div>
+  </div>
+
+  <!-- 使用記錄（折疊） -->
+  <div class="history-panel card" id="history-panel" style="padding:16px;margin-bottom:20px">
+    <div class="sec-head">📋 點數記錄</div>
+    <div id="history-list"><div style="text-align:center;font-size:12px;color:var(--muted);padding:16px">載入中...</div></div>
+  </div>
+
+  <!-- 點數方案 -->
+  <div class="sec-head">💎 購買點數</div>
+  <div class="plans-grid" id="plans-grid">
+
+    <div class="plan-card" id="plan-100" onclick="selectPlan(0)">
+      <div class="plan-points">100<span> 點</span></div>
+      <div class="plan-unit">可分析 100 次</div>
+      <div class="plan-price">NT$99</div>
+      <div class="plan-per">每點 NT$0.99</div>
+      <div class="plan-divider"></div>
+      <div class="plan-feature">適合 <span class="hi">輕度</span> 使用者</div>
+    </div>
+
+    <div class="plan-card popular" id="plan-300" onclick="selectPlan(1)">
+      <div class="popular-badge">⭐ 最多人選</div>
+      <div class="discount-badge">83折</div>
+      <div class="plan-points">300<span> 點</span></div>
+      <div class="plan-unit">可分析 300 次</div>
+      <div class="plan-price popular-price">NT$249</div>
+      <div class="plan-per">每點 NT$0.83 · 省 NT$48</div>
+      <div class="plan-divider"></div>
+      <div class="plan-feature">適合 <span class="hi" style="color:var(--warn)">一般</span> 使用者</div>
+    </div>
+
+    <div class="plan-card" id="plan-600" onclick="selectPlan(2)">
+      <div class="discount-badge">75折</div>
+      <div class="plan-points">600<span> 點</span></div>
+      <div class="plan-unit">可分析 600 次</div>
+      <div class="plan-price">NT$449</div>
+      <div class="plan-per">每點 NT$0.75 · 省 NT$145</div>
+      <div class="plan-divider"></div>
+      <div class="plan-feature">適合 <span class="hi">重度</span> 使用者</div>
+    </div>
+
+  </div>
+
+  <!-- 購買區 -->
+  <div class="buy-section" id="buy-section" style="display:none">
+    <div class="selected-summary">
+      <div class="ss-left">
+        <div style="font-weight:700" id="ss-title">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px" id="ss-desc">—</div>
+      </div>
+      <div class="ss-price" id="ss-price">—</div>
+    </div>
+
+    <div class="payment-methods">
+      <div class="pay-btn" onclick="showTransfer()">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="pay-icon">🏦</span>
+          <div>
+            <div>ATM 轉帳 / 網路銀行</div>
+            <div style="font-size:11px;color:var(--muted)">轉帳後通知管理員，1小時內開通</div>
+          </div>
+        </div>
+        <span class="pay-arrow">›</span>
+      </div>
+
+      <div class="pay-btn" id="ecpay-btn" onclick="goECPay()" style="opacity:.5;cursor:not-allowed">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="pay-icon">💳</span>
+          <div>
+            <div>信用卡 / 超商繳費</div>
+            <div style="font-size:11px;color:var(--muted)">綠界金流（即將開放）</div>
+          </div>
+        </div>
+        <span class="pay-arrow">›</span>
+      </div>
+    </div>
+
+    <!-- 轉帳資訊 -->
+    <div class="transfer-box" id="transfer-box">
+      <div class="sec-head" style="margin-bottom:12px">🏦 轉帳資訊</div>
+      <div class="transfer-row">
+        <span class="transfer-label">銀行</span>
+        <span class="transfer-value" id="tb-bank">—</span>
+      </div>
+      <div class="transfer-row">
+        <span class="transfer-label">帳號</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="transfer-value" id="tb-account">—</span>
+          <span class="copy-btn" onclick="copyAccount()">複製</span>
+        </div>
+      </div>
+      <div class="transfer-row">
+        <span class="transfer-label">金額</span>
+        <span class="transfer-value" id="tb-amount" style="color:var(--accent)">—</span>
+      </div>
+      <div class="transfer-row">
+        <span class="transfer-label">戶名</span>
+        <span class="transfer-value" id="tb-name">—</span>
+      </div>
+      <div class="transfer-note">
+        ⚠ 轉帳完成後，請截圖傳至管理員 LINE 或留言，確認後 1 小時內開通點數。<br>
+        備註請填寫：你的帳號 Email 或暱稱，方便核對。
+      </div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+        <a id="line-notify-btn" href="#" target="_blank" class="btn btn-green" style="text-decoration:none;font-size:13px">📱 LINE 通知管理員</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="sec-head">❓ 常見問題</div>
+  <div class="card" style="padding:16px">
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>點數會過期嗎？</span><span>＋</span></div>
+      <div class="faq-a">點數永久有效，不會過期。</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>轉帳後多久開通？</span><span>＋</span></div>
+      <div class="faq-a">確認收款後 1 小時內開通，營業時間為週一至週五 9:00–21:00。</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>分析失敗也會扣點嗎？</span><span>＋</span></div>
+      <div class="faq-a">只有成功完成分析才扣點，API 錯誤或逾時不扣點。</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)"><span>可以退款嗎？</span><span>＋</span></div>
+      <div class="faq-a">點數購買後恕不退款，請斟酌購買。如有異常請聯絡管理員。</div>
+    </div>
+  </div>
+
+</div>
+
+<nav class="tabbar">
+  <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
+  <a class="tb" href="watchlist.html"><span class="ti">⭐</span>觀察名單</a>
+  <a class="tb" href="news.html"><span class="ti">📰</span>新聞</a>
+  <a class="tb active" href="points.html"><span class="ti">◈</span>點數</a>
+</nav>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script>
+// ════ 管理員設定（請修改） ════
+const BANK_INFO = {
+  bank:    '玉山銀行（808）',       // ← 改成你的銀行
+  account: '0123-456-789012',       // ← 改成你的帳號
+  name:    '你的戶名',              // ← 改成你的戶名
+  lineUrl: 'https://line.me/ti/p/你的LineID'  // ← 改成你的 LINE 連結
+};
+
+const PLANS = [
+  { id:'p100',  points:100, price:99,  label:'100 點',  desc:'可分析 100 次', discount:'' },
+  { id:'p300',  points:300, price:249, label:'300 點',  desc:'可分析 300 次・省 NT$48', discount:'83折' },
+  { id:'p600',  points:600, price:449, label:'600 點',  desc:'可分析 600 次・省 NT$145', discount:'75折' },
+];
+// ══════════════════════════════
+
+let currentUser = null, userPoints = 0, selectedPlan = null, historyLoaded = false, historyOpen = false;
+
+(async () => {
+  currentUser = await requireAuth();
+  if (!currentUser) return;
+  await loadPoints();
+})();
+
+async function loadPoints() {
+  const { data } = await sb.from('points').select('balance').eq('user_id', currentUser.id).single();
+  userPoints = data?.balance || 0;
+  document.getElementById('bal-num').textContent = userPoints.toLocaleString();
+  document.getElementById('nav-pts').textContent = userPoints + ' 點';
+}
+
+function selectPlan(idx) {
+  selectedPlan = PLANS[idx];
+  ['plan-100','plan-300','plan-600'].forEach((id,i) =>
+    document.getElementById(id).classList.toggle('selected', i===idx));
+
+  document.getElementById('buy-section').style.display = 'block';
+  document.getElementById('ss-title').textContent = selectedPlan.label;
+  document.getElementById('ss-desc').textContent = selectedPlan.desc;
+  document.getElementById('ss-price').textContent = 'NT$' + selectedPlan.price;
+  document.getElementById('transfer-box').classList.remove('show');
+  document.getElementById('buy-section').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function showTransfer() {
+  if (!selectedPlan) return;
+  document.getElementById('tb-bank').textContent    = BANK_INFO.bank;
+  document.getElementById('tb-account').textContent = BANK_INFO.account;
+  document.getElementById('tb-amount').textContent  = 'NT$' + selectedPlan.price;
+  document.getElementById('tb-name').textContent    = BANK_INFO.name;
+  document.getElementById('line-notify-btn').href   = BANK_INFO.lineUrl +
+    `?text=${encodeURIComponent(`【點數儲值通知】\n帳號：${currentUser.email}\n方案：${selectedPlan.label} NT$${selectedPlan.price}\n已完成轉帳，請確認開通，謝謝！`)}`;
+  document.getElementById('transfer-box').classList.add('show');
+}
+
+function copyAccount() {
+  navigator.clipboard.writeText(BANK_INFO.account).then(() => showToast('✅ 帳號已複製', 'success'));
+}
+
+function goECPay() { showToast('綠界金流即將開放，請先使用轉帳', ''); }
+
+// ── 使用記錄 ──
+async function toggleHistory() {
+  historyOpen = !historyOpen;
+  document.getElementById('history-panel').classList.toggle('show', historyOpen);
+  if (historyOpen && !historyLoaded) { historyLoaded = true; await loadHistory(); }
+}
+
+async function loadHistory() {
+  const { data } = await sb.from('point_logs')
+    .select('*').eq('user_id', currentUser.id)
+    .order('created_at',{ascending:false}).limit(30);
+
+  const el = document.getElementById('history-list');
+  if (!data || !data.length) { el.innerHTML = '<div style="text-align:center;font-size:12px;color:var(--muted);padding:12px">尚無記錄</div>'; return; }
+
+  el.innerHTML = data.map(r => {
+    const isPlus = r.amount > 0;
+    const date = new Date(r.created_at).toLocaleString('zh-TW');
+    return `<div class="hist-row">
+      <div class="hist-type">
+        <div class="hist-dot" style="background:${isPlus?'var(--green)':'var(--red)'}"></div>
+        <div>
+          <div class="hist-desc">${r.description||'—'}</div>
+          <div class="hist-date">${date}</div>
+        </div>
+      </div>
+      <div class="hist-pts ${isPlus?'plus':'minus'}">${isPlus?'+':''}${r.amount}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── FAQ ──
+function toggleFaq(el) {
+  const a = el.nextElementSibling;
+  a.classList.toggle('open');
+  el.querySelector('span:last-child').textContent = a.classList.contains('open') ? '－' : '＋';
+}
+
+function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='show '+type;setTimeout(()=>t.className='',2500);}
+</script>
+</body>
+</html>

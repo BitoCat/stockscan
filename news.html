@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockScan · 市場新聞</title>
+<link rel="stylesheet" href="css/base.css">
+<style>
+.mkt-tabs { display:flex; border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:20px; }
+.mkt-tab { flex:1; background:transparent; border:none; font-family:'Noto Sans TC',sans-serif; font-size:14px; font-weight:500; padding:13px 8px; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:7px; color:var(--muted); position:relative; }
+.mkt-tab.active { background:rgba(0,212,255,.1); color:var(--accent); }
+.mkt-tab.active::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:var(--accent); }
+.mkt-tab.locked { cursor:not-allowed; opacity:.6; }
+.cat-row { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:16px; }
+.cat-chip { background:rgba(255,255,255,.05); border:1px solid var(--border); border-radius:20px; color:var(--muted); font-size:12px; padding:5px 14px; cursor:pointer; transition:all .2s; }
+.cat-chip.on { background:rgba(0,212,255,.1); border-color:var(--accent); color:var(--accent); }
+.news-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:10px; cursor:pointer; transition:all .2s; text-decoration:none; display:block; color:inherit; }
+.news-card:hover { border-color:var(--border2); transform:translateY(-1px); box-shadow:0 4px 20px rgba(0,0,0,.3); }
+.news-meta { display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+.news-source { font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--accent); background:rgba(0,212,255,.08); border:1px solid rgba(0,212,255,.2); border-radius:4px; padding:2px 8px; }
+.news-date { font-size:10px; color:var(--muted); }
+.ncb { font-size:10px; padding:2px 8px; border-radius:4px; border:1px solid; }
+.nc-hot { border-color:rgba(231,76,60,.4); color:var(--red); background:rgba(231,76,60,.08); }
+.nc-earn { border-color:rgba(46,204,113,.4); color:var(--green); background:rgba(46,204,113,.08); }
+.nc-macro { border-color:rgba(155,89,182,.4); color:var(--purple); background:rgba(155,89,182,.08); }
+.nc-tech { border-color:rgba(0,212,255,.4); color:var(--accent); background:rgba(0,212,255,.08); }
+.news-title { font-size:14px; font-weight:500; line-height:1.55; color:var(--text); margin-bottom:6px; }
+.news-summary { font-size:12px; color:var(--muted); line-height:1.65; }
+.news-foot { display:flex; align-items:center; justify-content:space-between; margin-top:10px; }
+.sent-bull { color:var(--green); font-size:11px; } .sent-bear { color:var(--red); font-size:11px; } .sent-neutral { color:var(--muted); font-size:11px; }
+.ai-bar { background:linear-gradient(135deg,rgba(0,212,255,.07),rgba(155,89,182,.05)); border:1px solid rgba(0,212,255,.2); border-radius:10px; padding:13px 16px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.locked-banner { text-align:center; padding:52px 20px; background:rgba(255,255,255,.02); border:1px dashed var(--border); border-radius:12px; }
+.locked-banner .li { font-size:52px; margin-bottom:14px; }
+.locked-banner .lt { font-size:16px; font-weight:700; margin-bottom:8px; }
+.locked-banner .ld { font-size:13px; color:var(--muted); line-height:1.7; margin-bottom:20px; }
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <a class="logo" href="index.html"><span class="logo-main">STOCK<span>SCAN</span></span></a>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span id="nav-plan" style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;padding:4px 10px;border-radius:20px;border:1px solid;color:var(--muted);border-color:var(--border)">—</span>
+    <button class="btn btn-ghost btn-sm" onclick="signOut()">登出</button>
+  </div>
+</nav>
+<div class="page-wrap">
+  <div class="mkt-tabs">
+    <button class="mkt-tab" id="tab-tw" onclick="switchMkt('tw')">🇹🇼 台股新聞</button>
+    <button class="mkt-tab" id="tab-us" onclick="switchMkt('us')">🇺🇸 美股新聞</button>
+  </div>
+  <div id="content-area"><div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入中...</div></div></div>
+</div>
+<nav class="tabbar">
+  <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
+  <a class="tb" href="watchlist.html"><span class="ti">⭐</span>觀察名單</a>
+  <a class="tb active" href="news.html"><span class="ti">📰</span>新聞</a>
+  <a class="tb" href="picks.html"><span class="ti">📋</span>選股</a>
+  <a class="tb" href="profile.html"><span class="ti">👤</span>我的</a>
+</nav>
+<div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script>
+let cu=null,cp=null,mkt='tw',cat='all',allNews=[];
+(async()=>{
+  cu=await requireAuth(); if(!cu)return;
+  cp=await getProfile(cu.id);
+  const nb=document.getElementById('nav-plan');
+  nb.textContent=planLabel(cp?.plan||'free');
+  const urlM=new URLSearchParams(location.search).get('mkt');
+  if(urlM==='us') mkt='us';
+  renderTabs(); renderContent();
+})();
+function renderTabs(){
+  const plan=cp?.plan||'free';
+  ['tw','us'].forEach(m=>{
+    const t=document.getElementById('tab-'+m);
+    const ok=canAccess(plan,m);
+    t.classList.toggle('active',m===mkt);
+    t.classList.toggle('locked',!ok);
+    t.innerHTML=(m==='tw'?'🇹🇼 台股新聞':'🇺🇸 美股新聞')+(ok?'':' 🔒');
+  });
+}
+function switchMkt(m){
+  if(!canAccess(cp?.plan||'free',m)){showToast('🔒 需要對應市場方案才能查看','error');return;}
+  mkt=m; cat='all';
+  history.replaceState(null,'','news.html?mkt='+m);
+  renderTabs(); renderContent();
+}
+async function renderContent(){
+  const plan=cp?.plan||'free';
+  const el=document.getElementById('content-area');
+  if(!canAccess(plan,mkt)){
+    const mn=mkt==='tw'?'台股':'美股', nd=mkt==='tw'?'台股會員':'美股會員';
+    el.innerHTML=`<div class="locked-banner"><div class="li">🔒</div><div class="lt">需要「${nd}」方案</div><div class="ld">升級後可查看${mn}最新新聞<br>AI 市況摘要與重要事件整理</div><a href="points.html" class="btn btn-primary" style="text-decoration:none">查看升級方案</a></div>`;
+    return;
+  }
+  const mn=mkt==='tw'?'台股':'美股';
+  el.innerHTML=`
+    <div class="ai-bar"><div style="font-size:13px">🤖 <strong style="color:var(--accent)">AI</strong> 摘要今日${mn}重點市況</div><button class="btn btn-primary btn-sm" id="ai-btn" onclick="fetchAI()">AI 分析今日市況</button></div>
+    <div id="ai-result"></div>
+    <div class="cat-row" id="cat-row"></div>
+    <div id="news-list"><div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入中...</div></div></div>`;
+  renderCats(); await loadNews();
+}
+function renderCats(){
+  const cats=mkt==='tw'?[['all','全部'],['hot','熱門'],['earn','法說/財報'],['macro','總經'],['tech','產業']]:[['all','全部'],['hot','熱門'],['earn','財報'],['macro','Fed/總經'],['tech','科技']];
+  document.getElementById('cat-row').innerHTML=cats.map(([k,l])=>`<div class="cat-chip ${k===cat?'on':''}" onclick="setCat('${k}')">${l}</div>`).join('');
+}
+function setCat(c){cat=c;renderCats();renderList();}
+async function loadNews(){
+  const {data}=await sb.from('news').select('*').eq('market',mkt).order('published_at',{ascending:false}).limit(40);
+  allNews=data?.length?data:getSample(mkt); renderList();
+}
+function renderList(){
+  let items=cat==='all'?allNews:allNews.filter(n=>n.category===cat);
+  const el=document.getElementById('news-list');
+  if(!items.length){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px">此分類暫無新聞</div>';return;}
+  el.innerHTML=items.map(n=>{
+    const ago=timeAgo(n.published_at);
+    const cmap={hot:'nc-hot',earn:'nc-earn',macro:'nc-macro',tech:'nc-tech'};
+    const clbl={hot:'熱門',earn:'財報/法說',macro:'總經',tech:'產業'};
+    const sc='sent-'+(n.sentiment||'neutral');
+    const si=n.sentiment==='bull'?'📈':n.sentiment==='bear'?'📉':'➡';
+    const sl=n.sentiment==='bull'?'偏多':n.sentiment==='bear'?'偏空':'中性';
+    return`<a class="news-card" href="${n.url||'#'}" target="${n.url?'_blank':'_self'}" rel="noopener">
+      <div class="news-meta"><span class="news-source">${n.source||'—'}</span><span class="ncb ${cmap[n.category]||''}">${clbl[n.category]||n.category||'—'}</span><span class="news-date">${ago}</span></div>
+      <div class="news-title">${n.title}</div>
+      ${n.summary?`<div class="news-summary">${n.summary}</div>`:''}
+      <div class="news-foot"><span class="${sc}">${si} ${sl}</span>${n.url?'<span style="font-size:11px;color:var(--accent)">閱讀全文 →</span>':''}</div>
+    </a>`;
+  }).join('');
+}
+async function fetchAI(){
+  if(!getAIKey()){showToast('請先設定 AI Key','error');return;}
+  const btn=document.getElementById('ai-btn'); btn.disabled=true; btn.textContent='分析中...';
+  const mn=mkt==='tw'?'台灣股市（台股）':'美國股市（美股）';
+  try{
+    const text=await callAI(`你是資深財經分析師，針對${mn}近期動態：\n1.今日市場情緒（2句）\n2.三個重要觀察重點（條列）\n3.最大風險因子（1-2點）\n4.短線操作建議（1句）\n繁體中文，簡潔。結尾標注⚠資料參考時間。`, 500);
+    document.getElementById('ai-result').innerHTML=`<div class="card" style="padding:16px;margin-bottom:16px;border-color:rgba(0,212,255,.25)"><div class="sec-head" style="margin-bottom:10px">🤖 AI 今日${mkt==='tw'?'台股':'美股'}市況摘要</div><div style="font-size:13px;line-height:1.85;white-space:pre-wrap">${text}</div></div>`;
+  }catch(e){showToast('AI 摘要失敗：'+e.message,'error');}
+  btn.disabled=false; btn.textContent='重新分析';
+}
+function getSample(m){
+  const tw=[
+    {id:1,title:'台積電 CoWoS 產能持續擴充，AI 晶片需求強勁',source:'財訊',market:'tw',category:'hot',sentiment:'bull',summary:'台積電先進封裝需求遠超預期，下半年產能利用率維持高檔。',published_at:new Date(Date.now()-3600000).toISOString()},
+    {id:2,title:'央行維持利率不變，台幣匯率短期走穩',source:'中央社',market:'tw',category:'macro',sentiment:'neutral',summary:'央行總裁表示通膨溫和，短期無升息壓力。',published_at:new Date(Date.now()-7200000).toISOString()},
+    {id:3,title:'鴻海法說：AI 伺服器訂單能見度佳',source:'工商時報',market:'tw',category:'earn',sentiment:'bull',summary:'鴻海第三季營收優於預期，AI 伺服器貢獻度持續上升。',published_at:new Date(Date.now()-10800000).toISOString()},
+    {id:4,title:'外資連續買超台股，電子股領漲',source:'MoneyDJ',market:'tw',category:'hot',sentiment:'bull',summary:'外資本週累計買超逾百億，電子權值股獲青睞。',published_at:new Date(Date.now()-18000000).toISOString()},
+  ];
+  const us=[
+    {id:5,title:'NVIDIA Blackwell 出貨加速，資料中心業務超預期',source:'Bloomberg',market:'us',category:'earn',sentiment:'bull',summary:'輝達最新財報顯示資料中心營收季增超過三成。',published_at:new Date(Date.now()-3600000).toISOString()},
+    {id:6,title:'Fed 官員暗示降息時程延後，市場預期調整',source:'Reuters',market:'us',category:'macro',sentiment:'bear',summary:'聯準會多位官員發表鷹派言論，市場將首次降息預期推遲。',published_at:new Date(Date.now()-7200000).toISOString()},
+    {id:7,title:'Apple WWDC 發表 AI 整合功能，股價應聲上漲',source:'WSJ',market:'us',category:'tech',sentiment:'bull',summary:'蘋果宣布與 OpenAI 合作，Siri 大幅升級。',published_at:new Date(Date.now()-14400000).toISOString()},
+    {id:8,title:'標普500估值偏高，分析師示警回調風險',source:'FT',market:'us',category:'hot',sentiment:'bear',summary:'多家投資銀行警示美股估值過高，建議降低科技股部位。',published_at:new Date(Date.now()-21600000).toISOString()},
+  ];
+  return m==='tw'?tw:us;
+}
+function timeAgo(iso){if(!iso)return'—';const d=(Date.now()-new Date(iso))/1000;if(d<3600)return Math.floor(d/60)+'分鐘前';if(d<86400)return Math.floor(d/3600)+'小時前';return Math.floor(d/86400)+'天前';}
+</script>
+</body>
+</html>

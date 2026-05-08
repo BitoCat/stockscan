@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockScan · 登入</title>
+<link rel="stylesheet" href="css/base.css">
+<style>
+  .auth-wrap {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px 16px; position: relative; z-index: 1;
+  }
+  .auth-box { width: 100%; max-width: 420px; }
+
+  .auth-logo { text-align: center; margin-bottom: 32px; }
+  .auth-logo .big { font-family: 'Bebas Neue',sans-serif; font-size: 52px; letter-spacing: 6px; color: #fff; text-shadow: 0 0 40px rgba(0,212,255,.4); }
+  .auth-logo .big span { color: var(--accent); }
+  .auth-logo .sub { font-family: 'Share Tech Mono',monospace; font-size: 10px; color: var(--muted); letter-spacing: 3px; margin-top: 4px; }
+
+  .tab-switch { display: flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 24px; }
+  .tsw { flex:1; background: transparent; border: none; color: var(--muted); font-family: 'Noto Sans TC',sans-serif; font-size: 14px; padding: 11px; cursor: pointer; transition: all .2s; }
+  .tsw.active { background: var(--accent); color: #000; font-weight: 700; }
+
+  .form-group { margin-bottom: 14px; }
+  .form-group label { font-size: 11px; color: var(--muted); letter-spacing: 1px; display: block; margin-bottom: 6px; }
+
+  .divider { display: flex; align-items: center; gap: 12px; margin: 18px 0; }
+  .divider::before, .divider::after { content:''; flex:1; height:1px; background: var(--border); }
+  .divider span { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+  .plan-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .plan-card {
+    flex: 1; border: 2px solid var(--border); border-radius: 10px;
+    padding: 12px 10px; cursor: pointer; transition: all .2s; text-align: center;
+  }
+  .plan-card:hover { border-color: var(--accent); }
+  .plan-card.selected { border-color: var(--accent); background: rgba(0,212,255,.06); }
+  .plan-icon { font-size: 22px; margin-bottom: 4px; }
+  .plan-name { font-size: 12px; font-weight: 700; color: var(--text); }
+  .plan-desc { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .error-msg { font-size: 12px; color: var(--red); margin-top: 10px; text-align: center; min-height: 18px; }
+  .success-msg { font-size: 12px; color: var(--green); margin-top: 10px; text-align: center; min-height: 18px; }
+
+  .footer-note { text-align: center; margin-top: 20px; font-size: 11px; color: var(--muted); line-height: 1.6; }
+  .footer-note a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-box fade-up">
+    <div class="auth-logo">
+      <div class="big">STOCK<span>SCAN</span></div>
+      <div class="sub">AI 股票健診平台</div>
+    </div>
+
+    <div class="card" style="padding:24px">
+      <div class="tab-switch">
+        <button class="tsw active" id="tab-login" onclick="switchTab('login')">登入</button>
+        <button class="tsw" id="tab-reg" onclick="switchTab('register')">註冊會員</button>
+      </div>
+
+      <!-- 登入表單 -->
+      <div id="form-login">
+        <div class="form-group">
+          <label>電子郵件</label>
+          <input class="inp" id="login-email" type="email" placeholder="your@email.com" />
+        </div>
+        <div class="form-group">
+          <label>密碼</label>
+          <input class="inp" id="login-pass" type="password" placeholder="••••••••"
+            onkeydown="if(event.key==='Enter')doLogin()" />
+        </div>
+        <div class="error-msg" id="login-err"></div>
+        <button class="btn btn-primary btn-full" id="login-btn" onclick="doLogin()">🔐 登入</button>
+        <div class="divider"><span>或</span></div>
+        <button class="btn btn-ghost btn-full" onclick="doGoogleLogin()">🔵 Google 登入</button>
+        <div class="footer-note" style="margin-top:14px">
+          <a href="#" onclick="switchTab('register')">還沒有帳號？立即免費註冊</a>
+        </div>
+      </div>
+
+      <!-- 註冊表單 -->
+      <div id="form-register" style="display:none">
+        <div class="form-group">
+          <label>顯示名稱</label>
+          <input class="inp" id="reg-name" type="text" placeholder="你的暱稱" />
+        </div>
+        <div class="form-group">
+          <label>電子郵件</label>
+          <input class="inp" id="reg-email" type="email" placeholder="your@email.com" />
+        </div>
+        <div class="form-group">
+          <label>密碼（至少 8 字元）</label>
+          <input class="inp" id="reg-pass" type="password" placeholder="設定密碼" />
+        </div>
+
+        <div class="form-group">
+          <label>選擇方案</label>
+          <div class="plan-row">
+            <div class="plan-card selected" id="plan-free" onclick="selectPlan('free')">
+              <div class="plan-icon">🆓</div>
+              <div class="plan-name">免費版</div>
+              <div class="plan-desc">每日 5 次健診</div>
+            </div>
+            <div class="plan-card" id="plan-pro" onclick="selectPlan('pro')">
+              <div class="plan-icon">⭐</div>
+              <div class="plan-name">Pro 版</div>
+              <div class="plan-desc">無限 + 推播通知</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="error-msg" id="reg-err"></div>
+        <div class="success-msg" id="reg-ok"></div>
+        <button class="btn btn-green btn-full" id="reg-btn" onclick="doRegister()">✨ 建立帳號</button>
+        <div class="footer-note" style="margin-top:14px">
+          <a href="#" onclick="switchTab('login')">已有帳號？直接登入</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-note">
+      © StockScan · 僅供參考，不構成投資建議
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script>
+  let selectedPlan = 'free';
+
+  // 若已登入直接跳主頁
+  (async () => {
+    const user = await getUser();
+    if (user) window.location.href = 'index.html';
+  })();
+
+  function switchTab(t) {
+    document.getElementById('form-login').style.display    = t==='login'    ? 'block' : 'none';
+    document.getElementById('form-register').style.display = t==='register' ? 'block' : 'none';
+    document.getElementById('tab-login').classList.toggle('active', t==='login');
+    document.getElementById('tab-reg').classList.toggle('active', t==='register');
+  }
+
+  function selectPlan(p) {
+    selectedPlan = p;
+    document.getElementById('plan-free').classList.toggle('selected', p==='free');
+    document.getElementById('plan-pro').classList.toggle('selected',  p==='pro');
+  }
+
+  async function doLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const pass  = document.getElementById('login-pass').value;
+    const btn   = document.getElementById('login-btn');
+    const err   = document.getElementById('login-err');
+    err.textContent = '';
+    if (!email || !pass) { err.textContent = '請填寫完整資料'; return; }
+    btn.disabled = true; btn.textContent = '登入中...';
+    const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) { err.textContent = '❌ ' + (error.message === 'Invalid login credentials' ? '帳號或密碼錯誤' : error.message); btn.disabled = false; btn.textContent = '🔐 登入'; }
+    else window.location.href = 'index.html';
+  }
+
+  async function doGoogleLogin() {
+    await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + '/index.html' } });
+  }
+
+  async function doRegister() {
+    const name  = document.getElementById('reg-name').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const pass  = document.getElementById('reg-pass').value;
+    const btn   = document.getElementById('reg-btn');
+    const err   = document.getElementById('reg-err');
+    const ok    = document.getElementById('reg-ok');
+    err.textContent = ''; ok.textContent = '';
+    if (!name || !email || !pass) { err.textContent = '請填寫所有欄位'; return; }
+    if (pass.length < 8)          { err.textContent = '密碼至少 8 個字元'; return; }
+    btn.disabled = true; btn.textContent = '建立中...';
+
+    const { data, error } = await sb.auth.signUp({
+      email, password: pass,
+      options: { data: { display_name: name, plan: selectedPlan } }
+    });
+
+    if (error) {
+      err.textContent = '❌ ' + error.message;
+      btn.disabled = false; btn.textContent = '✨ 建立帳號';
+    } else {
+      ok.textContent = '✅ 驗證信已寄出！請至信箱確認後登入。';
+      btn.textContent = '已寄出驗證信';
+    }
+  }
+
+  function showToast(msg, type='') {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = 'show ' + type;
+    setTimeout(() => t.className = '', 2800);
+  }
+</script>
+</body>
+</html>
