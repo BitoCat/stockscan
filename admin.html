@@ -70,6 +70,7 @@
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
           <input type="checkbox" id="ann-pinned"> 置頂顯示
         </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="ann-home"> 顯示在首頁</label>
         <button class="btn btn-green btn-sm" onclick="postAnnouncement()">📤 發布公告</button>
       </div>
     </div>
@@ -97,6 +98,7 @@
           <input class="key-inp" id="news-source" placeholder="來源" style="flex:1;min-width:100px;font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0">
           <input class="key-inp" id="news-url" placeholder="連結（選填）" style="flex:1;min-width:120px;font-size:12px">
         </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="news-home"> 顯示在首頁</label>
         <button class="btn btn-green btn-sm" onclick="postNews()">📤 發布新聞</button>
       </div>
     </div>
@@ -125,6 +127,7 @@
             <option value="bear">📉 偏空</option>
           </select>
         </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="da-home"> 顯示在首頁</label>
         <button class="btn btn-green btn-sm" onclick="postDailyAnalysis()">📤 發布解析</button>
       </div>
     </div>
@@ -151,6 +154,7 @@
           </select>
           <input class="key-inp" id="tut-emoji" placeholder="封面Emoji" style="width:100px;font-size:18px;text-align:center">
         </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="tut-home"> 顯示在首頁</label>
         <button class="btn btn-green btn-sm" onclick="postTutorial()">📤 發布教學</button>
       </div>
     </div>
@@ -295,7 +299,8 @@ async function postAnnouncement() {
   const url = document.getElementById("ann-url").value.trim() || null;
   const is_pinned = document.getElementById("ann-pinned").checked;
   if (!title) { showToast("請填寫標題", "error"); return; }
-  const res = await sb.from("announcements").insert({ title, content, url, is_pinned, published_at: new Date().toISOString() });
+  const show_on_home = document.getElementById("ann-home").checked;
+  const res = await sb.from("announcements").insert({ title, content, url, is_pinned, show_on_home, published_at: new Date().toISOString() });
   if (res.error) { showToast("發布失敗: " + res.error.message, "error"); return; }
   showToast("公告已發布", "success");
   document.getElementById("ann-title").value = "";
@@ -310,7 +315,8 @@ async function postNews() {
   const source = document.getElementById("news-source").value.trim() || "交易大師";
   const url = document.getElementById("news-url").value.trim() || null;
   if (!title) { showToast("請填寫標題", "error"); return; }
-  const res = await sb.from("news").insert({ title, summary, category, sentiment, source, url, published_at: new Date().toISOString() });
+  const show_on_home = document.getElementById("news-home").checked;
+  const res = await sb.from("news").insert({ title, summary, category, sentiment, source, url, show_on_home, published_at: new Date().toISOString() });
   if (res.error) { showToast("發布失敗", "error"); return; }
   showToast("新聞已發布", "success");
   document.getElementById("news-title").value = "";
@@ -323,7 +329,8 @@ async function postDailyAnalysis() {
   const market = document.getElementById("da-market").value;
   const sentiment = document.getElementById("da-sent").value;
   if (!title || !content) { showToast("請填寫標題和內容", "error"); return; }
-  const res = await sb.from("daily_analysis").insert({ title, content, market, sentiment, published_at: new Date().toISOString() });
+  const show_on_home = document.getElementById("da-home").checked;
+  const res = await sb.from("daily_analysis").insert({ title, content, market, sentiment, show_on_home, published_at: new Date().toISOString() });
   if (res.error) { showToast("發布失敗", "error"); return; }
   showToast("盤面解析已發布", "success");
   document.getElementById("da-title").value = "";
@@ -336,7 +343,8 @@ async function postTutorial() {
   const category = document.getElementById("tut-cat").value;
   const cover_emoji = document.getElementById("tut-emoji").value.trim() || "📚";
   if (!title) { showToast("請填寫標題", "error"); return; }
-  const res = await sb.from("tutorials").insert({ title, content, category, cover_emoji, published_at: new Date().toISOString() });
+  const show_on_home = document.getElementById("tut-home").checked;
+  const res = await sb.from("tutorials").insert({ title, content, category, cover_emoji, show_on_home, published_at: new Date().toISOString() });
   if (res.error) { showToast("發布失敗", "error"); return; }
   showToast("教學已發布", "success");
   document.getElementById("tut-title").value = "";
