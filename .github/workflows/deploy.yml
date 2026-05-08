@@ -2,21 +2,32 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
+  schedule:
+    - cron: '0 1 * * *'
   workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Inject Groq API Key
         run: |
-          sed -i "s|const DEFAULT_AI_KEY = '';|const DEFAULT_AI_KEY = '${{ secrets.GROQ_API_KEY }}';|g" js/supabase.js
-      
+          if [ -f js/ai.js ]; then
+            sed -i 's|GROQ_API_KEY_PLACEHOLDER|${{ secrets.GROQ_API_KEY }}|g' js/ai.js
+          fi
+
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./
+          exclude_assets: '.github'
