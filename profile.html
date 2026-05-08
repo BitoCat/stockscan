@@ -278,8 +278,8 @@ async function loadMembers() {
     "<option value='all' "+(m.plan==="all"?"selected":"")+">全市場</option>" +
     "<option value='admin' "+(m.plan==="admin"?"selected":"")+">Admin</option>" +
     "</select>" +
-    "<button class='btn btn-green btn-sm' onclick='addPointsForUser(this.dataset.uid,this.dataset.name)' data-uid='"+m.id+"' data-name='"+(m.display_name||"user").replace(/'/g,"")+"'>" +
-    "+點數</button>"
+    "<button class='btn btn-green btn-sm' onclick='addPointsForUser(this.dataset.uid,this.dataset.name)' data-uid='"+m.id+"' data-name='"+(m.display_name||"user").replace(/'/g,"")+"'">+points</button>" +
+    "</div></div>"
   ).join("");
 }
 
