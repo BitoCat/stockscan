@@ -218,7 +218,7 @@ async function analyze() {
     const clean = raw.replace(/```json|```/g, '').trim();
     let obj;
     try { obj = JSON.parse(clean); } catch(e) { const m=clean.match(/\{[\s\S]*\}/); obj=JSON.parse(m[0]); }
-    if (livePrice?.price) { obj.currentPrice=livePrice.price; obj.changePct=livePrice.changePct; obj.stockName=livePrice.name; }
+    if (livePrice?.price) { obj.currentPrice=livePrice.price; obj.changePct=livePrice.changePct; obj.stockName=livePrice.name; obj.support_s=livePrice.support_s; obj.resistance_s=livePrice.resistance_s; obj.support=livePrice.support; obj.resistance=livePrice.resistance; obj.support_l=livePrice.support_l; obj.resistance_l=livePrice.resistance_l; }
     lastResult = {...obj, symbol:sym, market:currentMkt};
     await deductPoint(currentUser.id, "AI 健診："+sym);
     const newPts = await getPoints(currentUser.id);
