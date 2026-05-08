@@ -128,3 +128,34 @@ async function callAI(prompt, maxTokens = 1000) {
     return data.content.map(b => b.text || '').join('');
   }
 }
+
+// ── 每日自動補點 ────────────────────────
+async function dailyBonus(userId) {
+  const today = new Date().toDateString();
+  const storageKey = 'daily_bonus_' + userId;
+  
+  // 檢查今天是否已補過
+  if (localStorage.getItem(storageKey) === today) return false;
+  
+  // 檢查 point_logs 今日是否已有補點記錄（防多裝置重複）
+  const todayISO = new Date().toISOString().split('T')[0];
+  const { data } = await sb.from('point_logs')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('description', '每日登入補點')
+    .gte('created_at', todayISO + 'T00:00:00')
+    .limit(1);
+  
+  if (data && data.length > 0) {
+    localStorage.setItem(storageKey, today);
+    return false; // 已補過
+  }
+  
+  // 補 100 點
+  const ok = await addPoints(userId, 100, '每日登入補點');
+  if (ok) {
+    localStorage.setItem(storageKey, today);
+    return true;
+  }
+  return false;
+}
