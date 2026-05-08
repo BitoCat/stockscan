@@ -1,0 +1,60 @@
+# 交易大師 專案摘要（貼給 Claude 用）
+
+## 專案概況
+網站名稱：交易大師
+網站網址：https://bitocat.github.io/stockscan
+GitHub：https://github.com/BitoCat/stockscan
+技術：純靜態 HTML+JS，GitHub Pages 託管，GitHub Actions 自動部署
+
+## 重要服務
+- Supabase URL：https://kldumnxdlgovaxtiszyn.supabase.co
+- Supabase ANON Key：存在 js/supabase.js
+- Groq API Key：存在用戶 localStorage (ai_key)，管理員透過後台發放
+- GitHub Token：本機 git remote，Classic Token 需有 repo+workflow 權限
+
+## 所有頁面
+- index.html：首頁儀表板（公告/新聞/教學/盤面精選標題）
+- diagnosis.html：AI 股票健診（Yahoo Finance即時技術指標+Groq AI分析）
+- daily.html：每日盤面解析（管理員發布，支援Markdown+圖片）
+- news.html：市場新聞（AI生成，4個分類Tab）
+- announcement.html：官方公告（管理員發布，支援置頂）
+- tutorial.html：投資教學（管理員發布，支援Markdown+圖片）
+- watchlist.html：觀察名單
+- contact.html：聯繫管理員（用戶申請Groq Key）
+- profile.html：我的帳號（AI設定/方案/帳號）
+- admin.html：管理後台（訊息回覆/會員管理/發布內容）
+- login.html：登入/註冊
+
+## Supabase 資料表
+- profiles：用戶資料（plan欄位：free/tw/us/all/admin）
+- points：點數餘額
+- point_logs：點數記錄
+- watchlist：觀察名單
+- messages：用戶訊息（status: pending/replied，可附groq_key）
+- news：市場新聞（show_on_home欄位控制首頁顯示）
+- announcements：官方公告（is_pinned, show_on_home）
+- tutorials：教學文章（show_on_home）
+- daily_analysis：每日盤面解析（show_on_home）
+- storage bucket：images（管理員上傳圖片用）
+
+## 用戶方案邏輯
+- free：功能全鎖，只能看首頁，需聯繫管理員開通
+- tw/us/all/admin：功能全開
+- 每日登入自動補100點，AI健診每次扣1點
+
+## 本機開發
+專案路徑：~/Documents/stockscan
+部署方式：git add . && git commit -m "說明" && git push origin main
+部署完成：約1分鐘，Cmd+Shift+R 清除快取
+
+## 目前已知問題/注意事項
+- JS 字串內禁止用全形字元（會造成 SyntaxError）
+- template literal 內有全形字元不會出錯，但字串外會
+- 每次修改 JS 後用 node 驗證語法：
+  node -e "const fs=require('fs');const html=fs.readFileSync('檔案.html','utf8');const start=html.indexOf('<script>');const end=html.indexOf('</script>',start);const AF=Object.getPrototypeOf(async function(){}).constructor;try{new AF(html.slice(start+8,end));console.log('OK');}catch(e){console.log('ERR:',e.message);}"
+- GitHub Actions 版本要用 v4（v3已棄用）
+- Yahoo Finance 需透過 CORS proxy 抓取
+
+## 管理員帳號
+Email：bitocat.trader@gmail.com
+plan：admin
