@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>StockScan · 市場新聞</title>
+<title>交易大師 · 市場新聞</title>
 <link rel="stylesheet" href="css/base.css">
 <style>
 .cat-tabs { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:16px; scrollbar-width:none; }
@@ -32,7 +32,7 @@
 </head>
 <body>
 <nav class="topnav">
-  <a class="logo" href="index.html"><span class="logo-main">STOCK<span>SCAN</span></span><span class="logo-ver">PRO</span></a>
+  <a class="logo" href="index.html"><span class="logo-main">交易<span>大師</span></span><span class="logo-ver">PRO</span></a>
   <div style="display:flex;align-items:center;gap:8px">
     <span id="nav-plan" class="plan-badge plan-free">FREE</span>
     <button class="btn btn-ghost btn-sm" onclick="signOut()">登出</button>
@@ -40,7 +40,8 @@
 </nav>
 <div class="page-wrap">
   <div class="cat-tabs">
-    <button class="cat-tab active" id="tab-macro" onclick="setTab('macro')">🌐 總經/Fed</button>
+    <button class="cat-tab active" id="tab-official" onclick="setTab('official')">📢 交易大師新聞</button>
+    <button class="cat-tab" id="tab-macro" onclick="setTab('macro')">🌐 總經/Fed</button>
     <button class="cat-tab" id="tab-us" onclick="setTab('us')">🇺🇸 美股科技</button>
     <button class="cat-tab" id="tab-tw" onclick="setTab('tw')">🇹🇼 台股產業</button>
     <button class="cat-tab" id="tab-crypto" onclick="setTab('crypto')">₿ 加密貨幣</button>
@@ -84,18 +85,24 @@ let newsCache = {};
     document.getElementById('last-update').textContent = '需要開通會員';
     return;
   }
-  await loadNews('macro');
+  await loadNews('official');
 })();
 
 function setTab(tab) {
   currentTab = tab;
-  ['macro','us','tw','crypto'].forEach(t => {
+  ['official','macro','us','tw','crypto'].forEach(t => {
     document.getElementById('tab-'+t).classList.toggle('active', t === tab);
   });
   loadNews(tab);
 }
 
 const TAB_CONFIG = {
+  official: {
+    label: '交易大師新聞', emoji: '📢',
+    sources: ['交易大師'],
+    keywords: '交易大師官方公告',
+    prompt_hint: '這是官方新聞區'
+  },
   macro: {
     label: '總經/Fed', emoji: '🌐',
     sources: ['Reuters', 'Bloomberg', 'WSJ', 'Financial Times', 'CNBC', '鉅亨網', '經濟日報', 'Nikkei Asia'],
@@ -123,6 +130,34 @@ const TAB_CONFIG = {
 };
 
 async function loadNews(tab, force = false) {
+  // 官方新聞從 Supabase 抓
+  if (tab === 'official') {
+    document.getElementById('news-list').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入官方新聞...</div></div>';
+    document.getElementById('last-update').textContent = '載入中...';
+    const { data, error } = await sb.from('news').select('*').order('published_at', { ascending: false }).limit(20);
+    const now = new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'});
+    document.getElementById('last-update').textContent = '更新於 ' + now;
+    if (error || !data || !data.length) {
+      document.getElementById('news-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">暫無官方新聞</div>';
+      return;
+    }
+    const sentIcon = s => s==='bull'?'📈':s==='bear'?'📉':'➡️';
+    const sentColor = s => s==='bull'?'var(--green)':s==='bear'?'var(--red)':'var(--muted)';
+    const sentLabel = s => s==='bull'?'偏多':s==='bear'?'偏空':'中性';
+    document.getElementById('news-list').innerHTML = data.map(n => {
+      const ago = timeAgo(n.published_at);
+      return "<div class='news-card'>" +
+        "<div class='news-meta'><span class='news-source'>" + (n.source||'交易大師') + "</span>" +
+        "<span class='news-lang'>官方</span>" +
+        "<span class='news-date'>" + ago + "</span></div>" +
+        "<div class='news-title'>" + n.title + "</div>" +
+        (n.summary ? "<div class='ai-summary show'><strong style='color:var(--accent);font-size:11px'>📌 摘要</strong><br>" + n.summary + "</div>" : "") +
+        "<div class='news-foot'><span style='font-size:11px;color:" + sentColor(n.sentiment) + "'>" + sentIcon(n.sentiment) + " " + sentLabel(n.sentiment) + "</span>" +
+        (n.url ? "<a href='" + n.url + "' target='_blank' style='font-size:11px;color:var(--accent);text-decoration:none'>閱讀全文 →</a>" : "") +
+        "</div></div>";
+    }).join('');
+    return;
+  }
   if (newsCache[tab] && !force) {
     renderNews(newsCache[tab], tab);
     return;

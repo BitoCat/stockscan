@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StockScan · 我的帳號</title>
+<title>交易大師 · 我的帳號</title>
 <link rel="stylesheet" href="css/base.css">
 <style>
   .avatar {
@@ -53,7 +53,7 @@
 <body>
 <nav class="topnav">
   <a class="logo" href="index.html">
-    <span class="logo-main">STOCK<span>SCAN</span></span>
+    <span class="logo-main">交易<span>大師</span></span>
   </a>
   <button class="btn btn-ghost btn-sm" onclick="signOut()">登出</button>
 </nav>
@@ -306,7 +306,7 @@ async function postNews() {
   const summary = document.getElementById("news-summary").value.trim();
   const category = document.getElementById("news-cat").value;
   const sentiment = document.getElementById("news-sent").value;
-  const source = document.getElementById("news-source").value.trim() || "StockScan";
+  const source = document.getElementById("news-source").value.trim() || "交易大師";
   const url = document.getElementById("news-url").value.trim() || null;
   if (!title) { showToast("請填寫標題", "error"); return; }
   const res = await sb.from("news").insert({ title: title, summary: summary, category: category, sentiment: sentiment, source: source, url: url, published_at: new Date().toISOString() });
