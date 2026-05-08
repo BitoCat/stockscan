@@ -63,42 +63,6 @@
 <script>
 let cu = null, cp = null, currentTab = 'macro';
 let newsCache = {};
-let aiSummaries = {};
-
-// RSS 來源設定
-// Google News RSS - 不需要 CORS proxy，直接用 allorigins 抓
-const GN = 'https://news.google.com/rss/search?hl=zh-TW&gl=TW&ceid=TW:zh-Hant&q=';
-const GN_EN = 'https://news.google.com/rss/search?hl=en-US&gl=US&ceid=US:en&q=';
-
-const RSS_SOURCES = {
-  macro: [
-    { name: 'Google財經', url: GN + encodeURIComponent('聯準會 Fed 降息 總經'), lang: '中' },
-    { name: 'Google財經', url: GN + encodeURIComponent('美國經濟 通膨 利率'), lang: '中' },
-    { name: 'Google News', url: GN_EN + encodeURIComponent('Federal Reserve interest rate inflation economy'), lang: 'EN' },
-    { name: 'Google News', url: GN_EN + encodeURIComponent('GDP recession treasury yield'), lang: 'EN' },
-  ],
-  us: [
-    { name: 'Google財經', url: GN + encodeURIComponent('美股 納斯達克 科技股 NVIDIA Apple'), lang: '中' },
-    { name: 'Google財經', url: GN + encodeURIComponent('美股 S&P500 道瓊 財報'), lang: '中' },
-    { name: 'Google News', url: GN_EN + encodeURIComponent('US stocks NASDAQ tech earnings NVIDIA Apple Microsoft'), lang: 'EN' },
-    { name: 'Google News', url: GN_EN + encodeURIComponent('S&P500 Dow Jones stock market'), lang: 'EN' },
-  ],
-  tw: [
-    { name: 'Google台股', url: GN + encodeURIComponent('台積電 台股 電子股'), lang: '中' },
-    { name: 'Google台股', url: GN + encodeURIComponent('台灣股市 鴻海 聯發科 法說會'), lang: '中' },
-    { name: 'Google台股', url: GN + encodeURIComponent('台股 外資 投信 買超 賣超'), lang: '中' },
-    { name: 'Google台股', url: GN + encodeURIComponent('台灣半導體 AI伺服器 CoWoS'), lang: '中' },
-  ],
-  crypto: [
-    { name: 'Google幣圈', url: GN + encodeURIComponent('比特幣 以太幣 加密貨幣'), lang: '中' },
-    { name: 'Google幣圈', url: GN + encodeURIComponent('BTC ETH 幣安 虛擬貨幣'), lang: '中' },
-    { name: 'Google Crypto', url: GN_EN + encodeURIComponent('Bitcoin Ethereum cryptocurrency crypto'), lang: 'EN' },
-    { name: 'Google Crypto', url: GN_EN + encodeURIComponent('BTC ETH Binance blockchain'), lang: 'EN' },
-  ]
-};
-
-const PROXY = 'https://api.allorigins.win/get?url=';
-const PROXY2 = 'https://corsproxy.io/?';
 
 (async () => {
   cu = await requireAuth();
@@ -118,167 +82,92 @@ function setTab(tab) {
   loadNews(tab);
 }
 
+const TAB_CONFIG = {
+  macro: { label: '總經/Fed', emoji: '🌐', keywords: '聯準會Fed利率通膨美國經濟GDP就業數據' },
+  us:    { label: '美股科技', emoji: '🇺🇸', keywords: 'NVIDIA Apple Microsoft Google Tesla Amazon美股納斯達克財報' },
+  tw:    { label: '台股產業', emoji: '🇹🇼', keywords: '台積電鴻海聯發科台股外資法說會半導體AI伺服器' },
+  crypto:{ label: '加密貨幣', emoji: '₿',  keywords: 'Bitcoin以太幣BTC ETH幣安加密貨幣區塊鏈' },
+};
+
 async function loadNews(tab, force = false) {
   if (newsCache[tab] && !force) {
-    renderNews(newsCache[tab]);
+    renderNews(newsCache[tab], tab);
     return;
   }
-  document.getElementById('news-list').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">抓取最新新聞...</div></div>';
+
+  document.getElementById('news-list').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">AI 整理最新市場動態...</div></div>';
   document.getElementById('last-update').textContent = '載入中...';
 
-  const sources = RSS_SOURCES[tab];
-  const allItems = [];
-
-  await Promise.allSettled(sources.map(async (src) => {
-    try {
-      const items = await fetchRSS(src.url, src.name, src.lang);
-      allItems.push(...items);
-    } catch(e) {
-      console.log('RSS 失敗:', src.name, e);
-    }
-  }));
-
-  // 排序：最新優先
-  allItems.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  // 最多顯示30則
-  const final = allItems.slice(0, 30);
-  newsCache[tab] = final;
-
-  const now = new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'});
-  document.getElementById('last-update').textContent = `更新於 ${now}`;
-
-  renderNews(final);
-}
-
-async function fetchRSS(url, sourceName, lang) {
-  let xml = null;
-
-  const proxies = [
-    'https://api.allorigins.win/get?url=' + encodeURIComponent(url),
-    'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(url),
-    'https://corsproxy.io/?' + encodeURIComponent(url),
-  ];
-
-  for (const proxy of proxies) {
-    try {
-      const r = await fetch(proxy, { signal: AbortSignal.timeout(8000) });
-      const data = await r.json();
-
-      // rss2json 格式
-      if (data?.items?.length > 0) {
-        return data.items.slice(0, 6).map(item => ({
-          title: (item.title || '').slice(0, 100),
-          url: item.link || item.url || '#',
-          date: item.pubDate ? new Date(item.pubDate) : new Date(),
-          source: sourceName,
-          lang: lang,
-          desc: (item.description || item.content || '').replace(/<[^>]*>/g, '').trim().slice(0, 150),
-        })).filter(i => i.title.length > 5);
-      }
-
-      // allorigins 格式
-      const rawContent = data?.contents || (typeof data === 'string' ? data : null);
-      if (rawContent && rawContent.includes('<item')) {
-        xml = rawContent;
-        break;
-      }
-    } catch(e) { continue; }
+  const key = getAIKey();
+  if (!key) {
+    document.getElementById('news-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">請先在「我的」頁面設定 AI Key</div>';
+    return;
   }
 
-  if (!xml) return [];
+  const cfg = TAB_CONFIG[tab];
+  const today = new Date().toLocaleDateString('zh-TW');
+  const prompt = `你是專業財經新聞編輯。今天是${today}。
 
-  // 解析 XML
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(xml, 'text/xml');
-  const items = doc.querySelectorAll('item');
-  const results = [];
+請針對「${cfg.label}」主題（關鍵字：${cfg.keywords}），
+整理10則最新重要新聞，以JSON陣列輸出：
 
-  items.forEach((item, idx) => {
-    if (idx >= 6) return; // 每個來源最多6則
-    const title = item.querySelector('title')?.textContent?.trim() || '';
-    const link = item.querySelector('link')?.textContent?.trim() ||
-                 item.querySelector('link')?.getAttribute('href') || '#';
-    const pubDate = item.querySelector('pubDate')?.textContent ||
-                    item.querySelector('published')?.textContent || '';
-    const desc = item.querySelector('description')?.textContent?.trim() || '';
+[
+  {
+    "title": "新聞標題（繁體中文，50字內）",
+    "source": "來源媒體名稱",
+    "lang": "中或EN",
+    "summary": "3行重點摘要（繁體中文）",
+    "sentiment": "bull或bear或neutral",
+    "url": "相關搜尋連結或留空"
+  }
+]
 
-    if (!title || title.length < 5) return;
+要求：
+- 標題要具體，含公司名/數字/事件
+- 中英文來源各約5則
+- sentiment要準確反映新聞內容
+- 只輸出JSON，不含其他文字`;
 
-    // 清除 HTML tags
-    const cleanDesc = desc.replace(/<[^>]*>/g, '').trim().slice(0, 150);
-
-    results.push({
-      title: title.slice(0, 100),
-      url: link,
-      date: pubDate ? new Date(pubDate) : new Date(),
-      source: sourceName,
-      lang: lang,
-      desc: cleanDesc,
-    });
-  });
-
-  return results;
+  try {
+    const raw = await callAI(prompt, 2000);
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const items = JSON.parse(clean);
+    newsCache[tab] = items;
+    const now = new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'});
+    document.getElementById('last-update').textContent = `AI 更新於 ${now}`;
+    renderNews(items, tab);
+  } catch(e) {
+    document.getElementById('news-list').innerHTML = `<div style="text-align:center;padding:40px;color:var(--red);font-size:13px">載入失敗：${e.message}</div>`;
+  }
 }
 
-function renderNews(items) {
+function renderNews(items, tab) {
   const el = document.getElementById('news-list');
   if (!items || !items.length) {
-    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">暫無新聞，請稍後重試</div>';
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">暫無新聞</div>';
     return;
   }
   el.innerHTML = items.map((n, idx) => {
-    const ago = timeAgo(n.date);
-    const langBadge = `<span class="news-lang">${n.lang}</span>`;
-    const hasSummary = aiSummaries[idx];
+    const sentIcon = n.sentiment === 'bull' ? '📈' : n.sentiment === 'bear' ? '📉' : '➡️';
+    const sentColor = n.sentiment === 'bull' ? 'var(--green)' : n.sentiment === 'bear' ? 'var(--red)' : 'var(--muted)';
+    const sentLabel = n.sentiment === 'bull' ? '偏多' : n.sentiment === 'bear' ? '偏空' : '中性';
     return `<div class="news-card">
       <div class="news-meta">
-        <span class="news-source">${n.source}</span>
-        ${langBadge}
-        <span class="news-date">${ago}</span>
+        <span class="news-source">${n.source || 'AI整理'}</span>
+        <span class="news-lang">${n.lang || '中'}</span>
       </div>
-      <div class="news-title"><a href="${n.url}" target="_blank" rel="noopener">${n.title}</a></div>
-      ${n.desc ? `<div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:6px">${n.desc}</div>` : ''}
-      <div id="ai-box-${idx}" class="ai-summary ${hasSummary ? 'show' : ''}">${hasSummary || ''}</div>
+      <div class="news-title">${n.title}</div>
+      <div class="ai-summary show">
+        <strong style="color:var(--accent);font-size:11px">🤖 重點摘要</strong><br>
+        ${(n.summary || '').replace(/
+/g, '<br>')}
+      </div>
       <div class="news-foot">
-        <button class="ai-btn" id="ai-btn-${idx}" onclick="getAISummary(${idx}, this)">
-          ${hasSummary ? '✅ AI 摘要' : '🤖 AI 重點摘要'}
-        </button>
-        <a href="${n.url}" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:none">閱讀全文 →</a>
+        <span style="font-size:11px;color:${sentColor}">${sentIcon} ${sentLabel}</span>
+        ${n.url ? `<a href="${n.url}" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:none">搜尋相關 →</a>` : ''}
       </div>
     </div>`;
   }).join('');
-}
-
-async function getAISummary(idx, btn) {
-  if (aiSummaries[idx]) {
-    // 切換顯示/隱藏
-    const box = document.getElementById('ai-box-' + idx);
-    box.classList.toggle('show');
-    return;
-  }
-
-  const key = getAIKey();
-  if (!key) { showToast('請先設定 AI Key', 'error'); return; }
-
-  btn.disabled = true;
-  btn.textContent = '分析中...';
-
-  const news = newsCache[currentTab][idx];
-  const prompt = 'You are a financial news analyst. Summarize this news in Traditional Chinese with 3 key points. Be concise. Format: "• point1\n• point2\n• point3"\n\nTitle: ' + news.title + '\nContent: ' + (news.desc || news.title);
-
-  try {
-    const summary = await callAI(prompt, 300);
-    aiSummaries[idx] = summary;
-    const box = document.getElementById('ai-box-' + idx);
-    box.innerHTML = '<strong style="color:var(--accent);font-size:11px">🤖 AI 重點</strong><br>' + summary.replace(/\n/g, '<br>');
-    box.classList.add('show');
-    btn.textContent = '✅ AI 摘要';
-  } catch(e) {
-    showToast('摘要失敗: ' + e.message, 'error');
-    btn.textContent = '🤖 AI 重點摘要';
-  }
-  btn.disabled = false;
 }
 
 function timeAgo(date) {
