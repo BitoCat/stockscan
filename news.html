@@ -170,7 +170,7 @@ function renderNews(items, tab) {
       </div>
       <div class="news-foot">
         <span style="font-size:11px;color:${sentColor}">${sentIcon} ${sentLabel}</span>
-        ${n.searchUrl ? `<a href="${n.searchUrl}" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:none">🔍 搜尋相關 →</a>` : ''}
+        <a href="https://news.google.com/search?q=${encodeURIComponent(n.title)}&hl=zh-TW" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:none">🔍 搜尋原文 →</a>
       </div>
     </div>`;
   }).join('');
