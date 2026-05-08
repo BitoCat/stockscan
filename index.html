@@ -327,15 +327,8 @@ async function analyze() {
   } catch(e) { console.log('股價抓取失敗', e); }
 
   const market = currentMkt === 'tw' ? '台灣股市(台股)' : '美國股市(美股)';
-  const companyHint = livePrice?.name ? `公司名稱是「${livePrice.name}」，` : '';
-  const prompt = `你是頂級股票分析師，擁有20年經驗。${companyHint}請對${market}股票代號「${sym}」進行分析。${priceContext}
-
-Please output pure JSON only, no markdown, format:
-{"stockName":"公司全名","sector":"產業別","healthScore":75,"grade":"強力買進","trend":"上升","peRatio":"估計PE","support":"支撐位","resistance":"壓力位","signals":[{"type":"bull","text":"具體多頭信號"},{"type":"bear","text":"具體空頭風險"},{"type":"neutral","text":"中性觀察"}],"analysis":"【公司簡介】說明核心業務與市場地位。【基本面分析】營收獲利趨勢、毛利率、財報重點。【技術面分析】股價位置、趨勢、支撐壓力位。【產業競爭地位】產業景氣與競爭優勢劣勢。【短中長期展望】各時期走勢預測與催化劑。【風險提示】三項具體風險說明。⚠資料參考時間：約2025年"}
-
-grade only: buy/sell/hold - must be one of: 強力買進、買進、谷底反彈機會、觀察等待、持有、減碼、避開
-analysis must be 600+ words in traditional Chinese.`;
-
+  const companyHint = livePrice?.name ? "公司名稱是" + livePrice.name + "，" : "";
+  const prompt = "你是頂級股票分析師，擁有20年經驗。" + companyHint + "請對" + market + "股票代號「" + sym + "」進行分析。" + priceContext + "\n\n請只輸出純JSON，不含任何markdown符號，格式如下：\n{\"stockName\":\"公司全名\",\"sector\":\"產業別\",\"healthScore\":75,\"grade\":\"強力買進\",\"trend\":\"上升\",\"peRatio\":\"估計PE\",\"support\":\"支撐位\",\"resistance\":\"壓力位\",\"signals\":[{\"type\":\"bull\",\"text\":\"多頭信號\"},{\"type\":\"bear\",\"text\":\"空頭風險\"},{\"type\":\"neutral\",\"text\":\"中性觀察\"}],\"analysis\":\"600字以上深度分析，包含公司簡介、基本面、技術面、產業競爭、短中長期展望、風險提示\"}\ngrade must be one of: 強力買進、買進、谷底反彈機會、觀察等待、持有、減碼、避開";
   try {
     const raw = await callAI(prompt, 2500);
     const m = raw.match(/```json\s*([\s\S]*?)\s*```/);
