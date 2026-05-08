@@ -238,7 +238,7 @@ function renderProfile() {
 function loadSavedKey() {
   const k = localStorage.getItem('ai_key') || '';
   document.getElementById('ai-key-inp').value = k;
-  if (k) document.getElementById('key-status').innerHTML = '✅ <span style="color:var(--green)">已設定 API Key</span>';
+  if (k) document.getElementById("key-status").innerHTML = "<span style='color:var(--green)'>已設定 API Key</span>";
 }
 
 function saveKey() {
@@ -246,7 +246,7 @@ function saveKey() {
   if (!k) { showToast('請輸入 API Key', 'error'); return; }
   if (!k.startsWith('sk-ant-') && !k.startsWith('gsk_')) { showToast('Key 格式不正確（應以 sk-ant- 或 gsk_ 開頭）', 'error'); return; }
   localStorage.setItem('ai_key', k);
-  document.getElementById('key-status').innerHTML = '✅ <span style="color:var(--green)">已儲存</span>';
+  document.getElementById("key-status").innerHTML = "<span style='color:var(--green)'>已儲存</span>";
   showToast('✅ API Key 已儲存', 'success');
 }
 
