@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockScan · 選股清單</title>
+<link rel="stylesheet" href="css/base.css">
+<style>
+.mkt-tabs { display:flex; border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:20px; }
+.mkt-tab { flex:1; background:transparent; border:none; font-family:'Noto Sans TC',sans-serif; font-size:14px; font-weight:500; padding:13px 8px; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:7px; color:var(--muted); position:relative; }
+.mkt-tab.active { background:rgba(0,212,255,.1); color:var(--accent); }
+.mkt-tab.active::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:var(--accent); }
+.mkt-tab.locked { cursor:not-allowed; opacity:.6; }
+
+/* Pick card */
+.pick-card { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:12px; transition:border-color .2s; }
+.pick-card:hover { border-color:var(--border2); }
+.pick-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+.pick-sym { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:2px; color:#fff; line-height:1; }
+.pick-name { font-size:12px; color:var(--muted); margin-top:2px; }
+.pick-badges { display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+.pick-date { font-family:'Share Tech Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:1px; }
+
+/* Price row */
+.price-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); gap:1px; background:var(--border); border-radius:8px; overflow:hidden; margin-bottom:14px; }
+.pr-cell { background:var(--panel2); padding:10px 12px; }
+.pr-l { font-size:9px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-bottom:4px; }
+.pr-v { font-family:'Share Tech Mono',monospace; font-size:15px; color:#fff; }
+.pr-v.up { color:var(--green); } .pr-v.dn { color:var(--red); } .pr-v.yw { color:var(--warn); }
+
+/* Reason & risk */
+.pick-reason { font-size:13px; line-height:1.8; color:var(--text); margin-bottom:10px; }
+.pick-tags { display:flex; gap:6px; flex-wrap:wrap; }
+.ptag { font-size:11px; padding:3px 10px; border-radius:20px; background:rgba(0,212,255,.07); border:1px solid rgba(0,212,255,.18); color:var(--accent); }
+
+/* Status badge */
+.status-active { background:rgba(46,204,113,.1); border-color:var(--green); color:var(--green); }
+.status-watch  { background:rgba(243,156,18,.1); border-color:var(--warn); color:var(--warn); }
+.status-closed { background:rgba(100,100,100,.1); border-color:var(--muted); color:var(--muted); }
+
+/* Locked */
+.locked-banner { text-align:center; padding:52px 20px; background:rgba(255,255,255,.02); border:1px dashed var(--border); border-radius:12px; }
+.locked-banner .li { font-size:52px; margin-bottom:14px; }
+.locked-banner .lt { font-size:16px; font-weight:700; margin-bottom:8px; }
+.locked-banner .ld { font-size:13px; color:var(--muted); line-height:1.7; margin-bottom:20px; }
+
+/* Admin post form */
+.admin-form { background:var(--panel); border:1px solid rgba(0,212,255,.2); border-radius:12px; padding:18px; margin-bottom:20px; }
+.form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin-bottom:10px; }
+.fi { display:flex; flex-direction:column; gap:5px; }
+.fi label { font-size:10px; color:var(--muted); letter-spacing:1px; }
+.fi input, .fi select, .fi textarea { background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:7px; color:var(--text); font-family:'Noto Sans TC',sans-serif; font-size:13px; padding:8px 10px; outline:none; transition:border-color .2s; }
+.fi input:focus, .fi select:focus, .fi textarea:focus { border-color:var(--accent); }
+.fi textarea { resize:vertical; min-height:80px; }
+option { background:#0b1020; }
+
+.empty-state { text-align:center; padding:48px 20px; color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <a class="logo" href="index.html"><span class="logo-main">STOCK<span>SCAN</span></span></a>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span id="nav-plan" style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;padding:4px 10px;border-radius:20px;border:1px solid;color:var(--muted);border-color:var(--border)">—</span>
+    <button class="btn btn-ghost btn-sm" onclick="signOut()">登出</button>
+  </div>
+</nav>
+
+<div class="page-wrap">
+
+  <!-- 管理員發布區（僅 admin 看得到） -->
+  <div class="admin-form" id="admin-form" style="display:none">
+    <div class="sec-head" style="margin-bottom:14px">👑 發布選股</div>
+    <div class="form-grid">
+      <div class="fi"><label>股票代號</label><input id="pk-sym" placeholder="如 2330 或 NVDA" style="font-family:'Share Tech Mono',monospace;letter-spacing:2px"></div>
+      <div class="fi"><label>公司名稱</label><input id="pk-name" placeholder="台積電"></div>
+      <div class="fi"><label>市場</label>
+        <select id="pk-mkt"><option value="tw">🇹🇼 台股</option><option value="us">🇺🇸 美股</option></select>
+      </div>
+      <div class="fi"><label>建議操作</label>
+        <select id="pk-grade">
+          <option value="強力買進">強力買進</option>
+          <option value="買進">買進</option>
+          <option value="谷底反彈機會">谷底反彈機會</option>
+          <option value="觀察等待">觀察等待</option>
+          <option value="持有">持有</option>
+          <option value="減碼">減碼</option>
+        </select>
+      </div>
+      <div class="fi"><label>目標價位</label><input id="pk-target" placeholder="如 1000 或 150"></div>
+      <div class="fi"><label>建議進場區間</label><input id="pk-entry" placeholder="如 900-950"></div>
+      <div class="fi"><label>停損位</label><input id="pk-stop" placeholder="如 850"></div>
+      <div class="fi"><label>狀態</label>
+        <select id="pk-status"><option value="active">📌 進行中</option><option value="watch">👀 觀察中</option><option value="closed">✅ 已結束</option></select>
+      </div>
+    </div>
+    <div class="fi" style="margin-bottom:10px"><label>操作理由 / 分析</label><textarea id="pk-reason" placeholder="說明進場理由、技術面或基本面分析..."></textarea></div>
+    <div class="fi" style="margin-bottom:12px"><label>標籤（逗號分隔，如：AI概念,半導體,法說行情）</label><input id="pk-tags" placeholder="AI概念, 半導體, 谷底反彈"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-green btn-sm" onclick="postPick()">📤 發布選股</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearForm()">清除</button>
+    </div>
+  </div>
+
+  <!-- 市場切換 -->
+  <div class="mkt-tabs">
+    <button class="mkt-tab" id="tab-tw" onclick="switchMkt('tw')">🇹🇼 台股選股</button>
+    <button class="mkt-tab" id="tab-us" onclick="switchMkt('us')">🇺🇸 美股選股</button>
+  </div>
+
+  <!-- 內容 -->
+  <div id="content-area"><div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入中...</div></div></div>
+
+</div>
+
+<nav class="tabbar">
+  <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
+  <a class="tb" href="watchlist.html"><span class="ti">⭐</span>觀察名單</a>
+  <a class="tb" href="news.html"><span class="ti">📰</span>新聞</a>
+  <a class="tb active" href="picks.html"><span class="ti">📋</span>選股</a>
+  <a class="tb" href="profile.html"><span class="ti">👤</span>我的</a>
+</nav>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script>
+let cu=null, cp=null, mkt='tw', allPicks=[];
+
+(async()=>{
+  cu=await requireAuth(); if(!cu)return;
+  cp=await getProfile(cu.id);
+  const nb=document.getElementById('nav-plan');
+  nb.textContent=planLabel(cp?.plan||'free');
+
+  // URL 參數
+  const urlM=new URLSearchParams(location.search).get('mkt');
+  if(urlM==='us') mkt='us';
+
+  // 管理員顯示發布表單
+  if(cp?.plan==='admin') {
+    document.getElementById('admin-form').style.display='block';
+    document.getElementById('pk-mkt').value=mkt;
+  }
+
+  renderTabs(); renderContent();
+})();
+
+function renderTabs(){
+  const plan=cp?.plan||'free';
+  ['tw','us'].forEach(m=>{
+    const t=document.getElementById('tab-'+m);
+    const ok=canAccess(plan,m);
+    t.classList.toggle('active',m===mkt);
+    t.classList.toggle('locked',!ok);
+    t.innerHTML=(m==='tw'?'🇹🇼 台股選股':'🇺🇸 美股選股')+(ok?'':' 🔒');
+  });
+}
+
+function switchMkt(m){
+  if(!canAccess(cp?.plan||'free',m)){showToast('🔒 需要對應市場方案','error');return;}
+  mkt=m;
+  history.replaceState(null,'','picks.html?mkt='+m);
+  if(cp?.plan==='admin') document.getElementById('pk-mkt').value=m;
+  renderTabs(); renderContent();
+}
+
+async function renderContent(){
+  const plan=cp?.plan||'free';
+  const el=document.getElementById('content-area');
+  if(!canAccess(plan,mkt)){
+    const mn=mkt==='tw'?'台股':'美股', nd=mkt==='tw'?'台股會員':'美股會員';
+    el.innerHTML=`<div class="locked-banner"><div class="li">📋</div><div class="lt">需要「${nd}」方案</div><div class="ld">升級後可查看老師精選${mn}選股清單<br>含進場價位、目標價、停損點與操作理由</div><a href="points.html" class="btn btn-primary" style="text-decoration:none">查看升級方案</a></div>`;
+    return;
+  }
+  el.innerHTML='<div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入選股...</div></div>';
+  await loadPicks();
+}
+
+async function loadPicks(){
+  const {data}=await sb.from('picks').select('*').eq('market',mkt).order('created_at',{ascending:false});
+  allPicks=data||[];
+  renderPicks();
+}
+
+function renderPicks(){
+  const el=document.getElementById('content-area');
+  if(!allPicks.length){
+    el.innerHTML='<div class="empty-state">📭 目前尚無選股清單<br><span style="font-size:11px;margin-top:6px;display:block">老師發布後將顯示在這裡</span></div>';
+    return;
+  }
+  el.innerHTML=allPicks.map(p=>renderPickCard(p)).join('');
+}
+
+function gradeClass(g){
+  if(!g)return'g-hold';
+  if(g.includes('強力買進')||g.includes('買進'))return'g-buy';
+  if(g.includes('谷底'))return'g-rebound';
+  if(g.includes('觀察'))return'g-watch';
+  if(g.includes('持有'))return'g-hold';
+  return'g-avoid';
+}
+
+function statusClass(s){
+  return s==='active'?'status-active':s==='watch'?'status-watch':'status-closed';
+}
+function statusLabel(s){
+  return s==='active'?'📌 進行中':s==='watch'?'👀 觀察中':'✅ 已結束';
+}
+
+function renderPickCard(p){
+  const date=p.created_at?new Date(p.created_at).toLocaleDateString('zh-TW'):'—';
+  const tags=(p.tags||'').split(',').filter(Boolean).map(t=>`<span class="ptag">${t.trim()}</span>`).join('');
+  const mktFlag=p.market==='us'?'🇺🇸':'🇹🇼';
+  return`<div class="pick-card" id="pick-${p.id}">
+    <div class="pick-header">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:16px">${mktFlag}</span>
+          <span class="pick-sym">${p.symbol||'—'}</span>
+        </div>
+        <div class="pick-name">${p.name||''}</div>
+      </div>
+      <div class="pick-badges">
+        <span class="grade ${gradeClass(p.grade)}">${p.grade||'—'}</span>
+        <span class="grade ${statusClass(p.status)}" style="font-size:10px;padding:3px 10px">${statusLabel(p.status)}</span>
+        <span class="pick-date">發布：${date}</span>
+      </div>
+    </div>
+    <div class="price-row">
+      <div class="pr-cell"><div class="pr-l">進場區間</div><div class="pr-v yw">${p.entry_range||'—'}</div></div>
+      <div class="pr-cell"><div class="pr-l">目標價</div><div class="pr-v up">${p.target_price||'—'}</div></div>
+      <div class="pr-cell"><div class="pr-l">停損位</div><div class="pr-v dn">${p.stop_loss||'—'}</div></div>
+    </div>
+    ${p.reason?`<div class="pick-reason">${p.reason}</div>`:''}
+    ${tags?`<div class="pick-tags">${tags}</div>`:''}
+    ${cp?.plan==='admin'?`<div style="margin-top:12px;display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="editPick('${p.id}')">✏️ 編輯狀態</button><button class="btn btn-red btn-sm" onclick="deletePick('${p.id}')">刪除</button></div>`:''}
+  </div>`;
+}
+
+// ── 管理員發布 ──
+async function postPick(){
+  const sym    = document.getElementById('pk-sym').value.trim().toUpperCase();
+  const name   = document.getElementById('pk-name').value.trim();
+  const market = document.getElementById('pk-mkt').value;
+  const grade  = document.getElementById('pk-grade').value;
+  const target = document.getElementById('pk-target').value.trim();
+  const entry  = document.getElementById('pk-entry').value.trim();
+  const stop   = document.getElementById('pk-stop').value.trim();
+  const status = document.getElementById('pk-status').value;
+  const reason = document.getElementById('pk-reason').value.trim();
+  const tags   = document.getElementById('pk-tags').value.trim();
+  if(!sym||!reason){showToast('請填寫代號和操作理由','error');return;}
+  const {error}=await sb.from('picks').insert({symbol:sym,name,market,grade,target_price:target,entry_range:entry,stop_loss:stop,status,reason,tags,created_at:new Date().toISOString()});
+  if(error){showToast('❌ 發布失敗：'+error.message,'error');return;}
+  showToast('✅ 選股已發布','success');
+  clearForm();
+  if(market===mkt) await loadPicks();
+}
+
+async function editPick(id){
+  const s=prompt('更新狀態（active / watch / closed）：','active');
+  if(!s)return;
+  const {error}=await sb.from('picks').update({status:s}).eq('id',id);
+  if(error)showToast('❌ 更新失敗','error');
+  else{showToast('✅ 狀態已更新','success'); await loadPicks();}
+}
+
+async function deletePick(id){
+  if(!confirm('確定刪除這筆選股？'))return;
+  await sb.from('picks').delete().eq('id',id);
+  showToast('已刪除','success'); await loadPicks();
+}
+
+function clearForm(){
+  ['pk-sym','pk-name','pk-target','pk-entry','pk-stop','pk-reason','pk-tags'].forEach(id=>document.getElementById(id).value='');
+}
+</script>
+</body>
+</html>
