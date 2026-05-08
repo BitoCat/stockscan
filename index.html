@@ -282,29 +282,44 @@ async function analyze() {
   document.getElementById('res-card').classList.remove('show');
   hideErr();
 
-  // 先抓即時股價（Yahoo Finance 直接呼叫，不需要後端）
+  // 先抓即時股價（多proxy備援）
   let livePrice = null;
   let priceContext = '';
   try {
     const yahooSym = currentMkt === 'tw' ? sym + '.TW' : sym;
-    const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=1d`;
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`;
-    const pr = await fetch(proxyUrl);
-    const proxyData = await pr.json();
-    const pd = JSON.parse(proxyData.contents);
+    const yahooUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=5d&includePrePost=false`;
+    const proxies = [
+      `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,
+      `https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`,
+      `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(yahooUrl)}`
+    ];
+    let pd = null;
+    for (const proxyUrl of proxies) {
+      try {
+        const r = await fetch(proxyUrl, {signal: AbortSignal.timeout(5000)});
+        const raw = await r.json();
+        pd = raw?.contents ? JSON.parse(raw.contents) : raw;
+        if (pd?.chart?.result?.[0]?.meta?.regularMarketPrice) break;
+      } catch(e2) { continue; }
+    }
     const meta = pd?.chart?.result?.[0]?.meta;
     if (meta?.regularMarketPrice) {
+      const today = new Date();
+      const dateStr = today.getFullYear() + '年' + (today.getMonth()+1) + '月' + today.getDate() + '日';
       livePrice = {
         name: meta.shortName || meta.longName || sym,
         price: meta.regularMarketPrice,
         high: meta.regularMarketDayHigh,
         low: meta.regularMarketDayLow,
         prev: meta.previousClose,
-        changePct: (((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100).toFixed(2)
+        changePct: (((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100).toFixed(2),
+        date: dateStr
       };
-      priceContext = `\n\n【即時股價資訊 - 必須根據此價格分析】\n公司名稱：${livePrice.name}\n股票代號：${sym}\n目前股價：${livePrice.price}\n今日最高：${livePrice.high}\n今日最低：${livePrice.low}\n昨日收盤：${livePrice.prev}\n漲跌幅：${livePrice.changePct}%\n⚠️ 分析必須針對「${livePrice.name}」這間公司，支撐位和壓力位必須基於目前股價 ${livePrice.price} 計算。`;
+      priceContext = `\n\n【即時股價資訊 ${dateStr} - 必須根據此資料分析】\n公司名稱：${livePrice.name}\n股票代號：${sym}\n目前股價：${livePrice.price}\n今日最高：${livePrice.high}\n今日最低：${livePrice.low}\n昨日收盤：${livePrice.prev}\n漲跌幅：${livePrice.changePct}%\n⚠️ 分析必須針對「${livePrice.name}」，支撐位壓力位須基於股價${livePrice.price}計算，資料時間為${dateStr}。`;
+    } else {
+      console.warn('所有proxy均失敗，使用AI估算');
     }
-  } catch(e) { console.log('股價抓取失敗，使用AI估算', e); }
+  } catch(e) { console.log('股價抓取失敗', e); }
 
   const market = currentMkt === 'tw' ? '台灣股市(台股)' : '美國股市(美股)';
   const companyHint = livePrice?.name ? `公司名稱是「${livePrice.name}」，` : '';
