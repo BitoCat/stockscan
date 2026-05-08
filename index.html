@@ -274,6 +274,12 @@ async function analyze() {
   const sym = document.getElementById('stock-inp').value.trim().toUpperCase();
   if (!sym) return;
 
+  // 檢查方案權限
+  if (currentProfile?.plan === 'free') {
+    showErr('此功能需要開通會員才能使用，請聯繫管理員開通。');
+    return;
+  }
+
   // Check points
   const pts = await getPoints(currentUser.id);
   if (pts < 1) {

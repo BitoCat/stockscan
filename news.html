@@ -72,6 +72,18 @@ let newsCache = {};
   const nb = document.getElementById('nav-plan');
   nb.textContent = planLabel(cp?.plan || 'free');
   nb.className = 'plan-badge ' + planBadge(cp?.plan || 'free');
+  // 檢查方案權限
+  if (cp?.plan === 'free') {
+    document.getElementById('news-list').innerHTML = \`
+      <div style="text-align:center;padding:60px 20px;background:rgba(255,255,255,.02);border:1px dashed var(--border);border-radius:12px;margin-top:20px">
+        <div style="font-size:48px;margin-bottom:16px">🔒</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:8px">需要開通會員</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px">新聞功能需要開通會員才能使用<br>請聯繫管理員開通您的帳號</div>
+        <a href="contact.html" class="btn btn-primary" style="text-decoration:none">✉️ 聯繫管理員</a>
+      </div>\`;
+    document.getElementById('last-update').textContent = '需要開通會員';
+    return;
+  }
   await loadNews('macro');
 })();
 
