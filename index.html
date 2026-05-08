@@ -366,7 +366,7 @@ grade限：強力買進、買進、谷底反彈機會、觀察等待、持有、
 注意：analysis必須是600字以上的繁體中文深度分析，不可敷衍簡短。`;
 
   try {
-    const raw = await callAI(prompt, 1000);
+    const raw = await callAI(prompt, 2500);
     const m = raw.match(/```json\s*([\s\S]*?)\s*```/);
     const obj = JSON.parse(m ? m[1] : raw);
     // 把即時股價加進結果
