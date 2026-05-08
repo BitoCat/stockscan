@@ -40,11 +40,11 @@
 </nav>
 <div class="page-wrap">
   <div class="cat-tabs">
-    <button class="cat-tab active" id="tab-official" onclick="setTab('official')">📢 交易大師新聞</button>
-    <button class="cat-tab" id="tab-macro" onclick="setTab('macro')">🌐 總經/Fed</button>
+    <button class="cat-tab active" id="tab-macro" onclick="setTab('macro')">🌐 總經/Fed</button>
     <button class="cat-tab" id="tab-us" onclick="setTab('us')">🇺🇸 美股科技</button>
     <button class="cat-tab" id="tab-tw" onclick="setTab('tw')">🇹🇼 台股產業</button>
     <button class="cat-tab" id="tab-crypto" onclick="setTab('crypto')">₿ 加密貨幣</button>
+    <button class="cat-tab" id="tab-official" onclick="setTab('official')">📢 交易大師</button>
   </div>
   <div class="refresh-bar">
     <span class="last-update" id="last-update">載入中...</span>
@@ -75,17 +75,17 @@ let newsCache = {};
   nb.className = 'plan-badge ' + planBadge(cp?.plan || 'free');
   // 檢查方案權限
   if (cp?.plan === 'free') {
-    document.getElementById('news-list').innerHTML = \`
-      <div style="text-align:center;padding:60px 20px;background:rgba(255,255,255,.02);border:1px dashed var(--border);border-radius:12px;margin-top:20px">
-        <div style="font-size:48px;margin-bottom:16px">🔒</div>
-        <div style="font-size:16px;font-weight:700;margin-bottom:8px">需要開通會員</div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px">新聞功能需要開通會員才能使用<br>請聯繫管理員開通您的帳號</div>
-        <a href="contact.html" class="btn btn-primary" style="text-decoration:none">✉️ 聯繫管理員</a>
-      </div>\`;
+    document.getElementById('news-list').innerHTML =
+      "<div style='text-align:center;padding:60px 20px;background:rgba(255,255,255,.02);border:1px dashed var(--border);border-radius:12px;margin-top:20px'>" +
+      "<div style='font-size:48px;margin-bottom:16px'>🔒</div>" +
+      "<div style='font-size:16px;font-weight:700;margin-bottom:8px'>需要開通會員</div>" +
+      "<div style='font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px'>新聞功能需要開通會員才能使用<br>請聯繫管理員開通您的帳號</div>" +
+      "<a href='contact.html' class='btn btn-primary' style='text-decoration:none'>✉️ 聯繫管理員</a>" +
+      "</div>";
     document.getElementById('last-update').textContent = '需要開通會員';
     return;
   }
-  await loadNews('official');
+  await loadNews('macro');
 })();
 
 function setTab(tab) {
