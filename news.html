@@ -83,10 +83,30 @@ function setTab(tab) {
 }
 
 const TAB_CONFIG = {
-  macro: { label: '總經/Fed', emoji: '🌐', keywords: '聯準會Fed利率通膨美國經濟GDP就業數據' },
-  us:    { label: '美股科技', emoji: '🇺🇸', keywords: 'NVIDIA Apple Microsoft Google Tesla Amazon美股納斯達克財報' },
-  tw:    { label: '台股產業', emoji: '🇹🇼', keywords: '台積電鴻海聯發科台股外資法說會半導體AI伺服器' },
-  crypto:{ label: '加密貨幣', emoji: '₿',  keywords: 'Bitcoin以太幣BTC ETH幣安加密貨幣區塊鏈' },
+  macro: {
+    label: '總經/Fed', emoji: '🌐',
+    sources: ['Reuters', 'Bloomberg', 'WSJ', 'Financial Times', 'CNBC', '鉅亨網', '經濟日報', 'Nikkei Asia'],
+    keywords: '聯準會Fed利率通膨美國經濟GDP就業數據財政部',
+    prompt_hint: '涵蓋Fed政策、美國經濟數據、全球總經、債券市場、匯率'
+  },
+  us: {
+    label: '美股科技', emoji: '🇺🇸',
+    sources: ['Bloomberg', 'TechCrunch', 'The Verge', 'WSJ', 'CNBC', 'Seeking Alpha', 'Barrons', '鉅亨美股'],
+    keywords: 'NVIDIA Apple Microsoft Google Meta Tesla Amazon美股納斯達克財報',
+    prompt_hint: '涵蓋美股財報、科技公司動態、AI產業、分析師評級、機構動向'
+  },
+  tw: {
+    label: '台股產業', emoji: '🇹🇼',
+    sources: ['工商時報', '經濟日報', 'MoneyDJ', '鉅亨網', '財訊', '商業周刊', 'Digitimes', '中央社'],
+    keywords: '台積電鴻海聯發科台股外資法說會半導體AI伺服器',
+    prompt_hint: '涵蓋台股個股動態、法說會、外資動向、產業鏈、IC設計、封測'
+  },
+  crypto: {
+    label: '加密貨幣', emoji: '₿',
+    sources: ['CoinDesk', 'CryptoNews', 'Decrypt', 'Cointelegraph', '動區動趨', 'BlockTempo', 'The Block', 'Binance'],
+    keywords: 'Bitcoin以太幣BTC ETH幣安加密貨幣區塊鏈DeFi NFT',
+    prompt_hint: '涵蓋BTC/ETH價格動態、監管政策、DeFi、機構採用、鏈上數據'
+  },
 };
 
 async function loadNews(tab, force = false) {
@@ -106,27 +126,22 @@ async function loadNews(tab, force = false) {
 
   const cfg = TAB_CONFIG[tab];
   const today = new Date().toLocaleDateString('zh-TW');
+  const sourceList = cfg.sources.join('、');
   const prompt = `你是專業財經新聞編輯。今天是${today}。
 
-請針對「${cfg.label}」主題（關鍵字：${cfg.keywords}），
-整理10則最新重要新聞，以JSON陣列輸出：
+針對「${cfg.label}」主題，${cfg.prompt_hint}。
+模擬來自以下媒體的新聞：${sourceList}
 
-[
-  {
-    "title": "新聞標題（繁體中文，50字內）",
-    "source": "來源媒體名稱",
-    "lang": "中或EN",
-    "summary": "3行重點摘要（繁體中文）",
-    "sentiment": "bull或bear或neutral",
-    "url": "相關搜尋連結或留空"
-  }
-]
+輸出12則重要新聞，JSON格式，不含其他文字：
+[{"title":"具體新聞標題含公司名或數字","source":"媒體名稱","lang":"中或EN","summary":"• 重點一\n• 重點二\n• 重點三","sentiment":"bull或bear或neutral","searchUrl":"https://www.google.com/search?q=標題關鍵字"}]
 
-要求：
-- 標題要具體，含公司名/數字/事件
-- 中英文來源各約5則
-- sentiment要準確反映新聞內容
-- 只輸出JSON，不含其他文字`;
+規則：
+- 中文來源約6則、英文約6則
+- 標題必須具體，如「台積電Q2法說：CoWoS產能季增40%」
+- summary用條列式3點，繁體中文
+- searchUrl用Google搜尋該新聞關鍵字
+- sentiment準確反映內容
+- 只輸出JSON陣列`;
 
   try {
     const raw = await callAI(prompt, 2000);
@@ -164,7 +179,7 @@ function renderNews(items, tab) {
       </div>
       <div class="news-foot">
         <span style="font-size:11px;color:${sentColor}">${sentIcon} ${sentLabel}</span>
-        ${n.url ? `<a href="${n.url}" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:none">搜尋相關 →</a>` : ''}
+        ${n.searchUrl ? `<a href="${n.searchUrl}" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:none">🔍 搜尋相關 →</a>` : ''}
       </div>
     </div>`;
   }).join('');
