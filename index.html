@@ -212,6 +212,11 @@ let currentUser = null, currentProfile = null, currentMkt = 'tw', lastResult = n
   currentUser = await requireAuth();
   if (!currentUser) return;
   currentProfile = await getProfile(currentUser.id);
+  
+  // 每日自動補點
+  const bonusGiven = await dailyBonus(currentUser.id);
+  if (bonusGiven) showToast('🎁 每日登入補點 +100 點！', 'success');
+
   if (!currentProfile) {
     // Auto-create profile if missing (first login via Google etc.)
     await sb.from('profiles').upsert({
