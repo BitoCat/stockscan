@@ -271,7 +271,7 @@ async function loadMembers() {
     "<div class='member-row'>" +
     "<div><div class='member-email'>"+(m.display_name||"—")+"</div><div class='member-name'>"+m.id.substring(0,8)+"…</div></div>" +
     "<div style='display:flex;align-items:center;gap:8px;flex-wrap:wrap'>" +
-    "<select class='plan-select' onchange='updatePlan(""+m.id+"",this.value)'>" +
+    "<select class='plan-select' onchange='updatePlan(this.dataset.uid,this.value)' data-uid='"+m.id+"'>" +
     "<option value='free' "+(m.plan==="free"?"selected":"")+">免費</option>" +
     "<option value='tw' "+(m.plan==="tw"?"selected":"")+">台股</option>" +
     "<option value='us' "+(m.plan==="us"?"selected":"")+">美股</option>" +
