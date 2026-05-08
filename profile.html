@@ -364,7 +364,7 @@ async function loadMessages() {
       (isPending ?
         "<div style='display:flex;flex-direction:column;gap:8px'>" +
         "<textarea id='reply-" + m.id + "' class='key-inp' placeholder='回覆內容...' rows='2' style='font-family:Noto Sans TC,sans-serif;font-size:12px;resize:vertical;letter-spacing:0'></textarea>" +
-        "<input id='groqkey-" + m.id + "' class='key-inp' placeholder='Groq Key（選填，gsk_...）' style='font-size:12px;letter-spacing:0;font-family:monospace'>" +
+        "<input id='groqkey-" + m.id + "' class='key-inp' placeholder='Groq Key (optional, gsk_...)' style='font-size:12px;letter-spacing:0;font-family:monospace'>" +
         "<div style='display:flex;gap:8px;flex-wrap:wrap'>" +
         "<button class='btn btn-green btn-sm' onclick='replyMessage("" + m.id + "")'>✅ 回覆</button>" +
         "<button class='btn btn-primary btn-sm' onclick='fillGroqKey("" + m.id + "")'>🔑 填入我的 Key</button></div></div>"
