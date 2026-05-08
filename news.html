@@ -66,34 +66,34 @@ let newsCache = {};
 let aiSummaries = {};
 
 // RSS 來源設定
+// Google News RSS - 不需要 CORS proxy，直接用 allorigins 抓
+const GN = 'https://news.google.com/rss/search?hl=zh-TW&gl=TW&ceid=TW:zh-Hant&q=';
+const GN_EN = 'https://news.google.com/rss/search?hl=en-US&gl=US&ceid=US:en&q=';
+
 const RSS_SOURCES = {
   macro: [
-    { name: 'Reuters經濟', url: 'https://feeds.reuters.com/reuters/businessNews', lang: 'EN' },
-    { name: 'FED Watch', url: 'https://feeds.feedburner.com/typepad/alleyinsider/silicon_alley_insider', lang: 'EN' },
-    { name: '鉅亨網總經', url: 'https://feeds.cnyes.com/market/cnyesNews/tw_economy', lang: '中' },
-    { name: 'WSJ Markets', url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml', lang: 'EN' },
-    { name: 'Bloomberg', url: 'https://feeds.bloomberg.com/economics/news.rss', lang: 'EN' },
+    { name: 'Google財經', url: GN + encodeURIComponent('聯準會 Fed 降息 總經'), lang: '中' },
+    { name: 'Google財經', url: GN + encodeURIComponent('美國經濟 通膨 利率'), lang: '中' },
+    { name: 'Google News', url: GN_EN + encodeURIComponent('Federal Reserve interest rate inflation economy'), lang: 'EN' },
+    { name: 'Google News', url: GN_EN + encodeURIComponent('GDP recession treasury yield'), lang: 'EN' },
   ],
   us: [
-    { name: 'CNBC Tech', url: 'https://www.cnbc.com/id/19854910/device/rss/rss.html', lang: 'EN' },
-    { name: 'TechCrunch', url: 'https://techcrunch.com/feed/', lang: 'EN' },
-    { name: 'Yahoo Finance', url: 'https://finance.yahoo.com/news/rssindex', lang: 'EN' },
-    { name: 'Seeking Alpha', url: 'https://seekingalpha.com/feed.xml', lang: 'EN' },
-    { name: '鉅亨美股', url: 'https://feeds.cnyes.com/market/cnyesNews/us_stock', lang: '中' },
+    { name: 'Google財經', url: GN + encodeURIComponent('美股 納斯達克 科技股 NVIDIA Apple'), lang: '中' },
+    { name: 'Google財經', url: GN + encodeURIComponent('美股 S&P500 道瓊 財報'), lang: '中' },
+    { name: 'Google News', url: GN_EN + encodeURIComponent('US stocks NASDAQ tech earnings NVIDIA Apple Microsoft'), lang: 'EN' },
+    { name: 'Google News', url: GN_EN + encodeURIComponent('S&P500 Dow Jones stock market'), lang: 'EN' },
   ],
   tw: [
-    { name: '鉅亨台股', url: 'https://feeds.cnyes.com/market/cnyesNews/tw_stock', lang: '中' },
-    { name: 'MoneyDJ', url: 'https://www.moneydj.com/rss/news.aspx', lang: '中' },
-    { name: '工商時報', url: 'https://ctee.com.tw/feed', lang: '中' },
-    { name: '財訊', url: 'https://www.wealth.com.tw/rss', lang: '中' },
-    { name: 'Yahoo台股', url: 'https://tw.stock.yahoo.com/rss', lang: '中' },
+    { name: 'Google台股', url: GN + encodeURIComponent('台積電 台股 電子股'), lang: '中' },
+    { name: 'Google台股', url: GN + encodeURIComponent('台灣股市 鴻海 聯發科 法說會'), lang: '中' },
+    { name: 'Google台股', url: GN + encodeURIComponent('台股 外資 投信 買超 賣超'), lang: '中' },
+    { name: 'Google台股', url: GN + encodeURIComponent('台灣半導體 AI伺服器 CoWoS'), lang: '中' },
   ],
   crypto: [
-    { name: 'CoinDesk', url: 'https://www.coindesk.com/arc/outboundfeeds/rss/', lang: 'EN' },
-    { name: 'CryptoNews', url: 'https://cryptonews.com/news/feed/', lang: 'EN' },
-    { name: 'Decrypt', url: 'https://decrypt.co/feed', lang: 'EN' },
-    { name: '動區動趨', url: 'https://www.blocktempo.com/feed/', lang: '中' },
-    { name: 'Cointelegraph中文', url: 'https://cointelegraph.com/rss/tag/chinese', lang: '中' },
+    { name: 'Google幣圈', url: GN + encodeURIComponent('比特幣 以太幣 加密貨幣'), lang: '中' },
+    { name: 'Google幣圈', url: GN + encodeURIComponent('BTC ETH 幣安 虛擬貨幣'), lang: '中' },
+    { name: 'Google Crypto', url: GN_EN + encodeURIComponent('Bitcoin Ethereum cryptocurrency crypto'), lang: 'EN' },
+    { name: 'Google Crypto', url: GN_EN + encodeURIComponent('BTC ETH Binance blockchain'), lang: 'EN' },
   ]
 };
 
