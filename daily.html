@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>交易大師 · 每日盤面解析</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/base.css">
+<style>
+.daily-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:12px; }
+.daily-card.today { border-color:rgba(0,212,255,.4); background:rgba(0,212,255,.03); }
+.daily-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px; }
+.daily-title { font-size:15px; font-weight:700; }
+.daily-meta { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.daily-body { font-size:13px; line-height:1.9; color:var(--text); white-space:pre-wrap; }
+.daily-date { font-size:10px; color:var(--muted); margin-top:10px; }
+.mkt-filter { display:flex; gap:8px; margin-bottom:16px; }
+.mf-btn { flex:1; background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:8px; color:var(--muted); font-size:13px; padding:8px; cursor:pointer; text-align:center; transition:all .2s; font-family:Noto Sans TC,sans-serif; }
+.mf-btn.active { background:rgba(0,212,255,.1); border-color:var(--accent); color:var(--accent); font-weight:600; }
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <a class="logo" href="index.html"><span class="logo-main">交易<span>大師</span></span><span class="logo-ver">PRO</span></a>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span id="nav-plan" class="plan-badge plan-free">FREE</span>
+    <button class="btn btn-ghost btn-sm" onclick="signOut()">登出</button>
+  </div>
+</nav>
+<div class="page-wrap">
+  <div class="sec-head">📊 每日盤面解析</div>
+  <div class="mkt-filter">
+    <button class="mf-btn active" id="mf-all" onclick="setMkt('all')">🌏 全部</button>
+    <button class="mf-btn" id="mf-tw" onclick="setMkt('tw')">🇹🇼 台股</button>
+    <button class="mf-btn" id="mf-us" onclick="setMkt('us')">🇺🇸 美股</button>
+  </div>
+  <div id="daily-list"><div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入解析...</div></div></div>
+</div>
+<nav class="tabbar">
+  <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
+  <a class="tb" href="watchlist.html"><span class="ti">⭐</span>觀察名單</a>
+  <a class="tb active" href="daily.html"><span class="ti">📊</span>盤面</a>
+  <a class="tb" href="tutorial.html"><span class="ti">📚</span>教學</a>
+  <a class="tb" href="profile.html"><span class="ti">👤</span>我的</a>
+</nav>
+<div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script>
+let cu = null, cp = null, allData = [], currentMkt = "all";
+
+(async () => {
+  cu = await requireAuth();
+  if (!cu) return;
+  cp = await getProfile(cu.id);
+  document.getElementById("nav-plan").textContent = planLabel(cp?.plan || "free");
+  document.getElementById("nav-plan").className = "plan-badge " + planBadge(cp?.plan || "free");
+  loadDaily();
+})();
+
+function setMkt(mkt) {
+  currentMkt = mkt;
+  ["all","tw","us"].forEach(m => document.getElementById("mf-"+m).classList.toggle("active", m === mkt));
+  renderDaily();
+}
+
+async function loadDaily() {
+  const res = await sb.from("daily_analysis").select("*").order("published_at", { ascending: false }).limit(30);
+  const el = document.getElementById("daily-list");
+  if (res.error || !res.data || !res.data.length) {
+    el.innerHTML = "<div style='text-align:center;padding:40px;color:var(--muted);font-size:13px'>每日盤面解析即將上線，敬請期待！</div>";
+    return;
+  }
+  allData = res.data;
+  renderDaily();
+}
+
+function renderDaily() {
+  const items = currentMkt === "all" ? allData : allData.filter(d => d.market === currentMkt || d.market === "both");
+  const el = document.getElementById("daily-list");
+  if (!items.length) { el.innerHTML = "<div style='text-align:center;padding:40px;color:var(--muted)'>暫無解析</div>"; return; }
+  const today = new Date().toDateString();
+  el.innerHTML = items.map((d, idx) => {
+    const isToday = new Date(d.published_at).toDateString() === today;
+    const sentIcon = d.sentiment === "bull" ? "📈" : d.sentiment === "bear" ? "📉" : "➡️";
+    const sentColor = d.sentiment === "bull" ? "var(--green)" : d.sentiment === "bear" ? "var(--red)" : "var(--muted)";
+    const mktLabel = d.market === "tw" ? "🇹🇼 台股" : d.market === "us" ? "🇺🇸 美股" : "🌏 全市場";
+    return "<div class='daily-card" + (isToday ? " today" : "") + "'>" +
+      (isToday ? "<div style='font-size:10px;color:var(--accent);font-family:Share Tech Mono,monospace;letter-spacing:2px;margin-bottom:8px'>TODAY</div>" : "") +
+      "<div class='daily-header'>" +
+      "<div class='daily-title'>" + d.title + "</div>" +
+      "<div class='daily-meta'>" +
+      "<span style='font-size:11px;color:" + sentColor + "'>" + sentIcon + "</span>" +
+      "<span style='font-size:11px;color:var(--muted)'>" + mktLabel + "</span>" +
+      "</div></div>" +
+      "<div class='daily-body'>" + (d.content || "") + "</div>" +
+      "<div class='daily-date'>" + timeAgo(d.published_at) + "</div>" +
+      "</div>";
+  }).join("");
+}
+
+function timeAgo(iso) {
+  if (!iso) return "—";
+  const d = (Date.now() - new Date(iso)) / 1000;
+  if (d < 3600) return Math.floor(d/60) + "分鐘前";
+  if (d < 86400) return Math.floor(d/3600) + "小時前";
+  return Math.floor(d/86400) + "天前";
+}
+</script>
+</body>
+</html>

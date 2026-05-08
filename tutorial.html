@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>交易大師 · 教學</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/base.css">
+<style>
+.tut-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; }
+.tut-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px; cursor:pointer; transition:all .2s; }
+.tut-card:hover { border-color:var(--accent); transform:translateY(-2px); }
+.tut-emoji { font-size:36px; margin-bottom:10px; }
+.tut-title { font-size:15px; font-weight:700; margin-bottom:6px; }
+.tut-cat { font-size:11px; color:var(--accent); margin-bottom:8px; }
+.tut-preview { font-size:12px; color:var(--muted); line-height:1.6; }
+.cat-filter { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+.cf-btn { background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:20px; color:var(--muted); font-size:12px; padding:5px 14px; cursor:pointer; transition:all .2s; font-family:Noto Sans TC,sans-serif; }
+.cf-btn.active { background:rgba(0,212,255,.1); border-color:var(--accent); color:var(--accent); }
+.modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:100; overflow-y:auto; padding:20px; }
+.modal.show { display:flex; align-items:flex-start; justify-content:center; }
+.modal-content { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:24px; max-width:600px; width:100%; margin:auto; }
+.modal-title { font-size:18px; font-weight:700; margin-bottom:16px; }
+.modal-body { font-size:14px; line-height:1.9; color:var(--text); white-space:pre-wrap; }
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <a class="logo" href="index.html"><span class="logo-main">交易<span>大師</span></span><span class="logo-ver">PRO</span></a>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span id="nav-plan" class="plan-badge plan-free">FREE</span>
+    <button class="btn btn-ghost btn-sm" onclick="signOut()">登出</button>
+  </div>
+</nav>
+<div class="page-wrap">
+  <div class="sec-head">📚 投資教學</div>
+  <div class="cat-filter" id="cat-filter"></div>
+  <div id="tut-list"><div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入教學...</div></div></div>
+</div>
+
+<div class="modal" id="modal" onclick="closeModal(event)">
+  <div class="modal-content">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div class="modal-title" id="modal-title"></div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<nav class="tabbar">
+  <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
+  <a class="tb" href="watchlist.html"><span class="ti">⭐</span>觀察名單</a>
+  <a class="tb" href="news.html"><span class="ti">📰</span>新聞</a>
+  <a class="tb active" href="tutorial.html"><span class="ti">📚</span>教學</a>
+  <a class="tb" href="profile.html"><span class="ti">👤</span>我的</a>
+</nav>
+<div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script>
+let cu = null, cp = null, allTuts = [], currentCat = "all";
+const catLabels = { all:"全部", basic:"📖 基礎入門", technical:"📈 技術分析", fundamental:"💰 基本面", strategy:"🎯 交易策略", risk:"🛡 風險管理" };
+
+(async () => {
+  cu = await requireAuth();
+  if (!cu) return;
+  cp = await getProfile(cu.id);
+  document.getElementById("nav-plan").textContent = planLabel(cp?.plan || "free");
+  document.getElementById("nav-plan").className = "plan-badge " + planBadge(cp?.plan || "free");
+  loadTutorials();
+})();
+
+async function loadTutorials() {
+  const res = await sb.from("tutorials").select("*").order("published_at", { ascending: false });
+  const el = document.getElementById("tut-list");
+  if (res.error || !res.data || !res.data.length) {
+    el.innerHTML = "<div style='text-align:center;padding:40px;color:var(--muted);font-size:13px'>教學內容即將上線，敬請期待！</div>";
+    return;
+  }
+  allTuts = res.data;
+  renderCats();
+  renderTuts();
+}
+
+function renderCats() {
+  const cats = ["all", ...new Set(allTuts.map(t => t.category))];
+  document.getElementById("cat-filter").innerHTML = cats.map(c =>
+    "<button class='cf-btn" + (c === currentCat ? " active" : "") + "' onclick='setCat("" + c + "")'>" + (catLabels[c] || c) + "</button>"
+  ).join("");
+}
+
+function setCat(cat) {
+  currentCat = cat;
+  renderCats();
+  renderTuts();
+}
+
+function renderTuts() {
+  const items = currentCat === "all" ? allTuts : allTuts.filter(t => t.category === currentCat);
+  const el = document.getElementById("tut-list");
+  if (!items.length) { el.innerHTML = "<div style='text-align:center;padding:40px;color:var(--muted)'>此分類暫無教學</div>"; return; }
+  el.innerHTML = "<div class='tut-grid'>" + items.map((t, i) =>
+    "<div class='tut-card' onclick='openTut(" + i + ")'>" +
+    "<div class='tut-emoji'>" + (t.cover_emoji || "📚") + "</div>" +
+    "<div class='tut-cat'>" + (catLabels[t.category] || t.category) + "</div>" +
+    "<div class='tut-title'>" + t.title + "</div>" +
+    "<div class='tut-preview'>" + (t.content || "").slice(0, 60) + "...</div>" +
+    "</div>"
+  ).join("") + "</div>";
+}
+
+function openTut(idx) {
+  const t = allTuts[idx];
+  document.getElementById("modal-title").textContent = (t.cover_emoji || "📚") + " " + t.title;
+  document.getElementById("modal-body").textContent = t.content || "";
+  document.getElementById("modal").classList.add("show");
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById("modal")) {
+    document.getElementById("modal").classList.remove("show");
+  }
+}
+</script>
+</body>
+</html>
