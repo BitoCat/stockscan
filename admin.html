@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>交易大師 · 管理後台</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/base.css">
+<style>
+.admin-tabs { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:20px; scrollbar-width:none; }
+.admin-tabs::-webkit-scrollbar { display:none; }
+.admin-tab { flex-shrink:0; background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:20px; color:var(--muted); font-size:12px; padding:7px 16px; cursor:pointer; transition:all .2s; font-family:Noto Sans TC,sans-serif; white-space:nowrap; }
+.admin-tab.active { background:rgba(0,212,255,.12); border-color:var(--accent); color:var(--accent); font-weight:600; }
+.panel { display:none; }
+.panel.show { display:block; }
+.member-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); gap:10px; flex-wrap:wrap; }
+.member-row:last-child { border-bottom:none; }
+.plan-select { background:var(--panel2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:12px; padding:5px 8px; outline:none; cursor:pointer; }
+.msg-pending { border-color:rgba(243,156,18,.4) !important; }
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <a class="logo" href="index.html"><span class="logo-main">交易<span>大師</span></span><span class="logo-ver">PRO</span></a>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-family:Share Tech Mono,monospace;font-size:10px;letter-spacing:2px;padding:4px 12px;border-radius:20px;border:1px solid;color:var(--red);border-color:var(--red);background:rgba(231,76,60,.08)">ADMIN</span>
+    <button class="btn btn-ghost btn-sm" onclick="signOut()">登出</button>
+  </div>
+</nav>
+<div class="page-wrap">
+  <div class="admin-tabs">
+    <button class="admin-tab active" onclick="setPanel('messages')">💬 用戶訊息 <span id="msg-badge" style="background:var(--red);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;display:none">0</span></button>
+    <button class="admin-tab" onclick="setPanel('members')">👥 會員管理</button>
+    <button class="admin-tab" onclick="setPanel('announce')">📢 發布公告</button>
+    <button class="admin-tab" onclick="setPanel('news')">📰 發布新聞</button>
+    <button class="admin-tab" onclick="setPanel('daily')">📊 盤面解析</button>
+    <button class="admin-tab" onclick="setPanel('tutorial')">📚 發布教學</button>
+  </div>
+
+  <!-- 用戶訊息 -->
+  <div class="panel show" id="panel-messages">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="sec-head" style="margin-bottom:0">用戶訊息</div>
+      <button class="btn btn-primary btn-sm" onclick="loadMessages()">🔄 重新整理</button>
+    </div>
+    <div id="messages-list"><div style="font-size:12px;color:var(--muted);text-align:center;padding:16px">點擊重新整理載入</div></div>
+  </div>
+
+  <!-- 會員管理 -->
+  <div class="panel" id="panel-members">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="sec-head" style="margin-bottom:0">會員管理 <span id="member-count" style="color:var(--accent)">0</span> 人</div>
+      <button class="btn btn-primary btn-sm" onclick="loadMembers()">🔄 重新整理</button>
+    </div>
+    <div id="members-list"><div style="font-size:12px;color:var(--muted);text-align:center;padding:16px">點擊重新整理載入</div></div>
+  </div>
+
+  <!-- 發布公告 -->
+  <div class="panel" id="panel-announce">
+    <div class="sec-head">📢 發布公告</div>
+    <div class="card" style="padding:16px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <input class="key-inp" id="ann-title" placeholder="公告標題" style="font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0">
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-size:11px;color:var(--muted)">支援 Markdown</span>
+          <button class="btn btn-ghost btn-sm" onclick="insertImg('ann-content')" type="button">🖼 插入圖片</button>
+        </div>
+        <textarea class="key-inp" id="ann-content" placeholder="公告內容，支援 Markdown 語法" rows="8" style="resize:vertical;font-family:monospace;font-size:12px;letter-spacing:0"></textarea>
+        <input class="key-inp" id="ann-url" placeholder="相關連結（選填）" style="font-size:12px;letter-spacing:0">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="ann-pinned"> 置頂顯示
+        </label>
+        <button class="btn btn-green btn-sm" onclick="postAnnouncement()">📤 發布公告</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 發布新聞 -->
+  <div class="panel" id="panel-news">
+    <div class="sec-head">📰 發布市場新聞</div>
+    <div class="card" style="padding:16px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <input class="key-inp" id="news-title" placeholder="新聞標題" style="font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0">
+        <textarea class="key-inp" id="news-summary" placeholder="新聞摘要" rows="3" style="resize:vertical;font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0"></textarea>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select class="plan-select" id="news-cat">
+            <option value="macro">🌐 總經</option>
+            <option value="tw">🇹🇼 台股</option>
+            <option value="us">🇺🇸 美股</option>
+            <option value="crypto">₿ 加密</option>
+          </select>
+          <select class="plan-select" id="news-sent">
+            <option value="bull">📈 偏多</option>
+            <option value="neutral">➡ 中性</option>
+            <option value="bear">📉 偏空</option>
+          </select>
+          <input class="key-inp" id="news-source" placeholder="來源" style="flex:1;min-width:100px;font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0">
+          <input class="key-inp" id="news-url" placeholder="連結（選填）" style="flex:1;min-width:120px;font-size:12px">
+        </div>
+        <button class="btn btn-green btn-sm" onclick="postNews()">📤 發布新聞</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 盤面解析 -->
+  <div class="panel" id="panel-daily">
+    <div class="sec-head">📊 每日盤面解析</div>
+    <div class="card" style="padding:16px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <input class="key-inp" id="da-title" placeholder="標題，如：2025/05/08 台股盤前解析" style="font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0">
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-size:11px;color:var(--muted)">支援 Markdown</span>
+          <button class="btn btn-ghost btn-sm" onclick="insertImg('da-content')" type="button">🖼 插入圖片</button>
+        </div>
+        <textarea class="key-inp" id="da-content" placeholder="盤面解析內容，支援 Markdown 語法" rows="10" style="resize:vertical;font-family:monospace;font-size:12px;letter-spacing:0"></textarea>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select class="plan-select" id="da-market">
+            <option value="tw">🇹🇼 台股</option>
+            <option value="us">🇺🇸 美股</option>
+            <option value="both">🌏 全市場</option>
+          </select>
+          <select class="plan-select" id="da-sent">
+            <option value="bull">📈 偏多</option>
+            <option value="neutral">中性</option>
+            <option value="bear">📉 偏空</option>
+          </select>
+        </div>
+        <button class="btn btn-green btn-sm" onclick="postDailyAnalysis()">📤 發布解析</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 發布教學 -->
+  <div class="panel" id="panel-tutorial">
+    <div class="sec-head">📚 發布教學文章</div>
+    <div class="card" style="padding:16px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <input class="key-inp" id="tut-title" placeholder="教學標題" style="font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0">
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-size:11px;color:var(--muted)">支援 Markdown</span>
+          <button class="btn btn-ghost btn-sm" onclick="insertImg('tut-content')" type="button">🖼 插入圖片</button>
+        </div>
+        <textarea class="key-inp" id="tut-content" placeholder="教學內容，支援 Markdown 語法" rows="10" style="resize:vertical;font-family:monospace;font-size:12px;letter-spacing:0"></textarea>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select class="plan-select" id="tut-cat">
+            <option value="basic">📖 基礎入門</option>
+            <option value="technical">📈 技術分析</option>
+            <option value="fundamental">💰 基本面分析</option>
+            <option value="strategy">🎯 交易策略</option>
+            <option value="risk">🛡 風險管理</option>
+          </select>
+          <input class="key-inp" id="tut-emoji" placeholder="封面Emoji" style="width:100px;font-size:18px;text-align:center">
+        </div>
+        <button class="btn btn-green btn-sm" onclick="postTutorial()">📤 發布教學</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<nav class="tabbar">
+  <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
+  <a class="tb" href="daily.html"><span class="ti">📊</span>盤面</a>
+  <a class="tb" href="news.html"><span class="ti">📰</span>新聞</a>
+  <a class="tb active" href="admin.html"><span class="ti">👑</span>後台</a>
+  <a class="tb" href="profile.html"><span class="ti">👤</span>我的</a>
+</nav>
+<div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script>
+let cu = null, currentPanel = "messages";
+
+(async () => {
+  cu = await requireAuth();
+  if (!cu) return;
+  const cp = await getProfile(cu.id);
+  if (cp?.plan !== "admin") {
+    window.location.href = "index.html";
+    return;
+  }
+  loadMessages();
+})();
+
+function setPanel(panel) {
+  currentPanel = panel;
+  document.querySelectorAll(".admin-tab").forEach((t, i) => {
+    const panels = ["messages","members","announce","news","daily","tutorial"];
+    t.classList.toggle("active", panels[i] === panel);
+  });
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("show"));
+  document.getElementById("panel-" + panel).classList.add("show");
+}
+
+async function loadMessages() {
+  const res = await sb.from("messages").select("*").order("created_at", { ascending: false });
+  if (res.error) { showToast("載入失敗", "error"); return; }
+  const data = res.data || [];
+  const pending = data.filter(m => m.status === "pending").length;
+  const badge = document.getElementById("msg-badge");
+  badge.textContent = pending;
+  badge.style.display = pending > 0 ? "inline" : "none";
+  const el = document.getElementById("messages-list");
+  if (!data.length) { el.innerHTML = "<div style='font-size:12px;color:var(--muted);text-align:center;padding:16px'>暫無訊息</div>"; return; }
+  let html = "";
+  for (const m of data) {
+    const isPending = m.status === "pending";
+    html += "<div class='card " + (isPending ? "msg-pending" : "") + "' style='padding:12px;margin-bottom:10px'>";
+    html += "<div style='display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:6px'>";
+    html += "<div><span style='font-size:13px;font-weight:600'>" + (m.display_name||"用戶") + "</span>";
+    html += "<span style='font-size:10px;color:var(--muted);margin-left:8px'>" + timeAgo(m.created_at) + "</span></div>";
+    html += "<span style='font-size:10px;padding:2px 8px;border-radius:8px;border:1px solid;" + (isPending ? "color:var(--warn);border-color:rgba(243,156,18,.4)" : "color:var(--green);border-color:rgba(46,204,113,.4)") + "'>" + (isPending ? "待處理" : "已回覆") + "</span></div>";
+    html += "<div style='font-size:12px;color:var(--accent);margin-bottom:4px'>" + m.subject + "</div>";
+    html += "<div style='font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6'>" + m.content + "</div>";
+    if (isPending) {
+      html += "<div style='display:flex;flex-direction:column;gap:8px'>";
+      html += "<textarea id='reply-" + m.id + "' class='key-inp' placeholder='回覆內容...' rows='3' style='font-family:sans-serif;font-size:12px;resize:vertical;letter-spacing:0'></textarea>";
+      html += "<input id='groqkey-" + m.id + "' class='key-inp' placeholder='Groq Key (optional)' style='font-size:12px;letter-spacing:0;font-family:monospace'>";
+      html += "<div style='display:flex;gap:8px'>";
+      html += "<button class='btn btn-green btn-sm' data-id='" + m.id + "' onclick='replyMessage(this.dataset.id)'>✅ 回覆</button>";
+      html += "<button class='btn btn-primary btn-sm' data-id='" + m.id + "' onclick='fillMyKey(this.dataset.id)'>🔑 填入我的Key</button>";
+      html += "</div></div>";
+    } else {
+      html += "<div style='font-size:12px;background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);border-radius:6px;padding:8px'>";
+      html += (m.admin_reply || "");
+      if (m.groq_key) html += "<div style='color:var(--green);font-size:11px;margin-top:4px'>🔑 已附上 Groq Key</div>";
+      html += "</div>";
+    }
+    html += "</div>";
+  }
+  el.innerHTML = html;
+}
+
+function fillMyKey(msgId) {
+  const k = localStorage.getItem("ai_key") || "";
+  if (!k) { showToast("請先在我的頁面設定 Groq Key", "error"); return; }
+  document.getElementById("groqkey-" + msgId).value = k;
+  showToast("已填入 Key", "success");
+}
+
+async function replyMessage(msgId) {
+  const reply = document.getElementById("reply-" + msgId).value.trim();
+  const groqKey = document.getElementById("groqkey-" + msgId).value.trim();
+  if (!reply) { showToast("請填寫回覆內容", "error"); return; }
+  const updateData = { status: "replied", admin_reply: reply, replied_at: new Date().toISOString() };
+  if (groqKey) updateData.groq_key = groqKey;
+  const res = await sb.from("messages").update(updateData).eq("id", msgId);
+  if (res.error) { showToast("回覆失敗", "error"); return; }
+  showToast("已回覆用戶", "success");
+  loadMessages();
+}
+
+async function loadMembers() {
+  const res = await sb.from("profiles").select("*").order("created_at", { ascending: false });
+  if (res.error) { showToast("載入失敗", "error"); return; }
+  const data = res.data;
+  document.getElementById("member-count").textContent = data.length;
+  let html = "";
+  for (const m of data) {
+    const name = (m.display_name || "用戶").replace(/'/g, "");
+    html += "<div class='member-row'>";
+    html += "<div><div style='font-size:13px'>" + (m.display_name||"—") + "</div>";
+    html += "<div style='font-size:10px;color:var(--muted)'>" + m.id.substring(0,8) + "...</div></div>";
+    html += "<div style='display:flex;align-items:center;gap:8px;flex-wrap:wrap'>";
+    html += "<select class='plan-select' data-uid='" + m.id + "' onchange='updatePlan(this.dataset.uid,this.value)'>";
+    html += "<option value='free'" + (m.plan==="free"?" selected":"") + ">免費</option>";
+    html += "<option value='tw'" + (m.plan==="tw"?" selected":"") + ">台股</option>";
+    html += "<option value='us'" + (m.plan==="us"?" selected":"") + ">美股</option>";
+    html += "<option value='all'" + (m.plan==="all"?" selected":"") + ">全市場</option>";
+    html += "<option value='admin'" + (m.plan==="admin"?" selected":"") + ">Admin</option>";
+    html += "</select>";
+    html += "<button class='btn btn-green btn-sm' data-uid='" + m.id + "' data-name='" + name + "' onclick='addPts(this.dataset.uid,this.dataset.name)'>+點數</button>";
+    html += "</div></div>";
+  }
+  document.getElementById("members-list").innerHTML = html;
+}
+
+async function updatePlan(uid, plan) {
+  const res = await sb.from("profiles").update({ plan }).eq("id", uid);
+  if (res.error) showToast("更新失敗", "error");
+  else showToast("方案已更新", "success");
+}
+
+async function addPts(userId, name) {
+  const amount = parseInt(prompt("幫 " + name + " 加幾點？", "300"));
+  if (!amount || amount < 1) return;
+  const note = prompt("備註", "管理員儲值") || "管理員儲值";
+  const ok = await addPoints(userId, amount, note);
+  if (ok) showToast("已加 " + amount + " 點", "success");
+  else showToast("加點失敗", "error");
+}
+
+async function postAnnouncement() {
+  const title = document.getElementById("ann-title").value.trim();
+  const content = document.getElementById("ann-content").value.trim();
+  const url = document.getElementById("ann-url").value.trim() || null;
+  const is_pinned = document.getElementById("ann-pinned").checked;
+  if (!title) { showToast("請填寫標題", "error"); return; }
+  const res = await sb.from("announcements").insert({ title, content, url, is_pinned, published_at: new Date().toISOString() });
+  if (res.error) { showToast("發布失敗: " + res.error.message, "error"); return; }
+  showToast("公告已發布", "success");
+  document.getElementById("ann-title").value = "";
+  document.getElementById("ann-content").value = "";
+}
+
+async function postNews() {
+  const title = document.getElementById("news-title").value.trim();
+  const summary = document.getElementById("news-summary").value.trim();
+  const category = document.getElementById("news-cat").value;
+  const sentiment = document.getElementById("news-sent").value;
+  const source = document.getElementById("news-source").value.trim() || "交易大師";
+  const url = document.getElementById("news-url").value.trim() || null;
+  if (!title) { showToast("請填寫標題", "error"); return; }
+  const res = await sb.from("news").insert({ title, summary, category, sentiment, source, url, published_at: new Date().toISOString() });
+  if (res.error) { showToast("發布失敗", "error"); return; }
+  showToast("新聞已發布", "success");
+  document.getElementById("news-title").value = "";
+  document.getElementById("news-summary").value = "";
+}
+
+async function postDailyAnalysis() {
+  const title = document.getElementById("da-title").value.trim();
+  const content = document.getElementById("da-content").value.trim();
+  const market = document.getElementById("da-market").value;
+  const sentiment = document.getElementById("da-sent").value;
+  if (!title || !content) { showToast("請填寫標題和內容", "error"); return; }
+  const res = await sb.from("daily_analysis").insert({ title, content, market, sentiment, published_at: new Date().toISOString() });
+  if (res.error) { showToast("發布失敗", "error"); return; }
+  showToast("盤面解析已發布", "success");
+  document.getElementById("da-title").value = "";
+  document.getElementById("da-content").value = "";
+}
+
+async function postTutorial() {
+  const title = document.getElementById("tut-title").value.trim();
+  const content = document.getElementById("tut-content").value.trim();
+  const category = document.getElementById("tut-cat").value;
+  const cover_emoji = document.getElementById("tut-emoji").value.trim() || "📚";
+  if (!title) { showToast("請填寫標題", "error"); return; }
+  const res = await sb.from("tutorials").insert({ title, content, category, cover_emoji, published_at: new Date().toISOString() });
+  if (res.error) { showToast("發布失敗", "error"); return; }
+  showToast("教學已發布", "success");
+  document.getElementById("tut-title").value = "";
+  document.getElementById("tut-content").value = "";
+}
+
+async function uploadImage(file) {
+  if (!file) return null;
+  const ext = file.name.split(".").pop();
+  const fileName = Date.now() + "." + ext;
+  const { data, error } = await sb.storage.from("images").upload(fileName, file, { upsert: true });
+  if (error) { showToast("圖片上傳失敗: " + error.message, "error"); return null; }
+  const { data: urlData } = sb.storage.from("images").getPublicUrl(fileName);
+  return urlData.publicUrl;
+}
+
+async function insertImg(editorId) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.onchange = async function() {
+    const file = input.files[0];
+    if (!file) return;
+    showToast("上傳中...", "");
+    const url = await uploadImage(file);
+    if (url) {
+      const ta = document.getElementById(editorId);
+      const pos = ta.selectionStart;
+      const before = ta.value.substring(0, pos);
+      const after = ta.value.substring(pos);
+      ta.value = before + "\n![圖片說明](" + url + ")\n" + after;
+      showToast("圖片已插入", "success");
+    }
+  };
+  input.click();
+}
+
+function timeAgo(iso) {
+  if (!iso) return "—";
+  const d = (Date.now() - new Date(iso)) / 1000;
+  if (d < 3600) return Math.floor(d/60) + "分鐘前";
+  if (d < 86400) return Math.floor(d/3600) + "小時前";
+  return Math.floor(d/86400) + "天前";
+}
+
+function showToast(msg, type) {
+  type = type || "";
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "show " + type;
+  setTimeout(function() { t.className = ""; }, 2500);
+}
+</script>
+</body>
+</html>
