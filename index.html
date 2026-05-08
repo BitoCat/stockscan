@@ -287,12 +287,12 @@ async function analyze() {
   document.getElementById('res-card').classList.remove('show');
   hideErr();
 
-  // 先抓即時股價（多proxy備援）
+  // 抓取即時股價 + 60天歷史K線
   let livePrice = null;
   let priceContext = '';
   try {
     const yahooSym = currentMkt === 'tw' ? sym + '.TW' : sym;
-    const yahooUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=5d&includePrePost=false`;
+    const yahooUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=3mo`;
     const proxies = [
       `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`,
       `https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}`,
@@ -307,10 +307,72 @@ async function analyze() {
         if (pd?.chart?.result?.[0]?.meta?.regularMarketPrice) break;
       } catch(e2) { continue; }
     }
-    const meta = pd?.chart?.result?.[0]?.meta;
-    if (meta?.regularMarketPrice) {
+    const result = pd?.chart?.result?.[0];
+    const meta = result?.meta;
+    const closes = result?.indicators?.quote?.[0]?.close || [];
+    const highs = result?.indicators?.quote?.[0]?.high || [];
+    const lows = result?.indicators?.quote?.[0]?.low || [];
+    const volumes = result?.indicators?.quote?.[0]?.volume || [];
+
+    if (meta?.regularMarketPrice && closes.length > 0) {
+      const validCloses = closes.filter(c => c != null);
+
+      // 計算移動平均線
+      const ma = (arr, n) => {
+        if (arr.length < n) return null;
+        const slice = arr.slice(-n).filter(v => v != null);
+        return (slice.reduce((a,b) => a+b, 0) / slice.length).toFixed(2);
+      };
+      const ma5  = ma(validCloses, 5);
+      const ma20 = ma(validCloses, 20);
+      const ma60 = ma(validCloses, 60);
+
+      // 計算 RSI(14)
+      const calcRSI = (arr, period=14) => {
+        if (arr.length < period+1) return null;
+        const slice = arr.slice(-(period+1)).filter(v => v != null);
+        let gains = 0, losses = 0;
+        for (let i=1; i<slice.length; i++) {
+          const diff = slice[i] - slice[i-1];
+          if (diff > 0) gains += diff; else losses -= diff;
+        }
+        const avgGain = gains / period;
+        const avgLoss = losses / period;
+        if (avgLoss === 0) return 100;
+        const rs = avgGain / avgLoss;
+        return (100 - 100/(1+rs)).toFixed(1);
+      };
+      const rsi = calcRSI(validCloses);
+
+      // 計算 MACD
+      const ema = (arr, n) => {
+        const k = 2/(n+1);
+        let e = arr[0];
+        for (let i=1; i<arr.length; i++) e = arr[i]*k + e*(1-k);
+        return e;
+      };
+      const validC = validCloses.filter(v=>v!=null);
+      let macd = null, signal = null;
+      if (validC.length >= 26) {
+        const ema12 = ema(validC.slice(-26), 12);
+        const ema26 = ema(validC, 26);
+        macd = (ema12 - ema26).toFixed(3);
+        signal = (ema(validC.slice(-9), 9) - ema26).toFixed(3);
+      }
+
+      // 支撐位/壓力位（近20天高低點）
+      const recent20H = highs.slice(-20).filter(v=>v!=null);
+      const recent20L = lows.slice(-20).filter(v=>v!=null);
+      const resistance = recent20H.length ? Math.max(...recent20H).toFixed(2) : null;
+      const support = recent20L.length ? Math.min(...recent20L).toFixed(2) : null;
+
+      // 近5日均量
+      const avgVol = volumes.slice(-5).filter(v=>v!=null);
+      const avgVolume = avgVol.length ? Math.round(avgVol.reduce((a,b)=>a+b,0)/avgVol.length) : null;
+
       const today = new Date();
       const dateStr = today.getFullYear() + '年' + (today.getMonth()+1) + '月' + today.getDate() + '日';
+
       livePrice = {
         name: meta.shortName || meta.longName || sym,
         price: meta.regularMarketPrice,
@@ -318,11 +380,21 @@ async function analyze() {
         low: meta.regularMarketDayLow,
         prev: meta.previousClose,
         changePct: (((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100).toFixed(2),
-        date: dateStr
+        ma5, ma20, ma60, rsi, macd, signal,
+        support, resistance, avgVolume, date: dateStr
       };
-      priceContext = `\n\n【即時股價資訊 ${dateStr} - 必須根據此資料分析】\n公司名稱：${livePrice.name}\n股票代號：${sym}\n目前股價：${livePrice.price}\n今日最高：${livePrice.high}\n今日最低：${livePrice.low}\n昨日收盤：${livePrice.prev}\n漲跌幅：${livePrice.changePct}%\n⚠️ 分析必須針對「${livePrice.name}」，支撐位壓力位須基於股價${livePrice.price}計算，資料時間為${dateStr}。`;
-    } else {
-      console.warn('所有proxy均失敗，使用AI估算');
+
+      priceContext = "\n\n[即時技術分析資料 " + dateStr + "]" +
+        "\n公司名稱: " + livePrice.name +
+        "\n目前股價: " + livePrice.price +
+        "\n漲跌幅: " + livePrice.changePct + "%" +
+        "\n今日高低: " + livePrice.high + " / " + livePrice.low +
+        "\nMA5: " + (ma5||'N/A') + " MA20: " + (ma20||'N/A') + " MA60: " + (ma60||'N/A') +
+        "\nRSI(14): " + (rsi||'N/A') +
+        "\nMACD: " + (macd||'N/A') + " Signal: " + (signal||'N/A') +
+        "\n近20日支撐: " + (support||'N/A') + " 壓力: " + (resistance||'N/A') +
+        "\n近5日均量: " + (avgVolume||'N/A') +
+        "\n[請根據以上真實技術指標進行分析，支撐壓力位直接使用上方數據]";
     }
   } catch(e) { console.log('股價抓取失敗', e); }
 
