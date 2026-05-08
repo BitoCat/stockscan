@@ -154,19 +154,33 @@ async function loadNews(tab, force = false) {
 async function fetchRSS(url, sourceName, lang) {
   let xml = null;
 
-  // 嘗試多個 proxy
   const proxies = [
-    PROXY + encodeURIComponent(url),
-    PROXY2 + encodeURIComponent(url),
+    'https://api.allorigins.win/get?url=' + encodeURIComponent(url),
+    'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(url),
+    'https://corsproxy.io/?' + encodeURIComponent(url),
   ];
 
   for (const proxy of proxies) {
     try {
-      const r = await fetch(proxy, { signal: AbortSignal.timeout(6000) });
+      const r = await fetch(proxy, { signal: AbortSignal.timeout(8000) });
       const data = await r.json();
-      const content = data?.contents || data;
-      if (typeof content === 'string' && content.includes('<item')) {
-        xml = content;
+
+      // rss2json 格式
+      if (data?.items?.length > 0) {
+        return data.items.slice(0, 6).map(item => ({
+          title: (item.title || '').slice(0, 100),
+          url: item.link || item.url || '#',
+          date: item.pubDate ? new Date(item.pubDate) : new Date(),
+          source: sourceName,
+          lang: lang,
+          desc: (item.description || item.content || '').replace(/<[^>]*>/g, '').trim().slice(0, 150),
+        })).filter(i => i.title.length > 5);
+      }
+
+      // allorigins 格式
+      const rawContent = data?.contents || (typeof data === 'string' ? data : null);
+      if (rawContent && rawContent.includes('<item')) {
+        xml = rawContent;
         break;
       }
     } catch(e) { continue; }
