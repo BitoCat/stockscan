@@ -366,9 +366,9 @@ async function loadMessages() {
         "<textarea id='reply-" + m.id + "' class='key-inp' placeholder='回覆內容...' rows='2' style='font-family:Noto Sans TC,sans-serif;font-size:12px;resize:vertical;letter-spacing:0'></textarea>" +
         "<input id='groqkey-" + m.id + "' class='key-inp' placeholder='Groq Key (optional, gsk_...)' style='font-size:12px;letter-spacing:0;font-family:monospace'>" +
         "<div style='display:flex;gap:8px;flex-wrap:wrap'>" +
-        "<button class='btn btn-green btn-sm' onclick='replyMessage("" + m.id + "")'>✅ 回覆</button>" +
-        "<button class='btn btn-primary btn-sm' onclick='fillGroqKey("" + m.id + "")'>🔑 填入我的 Key</button></div></div>"
-        :
+        "<div style='display:flex;gap:8px;flex-wrap:wrap'>" +
+        "<button class='btn btn-green btn-sm' onclick='replyMessage(\"" + m.id + "\")'>&#10003; 回覆</button>" +
+        "<button class='btn btn-primary btn-sm' onclick='fillGroqKey(\"" + m.id + "\")'>&#128273; 填入Key</button></div></div>"
         "<div style='font-size:12px;background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);border-radius:6px;padding:8px'>" +
         "<div style='color:var(--accent);font-size:10px;margin-bottom:4px'>已回覆內容</div>" + (m.admin_reply||"") +
         (m.groq_key ? "<div style='color:var(--green);font-size:11px;margin-top:4px'>🔑 已附上 Groq Key</div>" : "") + "</div>"
