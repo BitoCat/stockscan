@@ -1,0 +1,2 @@
+# stockscan
+Stock Analysis Platform
