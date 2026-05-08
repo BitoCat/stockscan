@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockScan · 觀察名單</title>
+<link rel="stylesheet" href="css/base.css">
+<style>
+  .filter-row { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 16px; }
+  .fchip { background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 20px; color: var(--muted); font-size: 12px; padding: 5px 14px; cursor: pointer; transition: all .2s; }
+  .fchip.on { background: rgba(0,212,255,.1); border-color: var(--accent); color: var(--accent); }
+  .fchip:hover:not(.on) { color: var(--text); }
+
+  .wl-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px; margin-bottom: 10px; transition: border-color .2s;
+  }
+  .wl-card:hover { border-color: var(--border2); }
+  .wl-sym { font-family: 'Share Tech Mono',monospace; font-size: 18px; color: #fff; }
+  .wl-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .wl-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .wl-date { font-family: 'Share Tech Mono',monospace; font-size: 9px; color: var(--muted); letter-spacing: 1px; }
+  .del-btn { background: transparent; border: 1px solid rgba(231,76,60,.3); border-radius: 6px; color: var(--red); font-size: 11px; padding: 4px 10px; cursor: pointer; transition: all .2s; }
+  .del-btn:hover { background: rgba(231,76,60,.1); border-color: var(--red); }
+
+  .empty-state { text-align: center; padding: 48px 20px; color: var(--muted); }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-txt { font-size: 14px; margin-bottom: 16px; }
+
+  .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 20px; }
+  .stat-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; text-align: center; }
+  .stat-v { font-family: 'Bebas Neue',sans-serif; font-size: 28px; color: var(--accent); }
+  .stat-l { font-size: 10px; color: var(--muted); letter-spacing: 1px; margin-top: 2px; }
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <a class="logo" href="index.html">
+    <span class="logo-main">STOCK<span>SCAN</span></span>
+  </a>
+  <button class="btn btn-ghost btn-sm" onclick="signOut()">登出</button>
+</nav>
+
+<div class="page-wrap">
+  <div class="sec-head">⭐ 觀察名單</div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-v" id="st-total">0</div><div class="stat-l">總股票數</div></div>
+    <div class="stat-card"><div class="stat-v" id="st-buy" style="color:var(--green)">0</div><div class="stat-l">買進機會</div></div>
+    <div class="stat-card"><div class="stat-v" id="st-avoid" style="color:var(--red)">0</div><div class="stat-l">待觀察</div></div>
+  </div>
+
+  <div class="filter-row">
+    <div class="fchip on" id="f-all"   onclick="setFilter('all')">全部</div>
+    <div class="fchip"   id="f-tw"    onclick="setFilter('tw')">🇹🇼 台股</div>
+    <div class="fchip"   id="f-us"    onclick="setFilter('us')">🇺🇸 美股</div>
+    <div class="fchip"   id="f-buy"   onclick="setFilter('buy')">🟢 買進</div>
+    <div class="fchip"   id="f-rebound" onclick="setFilter('rebound')">🟣 反彈</div>
+    <div class="fchip"   id="f-watch" onclick="setFilter('watch')">🟡 觀察</div>
+  </div>
+
+  <div id="wl-list">
+    <div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入中...</div></div>
+  </div>
+</div>
+
+<nav class="tabbar">
+  <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
+  <a class="tb active" href="watchlist.html"><span class="ti">⭐</span>觀察名單</a>
+  <a class="tb" href="news.html"><span class="ti">📰</span>新聞</a>
+  <a class="tb" href="profile.html"><span class="ti">👤</span>我的</a>
+</nav>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script>
+let allItems = [], currentFilter = 'all', currentUser = null;
+
+(async () => {
+  currentUser = await requireAuth();
+  if (!currentUser) return;
+  await loadAll();
+})();
+
+async function loadAll() {
+  const { data } = await sb.from('watchlist').select('*').eq('user_id', currentUser.id).order('added_at',{ascending:false});
+  allItems = data || [];
+  updateStats();
+  renderList();
+}
+
+function updateStats() {
+  document.getElementById('st-total').textContent = allItems.length;
+  const buy = allItems.filter(w => w.grade?.includes('買進') || w.grade?.includes('谷底')).length;
+  const avoid = allItems.filter(w => w.grade?.includes('避開') || w.grade?.includes('減碼')).length;
+  document.getElementById('st-buy').textContent = buy;
+  document.getElementById('st-avoid').textContent = avoid;
+}
+
+function setFilter(f) {
+  currentFilter = f;
+  ['all','tw','us','buy','rebound','watch'].forEach(x =>
+    document.getElementById('f-'+x)?.classList.toggle('on', x===f));
+  renderList();
+}
+
+function renderList() {
+  let items = allItems;
+  if (currentFilter === 'tw') items = items.filter(w => w.market === 'tw');
+  else if (currentFilter === 'us') items = items.filter(w => w.market === 'us');
+  else if (currentFilter === 'buy') items = items.filter(w => w.grade?.includes('買進'));
+  else if (currentFilter === 'rebound') items = items.filter(w => w.grade?.includes('谷底'));
+  else if (currentFilter === 'watch') items = items.filter(w => w.grade?.includes('觀察'));
+
+  const el = document.getElementById('wl-list');
+  if (!items.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-txt">此分類暫無股票</div><a href="index.html" class="btn btn-primary" style="text-decoration:none">去健診股票</a></div>`;
+    return;
+  }
+
+  el.innerHTML = items.map(w => {
+    const gc = gradeClass(w.grade||'');
+    const date = w.added_at ? new Date(w.added_at).toLocaleDateString('zh-TW') : '—';
+    const mkt = w.market === 'us' ? '🇺🇸' : '🇹🇼';
+    return `<div class="wl-card" id="wc-${w.id}">
+      <div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="wl-sym">${mkt} ${w.symbol}</span>
+        </div>
+        <div class="wl-meta">${w.name||''} ${w.sector ? '· '+w.sector : ''}</div>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span class="grade ${gc}" style="font-size:11px;padding:3px 10px">${w.grade||'—'}</span>
+          ${w.health_score ? `<span style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--muted)">健診分 ${w.health_score}</span>` : ''}
+        </div>
+      </div>
+      <div class="wl-right">
+        <span class="wl-date">${date}</span>
+        <button class="del-btn" onclick="deleteItem('${w.id}')">移除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function gradeClass(g) {
+  if (g.includes('強力買進')||g.includes('買進')) return 'g-buy';
+  if (g.includes('谷底')) return 'g-rebound';
+  if (g.includes('觀察')) return 'g-watch';
+  if (g.includes('持有')) return 'g-hold';
+  return 'g-avoid';
+}
+
+async function deleteItem(id) {
+  const { error } = await sb.from('watchlist').delete().eq('id', id).eq('user_id', currentUser.id);
+  if (error) { showToast('❌ 刪除失敗', 'error'); return; }
+  allItems = allItems.filter(w => w.id !== id);
+  updateStats(); renderList();
+  showToast('已移除', 'success');
+}
+
+function showToast(msg, type='') { const t=document.getElementById('toast'); t.textContent=msg; t.className='show '+type; setTimeout(()=>t.className='',2500); }
+</script>
+</body>
+</html>

@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockScan · 我的帳號</title>
+<link rel="stylesheet" href="css/base.css">
+<style>
+  .avatar {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 700; color: #000; flex-shrink: 0;
+  }
+  .profile-info { display: flex; align-items: center; gap: 16px; padding: 18px; margin-bottom: 16px; }
+  .pname { font-size: 18px; font-weight: 700; }
+  .pemail { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+  .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); gap: 12px; }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-label { font-size: 13px; }
+  .setting-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .key-wrap { display: flex; gap: 8px; }
+  .key-inp { flex:1; background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 8px; color: #fff; font-family: monospace; font-size: 12px; padding: 9px 12px; outline: none; transition: all .2s; letter-spacing: 1px; }
+  .key-inp:focus { border-color: var(--accent); }
+
+  /* Plan cards */
+  .plan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .plan-opt {
+    border: 2px solid var(--border); border-radius: 10px; padding: 14px 12px;
+    cursor: pointer; transition: all .2s; position: relative;
+  }
+  .plan-opt:hover { border-color: var(--border2); }
+  .plan-opt.current { border-color: var(--accent); background: rgba(0,212,255,.05); }
+  .plan-opt.current::after { content:'✓ 目前方案'; position:absolute; top:8px; right:10px; font-size:9px; color:var(--accent); letter-spacing:1px; }
+  .plan-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .plan-price { font-family:'Share Tech Mono',monospace; font-size:18px; color:var(--accent); }
+  .plan-features { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+
+  /* Admin panel */
+  .admin-panel { display: none; }
+  .admin-panel.show { display: block; }
+  .member-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); gap: 10px; flex-wrap: wrap; }
+  .member-row:last-child { border-bottom: none; }
+  .member-email { font-size: 12px; color: var(--text); }
+  .member-name { font-size: 11px; color: var(--muted); }
+  .plan-select { background: var(--panel2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; padding: 5px 8px; outline: none; cursor: pointer; }
+
+  .danger-zone { border-color: rgba(231,76,60,.3); }
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <a class="logo" href="index.html">
+    <span class="logo-main">STOCK<span>SCAN</span></span>
+  </a>
+  <button class="btn btn-ghost btn-sm" onclick="signOut()">登出</button>
+</nav>
+
+<div class="page-wrap">
+
+  <!-- Profile header -->
+  <div class="card profile-info" id="profile-card">
+    <div class="avatar" id="av">?</div>
+    <div>
+      <div class="pname" id="p-name">載入中...</div>
+      <div class="pemail" id="p-email"></div>
+      <div style="margin-top:8px" id="p-badge"></div>
+    </div>
+  </div>
+
+  <!-- AI Key 設定 -->
+  <div class="sec-head">🔑 AI 設定</div>
+  <div class="card" style="padding:16px;margin-bottom:16px">
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Anthropic API Key</div>
+        <div class="setting-sub">從 <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a> 取得</div>
+      </div>
+    </div>
+    <div class="key-wrap" style="margin-top:10px">
+      <input class="key-inp" id="ai-key-inp" type="password" placeholder="sk-ant-..." />
+      <button class="btn btn-primary btn-sm" onclick="saveKey()">儲存</button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleKeyVis()">👁</button>
+    </div>
+    <div id="key-status" style="font-size:11px;margin-top:8px;color:var(--muted)"></div>
+  </div>
+
+  <!-- 方案 -->
+  <div class="sec-head">💎 訂閱方案</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px" id="plan-grid">
+    <div class="plan-opt" id="opt-free">
+      <div class="plan-name">🆓 免費版</div>
+      <div class="plan-price">$0</div>
+      <div class="plan-features">每日 AI 健診<br>基本功能</div>
+    </div>
+    <div class="plan-opt" id="opt-tw">
+      <div class="plan-name">🇹🇼 台股版</div>
+      <div class="plan-price" style="color:var(--accent)">洽詢</div>
+      <div class="plan-features">台股新聞<br>台股選股清單<br>AI 健診點數</div>
+    </div>
+    <div class="plan-opt" id="opt-us">
+      <div class="plan-name">🇺🇸 美股版</div>
+      <div class="plan-price" style="color:var(--accent)">洽詢</div>
+      <div class="plan-features">美股新聞<br>美股選股清單<br>AI 健診點數</div>
+    </div>
+    <div class="plan-opt" id="opt-all">
+      <div class="plan-name">🌏 全市場</div>
+      <div class="plan-price" style="color:var(--warn)">洽詢</div>
+      <div class="plan-features">台股＋美股<br>全部功能解鎖<br>優先推播通知</div>
+    </div>
+  </div>
+  <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:20px">
+    升級方案請聯繫：<a href="#" id="contact-link" style="color:var(--accent)">管理員</a>
+  </div>
+
+  <!-- 帳號設定 -->
+  <div class="sec-head">⚙️ 帳號設定</div>
+  <div class="card" style="padding:14px 16px;margin-bottom:16px">
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">顯示名稱</div>
+        <div class="setting-sub" id="cur-name">—</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="changeName()">修改</button>
+    </div>
+    <div class="setting-row" style="border-bottom:none">
+      <div>
+        <div class="setting-label" style="color:var(--red)">登出帳號</div>
+      </div>
+      <button class="btn btn-red btn-sm" onclick="signOut()">登出</button>
+    </div>
+  </div>
+
+  <!-- Admin Panel -->
+  <div class="admin-panel" id="admin-panel">
+    <div class="sec-head">👑 管理員面板</div>
+    <div class="card" style="padding:16px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:13px;color:var(--muted)">所有會員 <span id="member-count" style="color:var(--accent)">0</span> 人</div>
+        <button class="btn btn-primary btn-sm" onclick="loadMembers()">🔄 重新整理</button>
+      </div>
+      <div id="members-list"><div style="font-size:12px;color:var(--muted);text-align:center;padding:16px">點擊重新整理載入</div></div>
+    </div>
+
+    <div class="card" style="padding:16px;margin-bottom:16px">
+      <div class="sec-head" style="margin-bottom:12px">&#9672; 手動加點</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input class="key-inp" id="pts-email" placeholder="用戶 Email" style="flex:2;min-width:160px;font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0">
+          <input class="key-inp" id="pts-amount" type="number" placeholder="點數（如 300）" style="flex:1;min-width:100px;font-size:13px">
+        </div>
+        <input class="key-inp" id="pts-note" placeholder="備註（如：ATM轉帳確認）" style="font-family:Noto Sans TC,sans-serif;font-size:13px;letter-spacing:0">
+        <button class="btn btn-green btn-sm" onclick="manualAddPoints()">＋ 確認加點</button>
+      </div>
+    </div>
+
+    <div class="card" style="padding:16px;margin-bottom:16px">
+      <div class="sec-head" style="margin-bottom:12px">📰 發布新聞</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <input class="key-inp" id="news-title" placeholder="新聞標題" style="font-family:'Noto Sans TC',sans-serif;font-size:13px;letter-spacing:0">
+        <textarea class="key-inp" id="news-summary" placeholder="摘要（選填）" rows="2" style="resize:vertical;font-family:'Noto Sans TC',sans-serif;font-size:13px;letter-spacing:0"></textarea>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select class="plan-select" id="news-cat">
+            <option value="tw">🇹🇼 台股</option>
+            <option value="us">🇺🇸 美股</option>
+            <option value="macro">🌐 總經</option>
+          </select>
+          <select class="plan-select" id="news-sent">
+            <option value="bull">📈 偏多</option>
+            <option value="neutral">➡ 中性</option>
+            <option value="bear">📉 偏空</option>
+          </select>
+          <input class="key-inp" id="news-source" placeholder="來源（如：財訊）" style="flex:1;min-width:100px;font-family:'Noto Sans TC',sans-serif;font-size:13px">
+          <input class="key-inp" id="news-url" placeholder="連結（選填）" style="flex:1;min-width:120px;font-size:12px">
+        </div>
+        <button class="btn btn-green btn-sm" onclick="postNews()">📤 發布新聞</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<nav class="tabbar">
+  <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
+  <a class="tb" href="watchlist.html"><span class="ti">⭐</span>觀察名單</a>
+  <a class="tb" href="news.html"><span class="ti">📰</span>新聞</a>
+  <a class="tb active" href="profile.html"><span class="ti">👤</span>我的</a>
+</nav>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script>
+let currentUser = null, currentProfile = null;
+
+(async () => {
+  currentUser = await requireAuth();
+  if (!currentUser) return;
+  currentProfile = await getProfile(currentUser.id);
+  renderProfile();
+  loadSavedKey();
+})();
+
+function renderProfile() {
+  const p = currentProfile;
+  if (!p) return;
+  const initial = (p.display_name||p.email||'?')[0].toUpperCase();
+  document.getElementById('av').textContent = initial;
+  document.getElementById('p-name').textContent = p.display_name || '—';
+  document.getElementById('p-email').textContent = currentUser.email;
+  document.getElementById('cur-name').textContent = p.display_name || '—';
+
+  const planLabel = p.plan==='admin'?'ADMIN':p.plan==='pro'?'PRO':'FREE';
+  const planCls   = p.plan==='admin'?'plan-admin':p.plan==='pro'?'plan-pro':'plan-free';
+  document.getElementById('p-badge').innerHTML = `<span class="plan-badge ${planCls}" style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;padding:4px 12px;border-radius:20px;border:1px solid">${planLabel}</span>`;
+
+  document.getElementById('opt-free').classList.toggle('current', p.plan==='free');
+  document.getElementById('opt-tw').classList.toggle('current',   p.plan==='tw');
+  document.getElementById('opt-us').classList.toggle('current',   p.plan==='us');
+  document.getElementById('opt-all').classList.toggle('current',  p.plan==='all'||p.plan==='admin');
+
+  if (p.plan === 'admin') {
+    document.getElementById('admin-panel').classList.add('show');
+  }
+}
+
+function loadSavedKey() {
+  const k = localStorage.getItem('ai_key') || '';
+  document.getElementById('ai-key-inp').value = k;
+  if (k) document.getElementById('key-status').innerHTML = '✅ <span style="color:var(--green)">已設定 API Key</span>';
+}
+
+function saveKey() {
+  const k = document.getElementById('ai-key-inp').value.trim();
+  if (!k) { showToast('請輸入 API Key', 'error'); return; }
+  if (!k.startsWith('sk-ant-') && !k.startsWith('gsk_')) { showToast('Key 格式不正確（應以 sk-ant- 或 gsk_ 開頭）', 'error'); return; }
+  localStorage.setItem('ai_key', k);
+  document.getElementById('key-status').innerHTML = '✅ <span style="color:var(--green)">已儲存</span>';
+  showToast('✅ API Key 已儲存', 'success');
+}
+
+function toggleKeyVis() {
+  const inp = document.getElementById('ai-key-inp');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+async function changeName() {
+  const name = prompt('輸入新的顯示名稱：', currentProfile?.display_name || '');
+  if (!name || !name.trim()) return;
+  const { error } = await sb.from('profiles').update({ display_name: name.trim() }).eq('id', currentUser.id);
+  if (error) { showToast('❌ 更新失敗', 'error'); return; }
+  currentProfile.display_name = name.trim();
+  renderProfile();
+  showToast('✅ 名稱已更新', 'success');
+}
+
+// ── Admin: load members ──
+async function loadMembers() {
+  const { data, error } = await sb.from('profiles').select('*').order('created_at',{ascending:false});
+  if (error) { showToast('載入失敗', 'error'); return; }
+  document.getElementById('member-count').textContent = data.length;
+  document.getElementById('members-list').innerHTML = data.map(m => `
+    <div class="member-row">
+      <div>
+        <div class="member-email">${m.display_name || '—'}</div>
+        <div class="member-name">${m.id.substring(0,8)}…</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <select class="plan-select" onchange="updatePlan('${m.id}',this.value)">
+          <option value="free"  ${m.plan==='free' ?'selected':''}>🆓 免費</option>
+          <option value="tw"    ${m.plan==='tw'   ?'selected':''}>🇹🇼 台股</option>
+          <option value="us"    ${m.plan==='us'   ?'selected':''}>🇺🇸 美股</option>
+          <option value="all"   ${m.plan==='all'  ?'selected':''}>🌏 全市場</option>
+          <option value="admin" ${m.plan==='admin'?'selected':''}>👑 Admin</option>
+        </select>
+        <button class="btn btn-green btn-sm" onclick="addPointsForUser('${m.id}','${(m.display_name||'用戶').replace(/'/g,'')}')">＋點數</button>
+      </div>
+    </div>`).join('');
+}
+
+async function updatePlan(uid, plan) {
+  const { error } = await sb.from('profiles').update({ plan }).eq('id', uid);
+  if (error) showToast('更新失敗', 'error');
+  else showToast('✅ 方案已更新', 'success');
+}
+
+// ── Admin: post news ──
+async function postNews() {
+  const title   = document.getElementById('news-title').value.trim();
+  const summary = document.getElementById('news-summary').value.trim();
+  const category= document.getElementById('news-cat').value;
+  const sentiment=document.getElementById('news-sent').value;
+  const source  = document.getElementById('news-source').value.trim();
+  const url     = document.getElementById('news-url').value.trim();
+  if (!title) { showToast('請填寫標題', 'error'); return; }
+
+  const { error } = await sb.from('news').insert({ title, summary, category, sentiment, source: source||'StockScan', url: url||null, published_at: new Date().toISOString() });
+  if (error) { showToast('❌ 發布失敗：'+error.message, 'error'); return; }
+  showToast('✅ 新聞已發布', 'success');
+  document.getElementById('news-title').value = '';
+  document.getElementById('news-summary').value = '';
+  document.getElementById('news-url').value = '';
+}
+
+// ── 管理員手動加點 ──
+async function manualAddPoints() {
+  const email  = document.getElementById('pts-email').value.trim();
+  const amount = parseInt(document.getElementById('pts-amount').value);
+  const note   = document.getElementById('pts-note').value.trim() || '管理員儲值';
+  if (!email || !amount || amount < 1) { showToast('請填寫 Email 和點數', 'error'); return; }
+
+  // 查找用戶 ID
+  const { data: profiles } = await sb.from('profiles').select('id, display_name').ilike('id', '%');
+  // 透過 auth admin 查 email → 改用已知 profile id
+  // 簡化做法：讓管理員從會員列表複製 ID 填入
+  // 這裡改成直接輸入 user_id 或 email 模糊比對
+  const { data: users } = await sb.from('profiles').select('id, display_name');
+  // 先嘗試從 point_logs 找，或直接讓管理員輸入 user ID
+  // 最實用做法：在會員列表旁加「加點」按鈕
+  showToast('請從下方會員列表點選「加點」按鈕', '');
+}
+
+// ── 從會員列表加點 ──
+async function addPointsForUser(userId, displayName) {
+  const amount = parseInt(prompt(`幫 ${displayName} 加幾點？`, '300'));
+  if (!amount || amount < 1) return;
+  const note = prompt('備註（如：ATM轉帳）', 'ATM轉帳確認') || '管理員儲值';
+  const ok = await addPoints(userId, amount, note);
+  if (ok) showToast(`✅ 已幫 ${displayName} 加 ${amount} 點`, 'success');
+  else showToast('❌ 加點失敗', 'error');
+}
+
+function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='show '+type;setTimeout(()=>t.className='',2500);}
+</script>
+</body>
+</html>
