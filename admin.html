@@ -286,18 +286,18 @@ async function loadMembers() {
 }
 
 async function updatePlan(uid, plan) {
-  const res = await sb.from("profiles").update({ plan }).eq("id", uid);
+  const updateData = { plan: plan };
+  if (plan !== "free") {
+    const { data } = await sb.from("profiles").select("groq_key").eq("plan", "admin").single();
+    const adminKey = data?.groq_key || "";
+    if (adminKey) updateData.groq_key = adminKey;
+  } else {
+    updateData.groq_key = null;
+  }
+  const res = await sb.from("profiles").update(updateData).eq("id", uid);
   if (res.error) showToast("更新失敗", "error");
-  else showToast("方案已更新", "success");
+  else showToast("方案已更新，Groq Key 已同步", "success");
 }
-
-async function addPts(userId, name) {
-  const amount = parseInt(prompt("幫 " + name + " 加幾點？", "300"));
-  if (!amount || amount < 1) return;
-  const note = prompt("備註", "管理員儲值") || "管理員儲值";
-  const ok = await addPoints(userId, amount, note);
-  if (ok) showToast("已加 " + amount + " 點", "success");
-  else showToast("加點失敗", "error");
 }
 
 async function postAnnouncement() {
