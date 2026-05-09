@@ -95,49 +95,33 @@ function showToast(msg, type = '') {
 
 // ── AI 呼叫（支援 Groq 和 Anthropic）──────
 // Groq key 以 gsk_ 開頭，Anthropic 以 sk-ant- 開頭
-async function callAI(prompt, maxTokens = 2500) {
-  const key = getAIKey();
-  if (!key) throw new Error('請先設定 AI Key');
-
-  const isGroq = key.startsWith('gsk_');
-
-  if (isGroq) {
-    // Groq API
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + key
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: maxTokens,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    return data.choices[0].message.content;
-
-  } else {
-    // Anthropic API
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: maxTokens,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    return data.content.map(b => b.text || '').join('');
+async function callAI(prompt, maxTokens) {
+  maxTokens = maxTokens || 1200;
+  var userKey = getAIKey();
+  if (userKey && userKey.startsWith('gsk_')) {
+    try { return await callGroq(prompt, maxTokens, userKey); }
+    catch(e) {
+      if (e.message.indexOf('Rate limit') === -1) throw e;
+      console.log('用戶 Key 額度用完，嘗試輪替');
+    }
+  } else if (userKey && userKey.startsWith('sk-ant-')) {
+    return await callClaude(prompt, maxTokens, userKey);
   }
+  var dbKey = await getNextGroqKey();
+  if (dbKey) {
+    try {
+      var result = await callGroq(prompt, maxTokens, dbKey.key_value);
+      await sb.from('api_keys').update({ daily_used: dbKey.daily_used + maxTokens }).eq('id', dbKey.id);
+      return result;
+    } catch(e) {
+      if (e.message.indexOf('Rate limit') !== -1) {
+        await sb.from('api_keys').update({ daily_used: 90001 }).eq('id', dbKey.id);
+      }
+      throw e;
+    }
+  }
+  throw new Error('所有 AI Key 額度已用完，請稍後再試');
+}
 }
 
 // ── 每日自動補點 ────────────────────────
@@ -188,4 +172,27 @@ async function saveAIKeyToDB(userId, key) {
     await sb.from('profiles').update({ groq_key: key }).eq('id', userId);
   } catch(e) { console.log('saveAIKeyToDB error:', e); }
   localStorage.setItem('ai_key', key);
+}
+
+// ── Groq Key 輪替 ────────────────────────
+async function getNextGroqKey() {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    await sb.from('api_keys')
+      .update({ daily_used: 0, last_reset: today })
+      .eq('provider', 'groq')
+      .lt('last_reset', today);
+    const { data } = await sb.from('api_keys')
+      .select('*')
+      .eq('provider', 'groq')
+      .eq('is_active', true)
+      .lt('daily_used', 90000)
+      .order('daily_used', { ascending: true })
+      .limit(1)
+      .single();
+    return data;
+  } catch(e) {
+    console.log('getNextGroqKey error:', e);
+    return null;
+  }
 }
