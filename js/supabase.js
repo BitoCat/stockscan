@@ -37,6 +37,7 @@ async function getProfile(userId) {
   const { data, error } = await sb.from('profiles')
     .select('*')
     .eq('id', userId)
+    .limit(1)
     .single();
   if (error) console.log('getProfile error:', error);
   return data;
