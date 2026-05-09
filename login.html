@@ -172,7 +172,7 @@
   }
 
   async function doGoogleLogin() {
-    await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + '/index.html' } });
+    await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: 'https://bitocat.github.io/stockscan/index.html' } });
   }
 
   async function doRegister() {
