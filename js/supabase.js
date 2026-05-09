@@ -34,7 +34,11 @@ async function getUser() {
   return user;
 }
 async function getProfile(userId) {
-  const { data } = await sb.from('profiles').select('*').eq('id', userId).single();
+  const { data, error } = await sb.from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+  if (error) console.log('getProfile error:', error);
   return data;
 }
 
