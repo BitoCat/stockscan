@@ -148,8 +148,6 @@ let currentUser = null, currentProfile = null, currentMkt = 'tw', lastResult = n
   document.getElementById('pts-display').textContent = pts + ' 點';
   // 從 DB 同步 Groq Key 到 localStorage
   await getAIKeyFromDB(currentUser.id);
-  // 臨時診斷
-  document.title = 'Plan:' + (currentProfile?.plan || 'NULL');
 })();
 
 function setMkt(m) {
