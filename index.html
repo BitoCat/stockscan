@@ -154,6 +154,8 @@ let currentUser = null, currentProfile = null;
     await sb.from('profiles').insert({ id: currentUser.id, display_name: currentUser.user_metadata?.display_name || currentUser.email.split('@')[0], plan: 'free', daily_count: 0, last_date: new Date().toDateString() }).then(() => {}).catch(() => {});
     currentProfile = await getProfile(currentUser.id);
   }
+  // 再抓一次確保是最新資料
+  currentProfile = await getProfile(currentUser.id);
   const bonusGiven = await dailyBonus(currentUser.id);
   if (bonusGiven) showToast('🎁 每日登入補點 +100 點！', 'success');
   renderHeader();
