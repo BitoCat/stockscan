@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Debug</title></head>
+<body style="background:#000;color:#0f0;font-family:monospace;padding:20px">
+<h3>Debug Info</h3>
+<div id="out">載入中...</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script>
+(async () => {
+  const out = document.getElementById('out');
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) { out.innerHTML = 'NOT LOGGED IN'; return; }
+    out.innerHTML = 'USER ID: ' + user.id + '<br>EMAIL: ' + user.email + '<br><br>抓取 profile...<br>';
+    const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
+    out.innerHTML += 'PROFILE: ' + JSON.stringify(data) + '<br>ERROR: ' + JSON.stringify(error);
+  } catch(e) {
+    out.innerHTML = 'ERROR: ' + e.message;
+  }
+})();
+</script>
+</body>
+</html>
