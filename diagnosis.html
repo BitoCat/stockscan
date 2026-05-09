@@ -66,6 +66,7 @@
       <input class="mono-inp" id="stock-inp" placeholder="輸入股票代號，如 2330 或 NVDA" onkeydown="if(event.key==='Enter')analyze()"/>
       <button class="btn btn-primary" id="analyze-btn" onclick="analyze()">診斷</button>
     </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px">⚠️ 請輸入股票代號，台股請輸入數字代號（如 2330），美股請輸入英文代號（如 NVDA），不支援中文名稱搜尋</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
       <span style="font-size:10px;color:var(--muted);align-self:center">熱門</span>
       <span class="chip" onclick="quickPick('2330','tw')">2330 台積電</span>
