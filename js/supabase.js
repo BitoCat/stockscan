@@ -163,7 +163,7 @@ async function dailyBonus(userId) {
   }
   
   // 補 100 點
-  const ok = await addPoints(userId, 100, '每日登入補點');
+  const ok = await addPoints(userId, 10, '每日登入補點');
   if (ok) {
     localStorage.setItem(storageKey, today);
     return true;
