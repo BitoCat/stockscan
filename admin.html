@@ -298,7 +298,6 @@ async function updatePlan(uid, plan) {
   if (res.error) showToast("更新失敗", "error");
   else showToast("方案已更新，Groq Key 已同步", "success");
 }
-}
 
 async function postAnnouncement() {
   const title = document.getElementById("ann-title").value.trim();
