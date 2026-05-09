@@ -249,7 +249,14 @@ async function replyMessage(msgId) {
   if (groqKey) updateData.groq_key = groqKey;
   const res = await sb.from("messages").update(updateData).eq("id", msgId);
   if (res.error) { showToast("回覆失敗", "error"); return; }
-  showToast("已回覆用戶", "success");
+  // 同時把 Groq Key 存到用戶的 profiles
+  if (groqKey) {
+    const msgRes = await sb.from("messages").select("user_id").eq("id", msgId).single();
+    if (msgRes.data?.user_id) {
+      await sb.from("profiles").update({ groq_key: groqKey }).eq("id", msgRes.data.user_id);
+    }
+  }
+  showToast("已回覆用戶，Groq Key 已同步到用戶帳號", "success");
   loadMessages();
 }
 

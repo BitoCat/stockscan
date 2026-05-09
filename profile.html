@@ -300,13 +300,13 @@ function loadSavedKey() {
   if (k) document.getElementById("key-status").innerHTML = "<span style='color:var(--green)'>已設定</span>";
 }
 
-function saveKey() {
+async function saveKey() {
   const k = document.getElementById("ai-key-inp").value.trim();
   if (!k) { showToast("請輸入 API Key", "error"); return; }
   if (!k.startsWith("sk-ant-") && !k.startsWith("gsk_")) { showToast("Key 格式不正確", "error"); return; }
-  localStorage.setItem("ai_key", k);
+  await saveAIKeyToDB(currentUser.id, k);
   document.getElementById("key-status").innerHTML = "<span style='color:var(--green)'>已儲存</span>";
-  showToast("API Key 已儲存", "success");
+  showToast("API Key 已儲存，所有裝置同步完成", "success");
 }
 
 function toggleKeyVis() {

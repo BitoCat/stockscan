@@ -135,6 +135,8 @@ let currentUser = null, currentProfile = null, currentMkt = 'tw', lastResult = n
   nb.className = 'plan-badge ' + planBadge(currentProfile?.plan || 'free');
   const pts = await getPoints(currentUser.id);
   document.getElementById('pts-display').textContent = pts + ' 點';
+  // 從 DB 同步 Groq Key 到 localStorage
+  await getAIKeyFromDB(currentUser.id);
 })();
 
 function setMkt(m) {
