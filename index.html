@@ -239,6 +239,18 @@ function timeAgo(iso) {
   return Math.floor(d/86400) + '天前';
 }
 
+// 每30秒檢查 profile 是否有更新（讓升級立即生效）
+setInterval(async () => {
+  if (!currentUser) return;
+  const fresh = await getProfile(currentUser.id);
+  if (fresh && fresh.plan !== currentProfile?.plan) {
+    currentProfile = fresh;
+    renderHeader();
+    loadContent();
+    showToast("帳號已升級，功能已開啟！", "success");
+  }
+}, 30000);
+
 function showToast(msg, type) {
   type = type || '';
   const t = document.getElementById('toast');
