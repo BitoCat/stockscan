@@ -35,6 +35,21 @@
 .quick-btn .qd { font-size:11px; color:var(--muted); margin-top:2px; }
 .free-banner { background:rgba(243,156,18,.06); border:1px solid rgba(243,156,18,.3); border-radius:12px; padding:16px; margin-bottom:16px; text-align:center; }
 </style>
+<script>
+// 清除舊的 Service Worker 快取
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for(let registration of registrations) {
+      registration.unregister();
+    }
+  });
+  caches.keys().then(function(cacheNames) {
+    cacheNames.forEach(function(cacheName) {
+      caches.delete(cacheName);
+    });
+  });
+}
+</script>
 </head>
 <body>
 <nav class="topnav">
