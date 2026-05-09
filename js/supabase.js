@@ -84,6 +84,10 @@ function getAIKey() {
   return localStorage.getItem('ai_key') || DEFAULT_AI_KEY || '';
 }
 
+function clearOldKey() {
+  localStorage.removeItem('ai_key');
+}
+
 // ── 共用 Toast ──────────────────────────
 function showToast(msg, type = '') {
   const t = document.getElementById('toast');
@@ -119,7 +123,7 @@ async function callClaude(prompt, maxTokens, key) {
 
 async function callAI(prompt, maxTokens) {
   maxTokens = maxTokens || 1200;
-  // 優先使用 api_keys 輪替，用戶自備 Key 當備用
+  // 完全使用 api_keys 輪替，忽略 localStorage
   var dbKey = await getNextGroqKey();
   if (dbKey) {
     try {
@@ -129,24 +133,17 @@ async function callAI(prompt, maxTokens) {
     } catch(e) {
       if (e.message.indexOf('Rate limit') !== -1) {
         await sb.from('api_keys').update({ daily_used: 90001 }).eq('id', dbKey.id);
-        // 嘗試下一個 Key
         var dbKey2 = await getNextGroqKey();
         if (dbKey2) {
-          var result2 = await callGroq(prompt, maxTokens, dbKey2.key_value);
+          var r2 = await callGroq(prompt, maxTokens, dbKey2.key_value);
           await sb.from('api_keys').update({ daily_used: dbKey2.daily_used + maxTokens }).eq('id', dbKey2.id);
-          return result2;
+          return r2;
         }
       }
+      throw e;
     }
   }
-  // 備用：用戶自己的 Key
-  var userKey = localStorage.getItem('ai_key') || '';
-  if (userKey && userKey.startsWith('gsk_')) {
-    return await callGroq(prompt, maxTokens, userKey);
-  } else if (userKey && userKey.startsWith('sk-ant-')) {
-    return await callClaude(prompt, maxTokens, userKey);
-  }
-  throw new Error('所有 AI Key 額度已用完，請稍後再試');
+  throw new Error('AI 服務暫時無法使用，請稍後再試');
 }
 
 // ── 每日自動補點 ────────────────────────
