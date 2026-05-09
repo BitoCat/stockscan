@@ -407,22 +407,31 @@ async function insertImg(editorId) {
 async function loadApiKeys() {
   const { data } = await sb.from('api_keys').select('*').order('created_at', { ascending: false });
   const el = document.getElementById('keys-list');
-  if (!data || !data.length) { el.innerHTML = "<div style='font-size:12px;color:var(--muted);text-align:center;padding:16px'>尚無 Key</div>"; return; }
-  el.innerHTML = data.map(k => {
+  if (!data || !data.length) {
+    el.innerHTML = "<div style='font-size:12px;color:var(--muted);text-align:center;padding:16px'>尚無 Key，請新增</div>";
+    return;
+  }
+  let html = "";
+  for (const k of data) {
     const pct = Math.round(k.daily_used / 90000 * 100);
-    const color = pct > 80 ? 'var(--red)' : pct > 50 ? 'var(--warn)' : 'var(--green)';
-    return "<div style='border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px'>" +
-      "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px'>" +
-      "<div style='font-family:monospace;font-size:11px;color:var(--muted)'>" + k.key_value.slice(0,20) + "...</div>" +
-      "<div style='display:flex;gap:6px'>" +
-      "<span style='font-size:10px;padding:2px 8px;border-radius:6px;background:" + (k.is_active ? 'rgba(46,204,113,.15)' : 'rgba(231,76,60,.15)') + ";color:" + (k.is_active ? 'var(--green)' : 'var(--red)') + "'>" + (k.is_active ? '啟用' : '停用') + "</span>" +
-      "<button class='btn btn-ghost btn-sm' onclick='toggleKey("" + k.id + ""," + !k.is_active + ")'>" + (k.is_active ? '停用' : '啟用') + "</button>" +
-      "<button class='btn btn-red btn-sm' onclick='deleteKey("" + k.id + "")'>刪除</button>" +
-      "</div></div>" +
-      "<div style='font-size:11px;color:var(--muted);margin-bottom:4px'>今日使用: " + k.daily_used + " / 90,000 tokens (" + pct + "%)</div>" +
-      "<div style='height:4px;background:var(--border);border-radius:2px'><div style='height:100%;width:" + pct + "%;background:" + color + ";border-radius:2px'></div></div>" +
-      "</div>";
-  }).join('');
+    const color = pct > 80 ? "var(--red)" : pct > 50 ? "var(--warn)" : "var(--green)";
+    const activeBg = k.is_active ? "rgba(46,204,113,.15)" : "rgba(231,76,60,.15)";
+    const activeColor = k.is_active ? "var(--green)" : "var(--red)";
+    const activeLabel = k.is_active ? "啟用" : "停用";
+    const toggleLabel = k.is_active ? "停用" : "啟用";
+    html += "<div style='border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px'>";
+    html += "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px'>";
+    html += "<div style='font-family:monospace;font-size:11px;color:var(--muted)'>" + k.key_value.slice(0,20) + "...</div>";
+    html += "<div style='display:flex;gap:6px'>";
+    html += "<span style='font-size:10px;padding:2px 8px;border-radius:6px;background:" + activeBg + ";color:" + activeColor + "'>" + activeLabel + "</span>";
+    html += "<button class='btn btn-ghost btn-sm' data-id='" + k.id + "' data-val='" + !k.is_active + "' onclick='toggleKey(this.dataset.id, this.dataset.val === "true")'>" + toggleLabel + "</button>";
+    html += "<button class='btn btn-red btn-sm' data-id='" + k.id + "' onclick='deleteKey(this.dataset.id)'>刪除</button>";
+    html += "</div></div>";
+    html += "<div style='font-size:11px;color:var(--muted);margin-bottom:4px'>今日使用: " + k.daily_used + " / 90,000 tokens (" + pct + "%)</div>";
+    html += "<div style='height:4px;background:var(--border);border-radius:2px'><div style='height:100%;width:" + pct + "%;background:" + color + ";border-radius:2px'></div></div>";
+    html += "</div>";
+  }
+  el.innerHTML = html;
 }
 
 async function addApiKey() {
