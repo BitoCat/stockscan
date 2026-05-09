@@ -163,8 +163,28 @@ async function loadNews(tab, force = false) {
     return;
   }
 
-  document.getElementById('news-list').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">AI 整理最新市場動態...</div></div>';
+  document.getElementById('news-list').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入市場動態...</div></div>';
   document.getElementById('last-update').textContent = '載入中...';
+
+  // 先查 Supabase 快取（6小時內）
+  try {
+    const { data: cached } = await sb.from('news_cache')
+      .select('*')
+      .eq('tab', tab)
+      .single();
+
+    if (cached && !force) {
+      const updatedAt = new Date(cached.updated_at);
+      const hoursDiff = (Date.now() - updatedAt) / 1000 / 3600;
+      if (hoursDiff < 6) {
+        newsCache[tab] = cached.content;
+        const timeStr = updatedAt.toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'});
+        document.getElementById('last-update').textContent = 'AI 更新於 ' + timeStr;
+        renderNews(cached.content, tab);
+        return;
+      }
+    }
+  } catch(e) { console.log('快取查詢失敗', e); }
 
   const key = getAIKey();
   if (!key) {
@@ -190,6 +210,13 @@ async function loadNews(tab, force = false) {
     const now = new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'});
     document.getElementById('last-update').textContent = `AI 更新於 ${now}`;
     renderNews(items, tab);
+    // 儲存到 Supabase 快取
+    try {
+      await sb.from('news_cache').upsert(
+        { tab: tab, content: items, updated_at: new Date().toISOString() },
+        { onConflict: 'tab' }
+      );
+    } catch(e) { console.log('快取儲存失敗', e); }
   } catch(e) {
     const isRateLimit = e.message.includes('Rate limit');
     const msg = isRateLimit
