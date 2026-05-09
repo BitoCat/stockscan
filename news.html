@@ -203,7 +203,7 @@ async function loadNews(tab, force = false) {
     "規則：中文來源約6則、英文約6則；標題具體含公司名數字；summary繁體中文3點；sentiment準確；只輸出JSON";
 
   try {
-    const raw = await callAI(prompt, 800);
+    const raw = await callAI(prompt, 1500);
     const clean = raw.replace(/```json|```/g, '').trim();
     const items = JSON.parse(clean);
     newsCache[tab] = items;
