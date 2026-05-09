@@ -159,3 +159,22 @@ async function dailyBonus(userId) {
   }
   return false;
 }
+
+// ── AI Key 雲端同步 ─────────────────────
+async function getAIKeyFromDB(userId) {
+  try {
+    const { data } = await sb.from('profiles').select('groq_key').eq('id', userId).single();
+    if (data?.groq_key) {
+      localStorage.setItem('ai_key', data.groq_key);
+      return data.groq_key;
+    }
+  } catch(e) { console.log('getAIKeyFromDB error:', e); }
+  return localStorage.getItem('ai_key') || DEFAULT_AI_KEY || '';
+}
+
+async function saveAIKeyToDB(userId, key) {
+  try {
+    await sb.from('profiles').update({ groq_key: key }).eq('id', userId);
+  } catch(e) { console.log('saveAIKeyToDB error:', e); }
+  localStorage.setItem('ai_key', key);
+}
