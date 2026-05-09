@@ -153,6 +153,11 @@ function quickPick(sym, mkt) { setMkt(mkt); document.getElementById('stock-inp')
 
 async function analyze() {
   const sym = document.getElementById('stock-inp').value.trim().toUpperCase();
+  // 只接受數字和英文
+  if (-c[A-Z0-9.\-]+$/.test(sym)) {
+    showErr('請輸入股票代號（數字或英文），如 2330 或 NVDA，不支援中文名稱');
+    return;
+  }
   if (!sym) return;
   if (currentProfile?.plan === 'free') { showErr('此功能需要開通會員才能使用，請聯繫管理員開通。'); return; }
   const pts = await getPoints(currentUser.id);
