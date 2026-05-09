@@ -33,7 +33,10 @@
   .dot.bull { background:var(--green); box-shadow:0 0 6px var(--green); }
   .dot.bear { background:var(--red); box-shadow:0 0 6px var(--red); }
   .dot.neutral { background:var(--warn); box-shadow:0 0 6px var(--warn); }
-  .ai-text { font-size:13px; line-height:1.85; color:var(--text); white-space:pre-wrap; }
+  .ai-text { font-size:13px; line-height:1.85; color:var(--text); }
+  .ai-section { margin-bottom:20px; padding:14px; background:rgba(255,255,255,.02); border-radius:10px; border-left:3px solid var(--accent); }
+  .ai-section-title { color:var(--accent); font-weight:700; font-size:13px; letter-spacing:1px; margin-bottom:8px; display:block; }
+  .ai-section-body { line-height:1.9; color:var(--text); font-size:13px; }
   .res-foot { padding:10px 18px; background:rgba(0,0,0,.3); border-top:1px solid var(--border); font-family:'Share Tech Mono',monospace; font-size:9px; color:var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; }
   .pts-bar { background:linear-gradient(135deg,rgba(0,212,255,.08),rgba(155,89,182,.06)); border:1px solid rgba(0,212,255,.2); border-radius:10px; padding:10px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; }
 </style>
@@ -284,7 +287,20 @@ function renderResult(sym, d) {
   ];
   document.getElementById('r-metrics').innerHTML=mets.map(m=>'<div class="met"><div class="met-l">'+m.l+'</div><div class="met-v '+m.c+'">'+m.v+'</div>'+(m.s?'<div class="met-s">'+m.s+'</div>':'')+'</div>').join('');
   document.getElementById('r-signals').innerHTML=(d.signals||[]).map(s=>'<div class="sig"><div class="dot '+s.type+'"></div><span>'+s.text+'</span></div>').join('');
-  document.getElementById('r-analysis').textContent=d.analysis||'';
+  const analysisText = d.analysis || '';
+  const sections = analysisText.split(/(?=\u3010)/);
+  let analysisHtml = '';
+  sections.forEach(function(s) {
+    const titleMatch = s.match(/^\u3010(.+?)\u3011/);
+    if (titleMatch) {
+      const title = titleMatch[0];
+      const body = s.replace(title, '').trim();
+      analysisHtml += '<div class="ai-section"><span class="ai-section-title">' + title + '</span><div class="ai-section-body">' + body + '</div></div>';
+    } else if (s.trim()) {
+      analysisHtml += '<div class="ai-section"><div class="ai-section-body">' + s + '</div></div>';
+    }
+  });
+  document.getElementById('r-analysis').innerHTML = analysisHtml;
   document.getElementById('r-time').textContent='診斷：'+new Date().toLocaleString('zh-TW');
   document.getElementById('res-card').classList.add('show');
   document.getElementById('res-card').scrollIntoView({behavior:'smooth',block:'nearest'});
