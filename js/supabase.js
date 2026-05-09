@@ -122,7 +122,6 @@ async function callAI(prompt, maxTokens) {
   }
   throw new Error('所有 AI Key 額度已用完，請稍後再試');
 }
-}
 
 // ── 每日自動補點 ────────────────────────
 async function dailyBonus(userId) {
