@@ -95,6 +95,28 @@ function showToast(msg, type = '') {
 
 // ── AI 呼叫（支援 Groq 和 Anthropic）──────
 // Groq key 以 gsk_ 開頭，Anthropic 以 sk-ant- 開頭
+async function callGroq(prompt, maxTokens, key) {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+    body: JSON.stringify({ model: 'llama-3.3-70b-versatile', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.choices[0].message.content;
+}
+
+async function callClaude(prompt, maxTokens, key) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.content.map(function(b) { return b.text || ''; }).join('');
+}
+
 async function callAI(prompt, maxTokens) {
   maxTokens = maxTokens || 1200;
   var userKey = getAIKey();
