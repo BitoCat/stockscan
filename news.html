@@ -183,7 +183,7 @@ async function loadNews(tab, force = false) {
     "規則：中文來源約6則、英文約6則；標題具體含公司名數字；summary繁體中文3點；sentiment準確；只輸出JSON";
 
   try {
-    const raw = await callAI(prompt, 2000);
+    const raw = await callAI(prompt, 800);
     const clean = raw.replace(/```json|```/g, '').trim();
     const items = JSON.parse(clean);
     newsCache[tab] = items;
@@ -191,7 +191,13 @@ async function loadNews(tab, force = false) {
     document.getElementById('last-update').textContent = `AI 更新於 ${now}`;
     renderNews(items, tab);
   } catch(e) {
-    document.getElementById('news-list').innerHTML = `<div style="text-align:center;padding:40px;color:var(--red);font-size:13px">載入失敗：${e.message}</div>`;
+    const isRateLimit = e.message.includes('Rate limit');
+    const msg = isRateLimit
+      ? 'AI 每日額度已用完，請稍後再試（約 24 小時後重置）'
+      : '載入失敗：' + e.message;
+    document.getElementById('news-list').innerHTML =
+      "<div style='text-align:center;padding:40px;font-size:13px;color:" + (isRateLimit ? "var(--warn)" : "var(--red)") + "'>" +
+      (isRateLimit ? "⏳ " : "❌ ") + msg + "</div>";
   }
 }
 
