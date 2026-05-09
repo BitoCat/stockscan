@@ -165,7 +165,6 @@ let currentUser = null, currentProfile = null;
   // 強制從 DB 抓最新 profile
   currentProfile = null;
   currentProfile = await getProfile(currentUser.id);
-  console.log('profile loaded:', currentProfile?.plan, currentProfile?.groq_key?.slice(0,10));
   if (!currentProfile) {
     await sb.from('profiles').insert({ id: currentUser.id, display_name: currentUser.user_metadata?.display_name || currentUser.email.split('@')[0], plan: 'free', daily_count: 0, last_date: new Date().toDateString() }).then(() => {}).catch(() => {});
     currentProfile = await getProfile(currentUser.id);
