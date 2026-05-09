@@ -463,6 +463,38 @@ async function deleteKey(id) {
   loadApiKeys();
 }
 
+async function loadPublished(table, elId, titleField) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = "<div style='font-size:12px;color:var(--muted);text-align:center;padding:12px'>載入中...</div>";
+  const { data, error } = await sb.from(table).select('*').order('published_at', { ascending: false }).limit(10);
+  if (error || !data || !data.length) {
+    el.innerHTML = "<div style='font-size:12px;color:var(--muted);text-align:center;padding:12px'>尚無已發布內容</div>";
+    return;
+  }
+  let html = "";
+  for (const item of data) {
+    html += "<div style='border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap'>";
+    html += "<div style='flex:1'><div style='font-size:13px;font-weight:600'>" + (item[titleField] || '—') + "</div>";
+    html += "<div style='font-size:10px;color:var(--muted)'>" + timeAgo(item.published_at) + "</div></div>";
+    html += "<button class='btn btn-red btn-sm' data-id='" + item.id + "' data-table='" + table + "' data-el='" + elId + "' data-field='" + titleField + "' onclick='deleteItem(this)'>🗑 刪除</button>";
+    html += "</div>";
+  }
+  el.innerHTML = html;
+}
+
+async function deleteItem(btn) {
+  const id = btn.dataset.id;
+  const table = btn.dataset.table;
+  const elId = btn.dataset.el;
+  const field = btn.dataset.field;
+  if (!confirm('確定刪除？')) return;
+  const { error } = await sb.from(table).delete().eq('id', id);
+  if (error) { showToast('刪除失敗', 'error'); return; }
+  showToast('已刪除', 'success');
+  loadPublished(table, elId, field);
+}
+
 function timeAgo(iso) {
   if (!iso) return "—";
   const d = (Date.now() - new Date(iso)) / 1000;
