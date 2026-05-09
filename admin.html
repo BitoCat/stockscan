@@ -75,6 +75,8 @@
         <button class="btn btn-green btn-sm" onclick="postAnnouncement()">📤 發布公告</button>
       </div>
     </div>
+    <div class="sec-head" style="margin-top:20px">已發布公告</div>
+    <div id="ann-published"><div style="font-size:12px;color:var(--muted);text-align:center;padding:16px">載入中...</div></div>
   </div>
 
   <!-- 發布新聞 -->
@@ -103,6 +105,8 @@
         <button class="btn btn-green btn-sm" onclick="postNews()">📤 發布新聞</button>
       </div>
     </div>
+    <div class="sec-head" style="margin-top:16px">已發布新聞</div>
+    <div id="news-list-pub"></div>
   </div>
 
   <!-- 盤面解析 -->
@@ -209,6 +213,10 @@ function setPanel(panel) {
   document.getElementById("panel-" + panel).classList.add("show");
   if (panel === 'keys') loadApiKeys();
   if (panel === 'members') loadMembers();
+  if (panel === 'announce') loadPublished('announcements', 'ann-list-pub', 'title');
+  if (panel === 'news') loadPublished('news', 'news-list-pub', 'title');
+  if (panel === 'daily') loadPublished('daily_analysis', 'daily-list-pub', 'title');
+  if (panel === 'tutorial') loadPublished('tutorials', 'tut-list-pub', 'title');
 }
 
 async function loadMessages() {
