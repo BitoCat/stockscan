@@ -168,12 +168,6 @@ async function analyze() {
   if (currentProfile?.plan === 'free') { showErr('此功能需要開通會員才能使用，請聯繫管理員開通。'); return; }
   const pts = await getPoints(currentUser.id);
   if (pts < 1) { showErr('點數不足！請聯繫管理員儲值。'); return; }
-  let key = getAIKey();
-  if (!key) {
-    // 嘗試從 DB 重新抓
-    key = await getAIKeyFromDB(currentUser.id);
-  }
-  if (!key) { showErr('請先在「我的」頁面設定 AI Key'); return; }
   toggleLoad(true);
   document.getElementById('res-card').classList.remove('show');
   hideErr();
