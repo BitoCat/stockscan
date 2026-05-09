@@ -35,6 +35,7 @@
     <button class="admin-tab" onclick="setPanel('news')">📰 發布新聞</button>
     <button class="admin-tab" onclick="setPanel('daily')">📊 盤面解析</button>
     <button class="admin-tab" onclick="setPanel('tutorial')">📚 發布教學</button>
+    <button class="admin-tab" onclick="setPanel('keys')">🔑 Key 管理</button>
   </div>
 
   <!-- 用戶訊息 -->
@@ -133,6 +134,19 @@
     </div>
   </div>
 
+  <!-- Key 管理 -->
+  <div class="panel" id="panel-keys">
+    <div class="sec-head">🔑 Groq Key 輪替管理</div>
+    <div class="card" style="padding:16px;margin-bottom:16px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <input class="key-inp" id="new-key-value" placeholder="gsk_新的Groq Key" style="font-family:monospace;font-size:12px;letter-spacing:0">
+        <button class="btn btn-green btn-sm" onclick="addApiKey()">➕ 新增 Key</button>
+      </div>
+    </div>
+    <div class="sec-head">現有 Keys</div>
+    <div id="keys-list"><div style="font-size:12px;color:var(--muted);text-align:center;padding:16px">載入中...</div></div>
+  </div>
+
   <!-- 發布教學 -->
   <div class="panel" id="panel-tutorial">
     <div class="sec-head">📚 發布教學文章</div>
@@ -193,6 +207,8 @@ function setPanel(panel) {
   });
   document.querySelectorAll(".panel").forEach(p => p.classList.remove("show"));
   document.getElementById("panel-" + panel).classList.add("show");
+  if (panel === 'keys') loadApiKeys();
+  if (panel === 'members') loadMembers();
 }
 
 async function loadMessages() {
@@ -386,6 +402,48 @@ async function insertImg(editorId) {
     }
   };
   input.click();
+}
+
+async function loadApiKeys() {
+  const { data } = await sb.from('api_keys').select('*').order('created_at', { ascending: false });
+  const el = document.getElementById('keys-list');
+  if (!data || !data.length) { el.innerHTML = "<div style='font-size:12px;color:var(--muted);text-align:center;padding:16px'>尚無 Key</div>"; return; }
+  el.innerHTML = data.map(k => {
+    const pct = Math.round(k.daily_used / 90000 * 100);
+    const color = pct > 80 ? 'var(--red)' : pct > 50 ? 'var(--warn)' : 'var(--green)';
+    return "<div style='border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px'>" +
+      "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px'>" +
+      "<div style='font-family:monospace;font-size:11px;color:var(--muted)'>" + k.key_value.slice(0,20) + "...</div>" +
+      "<div style='display:flex;gap:6px'>" +
+      "<span style='font-size:10px;padding:2px 8px;border-radius:6px;background:" + (k.is_active ? 'rgba(46,204,113,.15)' : 'rgba(231,76,60,.15)') + ";color:" + (k.is_active ? 'var(--green)' : 'var(--red)') + "'>" + (k.is_active ? '啟用' : '停用') + "</span>" +
+      "<button class='btn btn-ghost btn-sm' onclick='toggleKey("" + k.id + ""," + !k.is_active + ")'>" + (k.is_active ? '停用' : '啟用') + "</button>" +
+      "<button class='btn btn-red btn-sm' onclick='deleteKey("" + k.id + "")'>刪除</button>" +
+      "</div></div>" +
+      "<div style='font-size:11px;color:var(--muted);margin-bottom:4px'>今日使用: " + k.daily_used + " / 90,000 tokens (" + pct + "%)</div>" +
+      "<div style='height:4px;background:var(--border);border-radius:2px'><div style='height:100%;width:" + pct + "%;background:" + color + ";border-radius:2px'></div></div>" +
+      "</div>";
+  }).join('');
+}
+
+async function addApiKey() {
+  const key = document.getElementById('new-key-value').value.trim();
+  if (!key || !key.startsWith('gsk_')) { showToast('請輸入有效的 Groq Key', 'error'); return; }
+  const { error } = await sb.from('api_keys').insert({ key_value: key, provider: 'groq', is_active: true, daily_used: 0, last_reset: new Date().toISOString().split('T')[0] });
+  if (error) { showToast('新增失敗: ' + error.message, 'error'); return; }
+  showToast('Key 已新增', 'success');
+  document.getElementById('new-key-value').value = '';
+  loadApiKeys();
+}
+
+async function toggleKey(id, isActive) {
+  await sb.from('api_keys').update({ is_active: isActive }).eq('id', id);
+  loadApiKeys();
+}
+
+async function deleteKey(id) {
+  if (!confirm('確定刪除這個 Key？')) return;
+  await sb.from('api_keys').delete().eq('id', id);
+  loadApiKeys();
 }
 
 function timeAgo(iso) {
