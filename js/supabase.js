@@ -37,6 +37,12 @@ async function getProfile(userId) {
   const { data } = await sb.from('profiles').select('*').eq('id', userId).single();
   return data;
 }
+
+// 強制重新抓取最新 profile（清除快取）
+async function refreshProfile(userId) {
+  const { data } = await sb.from('profiles').select('*').eq('id', userId).single();
+  return data;
+}
 async function requireAuth() {
   const user = await getUser();
   if (!user) { window.location.href = 'login.html'; return null; }
