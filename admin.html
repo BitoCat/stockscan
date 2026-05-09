@@ -395,9 +395,9 @@ async function uploadImage(file) {
   if (!file) return null;
   const ext = file.name.split(".").pop();
   const fileName = Date.now() + "." + ext;
-  const { data, error } = await sb.storage.from("images").upload(fileName, file, { upsert: true });
+  const { data, error } = await sb.storage.from("image").upload(fileName, file, { upsert: true });
   if (error) { showToast("圖片上傳失敗: " + error.message, "error"); return null; }
-  const { data: urlData } = sb.storage.from("images").getPublicUrl(fileName);
+  const { data: urlData } = sb.storage.from("image").getPublicUrl(fileName);
   return urlData.publicUrl;
 }
 
