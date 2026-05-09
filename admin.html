@@ -332,13 +332,19 @@ async function postAnnouncement() {
   const content = document.getElementById("ann-content").value.trim();
   const url = document.getElementById("ann-url").value.trim() || null;
   const is_pinned = document.getElementById("ann-pinned").checked;
-  if (!title) { showToast("請填寫標題", "error"); return; }
   const show_on_home = document.getElementById("ann-home").checked;
+  if (!title) { showToast("請填寫標題", "error"); return; }
+  // 編輯模式
+  if (window._editId && window._editTable === "announcements") {
+    const done = await updateItem("announcements", { title, content, url, is_pinned, show_on_home }, "ann-list-pub");
+    if (done) { document.getElementById("ann-title").value = ""; document.getElementById("ann-content").value = ""; return; }
+  }
   const res = await sb.from("announcements").insert({ title, content, url, is_pinned, show_on_home, published_at: new Date().toISOString() });
   if (res.error) { showToast("發布失敗: " + res.error.message, "error"); return; }
   showToast("公告已發布", "success");
   document.getElementById("ann-title").value = "";
   document.getElementById("ann-content").value = "";
+  loadPublished("announcements", "ann-list-pub", "title");
 }
 
 async function postNews() {
@@ -504,28 +510,50 @@ async function editItem(btn) {
   const id = btn.dataset.id;
   const table = btn.dataset.table;
   const elId = btn.dataset.el;
-  const field = btn.dataset.field;
 
   const { data } = await sb.from(table).select('*').eq('id', id).single();
-  if (!data) { showToast('載入失敗', 'error'); return; }
+  if (!data) { showToast("載入失敗", "error"); return; }
 
-  const newTitle = prompt('修改標題：', data.title || data.name || '');
-  if (newTitle === null) return;
-
-  const contentField = data.content !== undefined ? 'content' : data.summary !== undefined ? 'summary' : null;
-  let newContent = data[contentField] || '';
-  if (contentField) {
-    newContent = prompt('修改內容：', data[contentField] || '');
-    if (newContent === null) return;
+  // 根據資料表填入對應的表單
+  if (table === "announcements") {
+    document.getElementById("ann-title").value = data.title || "";
+    document.getElementById("ann-content").value = data.content || "";
+    document.getElementById("ann-url").value = data.url || "";
+    document.getElementById("ann-pinned").checked = data.is_pinned || false;
+    document.getElementById("ann-home").checked = data.show_on_home || false;
+    window._editId = id; window._editTable = table; window._editEl = elId;
+    showToast("已載入，修改後點發布即可更新", "success");
+    document.getElementById("ann-title").scrollIntoView({behavior:"smooth"});
+  } else if (table === "news") {
+    document.getElementById("news-title").value = data.title || "";
+    document.getElementById("news-summary").value = data.summary || "";
+    document.getElementById("news-source").value = data.source || "";
+    document.getElementById("news-url").value = data.url || "";
+    window._editId = id; window._editTable = table; window._editEl = elId;
+    showToast("已載入，修改後點發布即可更新", "success");
+  } else if (table === "daily_analysis") {
+    document.getElementById("da-title").value = data.title || "";
+    document.getElementById("da-content").value = data.content || "";
+    window._editId = id; window._editTable = table; window._editEl = elId;
+    showToast("已載入，修改後點發布即可更新", "success");
+  } else if (table === "tutorials") {
+    document.getElementById("tut-title").value = data.title || "";
+    document.getElementById("tut-content").value = data.content || "";
+    document.getElementById("tut-emoji").value = data.cover_emoji || "";
+    window._editId = id; window._editTable = table; window._editEl = elId;
+    showToast("已載入，修改後點發布即可更新", "success");
   }
+}
 
-  const updateData = { title: newTitle };
-  if (contentField) updateData[contentField] = newContent;
-
-  const { error } = await sb.from(table).update(updateData).eq('id', id);
-  if (error) { showToast('更新失敗', 'error'); return; }
-  showToast('已更新', 'success');
-  loadPublished(table, elId, field);
+// 更新已存在的項目
+async function updateItem(table, updateData, elId) {
+  if (!window._editId || window._editTable !== table) return false;
+  const { error } = await sb.from(table).update(updateData).eq("id", window._editId);
+  if (error) { showToast("更新失敗", "error"); return false; }
+  showToast("已更新", "success");
+  window._editId = null; window._editTable = null;
+  loadPublished(table, elId, "title");
+  return true;
 }
 
 function timeAgo(iso) {
