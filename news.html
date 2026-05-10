@@ -186,11 +186,6 @@ async function loadNews(tab, force = false) {
     }
   } catch(e) { console.log('快取查詢失敗', e); }
 
-  const key = getAIKey();
-  if (!key) {
-    document.getElementById('news-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">請先在「我的」頁面設定 AI Key</div>';
-    return;
-  }
 
   const cfg = TAB_CONFIG[tab];
   const today = new Date().toLocaleDateString('zh-TW');
