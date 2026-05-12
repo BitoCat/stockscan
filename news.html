@@ -151,7 +151,7 @@ async function loadNews(tab, force = false) {
         "<span class='news-lang'>官方</span>" +
         "<span class='news-date'>" + ago + "</span></div>" +
         "<div class='news-title'>" + n.title + "</div>" +
-        (n.summary ? "<div class='ai-summary show'><strong style='color:var(--accent);font-size:11px'>📌 摘要</strong><br>" + n.summary + "</div>" : "") +
+        (n.summary ? "<div class='ai-summary show'><strong style='color:var(--accent);font-size:11px'>📌 摘要</strong><br>" + n.summary.replace(/\n/g, '<br>') + "</div>" : "") +        
         "<div class='news-foot'><span style='font-size:11px;color:" + sentColor(n.sentiment) + "'>" + sentIcon(n.sentiment) + " " + sentLabel(n.sentiment) + "</span>" +
         (n.url ? "<a href='" + n.url + "' target='_blank' style='font-size:11px;color:var(--accent);text-decoration:none'>閱讀全文 →</a>" : "") +
         "</div></div>";
