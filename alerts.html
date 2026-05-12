@@ -78,6 +78,8 @@ let cu = null, cp = null, currentTab = 'us';
   await loadAlerts('us');
 
   // 即時訂閱新快訊
+  // 每30秒自動輪詢
+setInterval(() => loadAlerts(currentTab), 10000);  
   sb.channel('alerts').on('postgres_changes', {
     event: 'INSERT', schema: 'public', table: 'alerts'
   }, payload => {
