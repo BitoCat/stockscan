@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>交易大師 · 即時快訊</title>
+<link rel="stylesheet" href="css/base.css">
+<style>
+.cat-tabs { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:16px; scrollbar-width:none; }
+.cat-tabs::-webkit-scrollbar { display:none; }
+.cat-tab { flex-shrink:0; background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:20px; color:var(--muted); font-size:12px; font-family:'Noto Sans TC',sans-serif; padding:7px 16px; cursor:pointer; transition:all .2s; white-space:nowrap; }
+.cat-tab.active { background:rgba(0,212,255,.12); border-color:var(--accent); color:var(--accent); font-weight:600; }
+.alert-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:10px; transition:all .2s; }
+.alert-card.ll { border-left:3px solid var(--red); }
+.alert-card.hl { border-left:3px solid var(--green); }
+.alert-meta { display:flex; align-items:center; gap:7px; margin-bottom:8px; flex-wrap:wrap; }
+.alert-symbol { font-family:'Share Tech Mono',monospace; font-size:14px; font-weight:700; color:var(--text); }
+.alert-tf { font-size:10px; color:var(--accent); background:rgba(0,212,255,.08); border:1px solid rgba(0,212,255,.2); border-radius:4px; padding:2px 8px; }
+.alert-time { font-size:10px; color:var(--muted); margin-left:auto; }
+.alert-signal { font-size:13px; font-weight:600; margin-bottom:6px; }
+.alert-signal.ll { color:var(--red); }
+.alert-signal.hl { color:var(--green); }
+.alert-price { font-family:'Share Tech Mono',monospace; font-size:12px; color:var(--muted); margin-bottom:8px; }
+.alert-analysis { background:rgba(255,255,255,.03); border-radius:8px; padding:10px 12px; font-size:12px; color:var(--text); line-height:1.7; }
+.alert-rating { font-size:13px; margin-bottom:4px; }
+.refresh-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.last-update { font-size:11px; color:var(--muted); }
+.notify-btn { background:rgba(0,212,255,.08); border:1px solid rgba(0,212,255,.2); border-radius:8px; color:var(--accent); font-size:11px; padding:6px 12px; cursor:pointer; font-family:'Noto Sans TC',sans-serif; }
+.notify-btn.on { background:rgba(46,204,113,.08); border-color:rgba(46,204,113,.3); color:var(--green); }
+.empty { text-align:center; padding:40px 20px; color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <a class="logo" href="index.html"><span class="logo-main">交易<span>大師</span></span><span class="logo-ver">PRO</span></a>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span id="nav-plan" class="plan-badge plan-free">FREE</span>
+    <button class="btn btn-ghost btn-sm" onclick="signOut()">登出</button>
+  </div>
+</nav>
+
+<div class="page-wrap">
+  <div class="cat-tabs">
+    <button class="cat-tab active" id="tab-us" onclick="setTab('us')">🇺🇸 美股快訊</button>
+    <button class="cat-tab" id="tab-tw" onclick="setTab('tw')">🇹🇼 台股快訊</button>
+  </div>
+
+  <div class="refresh-bar">
+    <span class="last-update" id="last-update">載入中...</span>
+    <button class="notify-btn" id="notify-btn" onclick="toggleNotify()">🔔 開啟通知</button>
+  </div>
+
+  <div id="alerts-list"><div class="empty">載入中...</div></div>
+</div>
+
+<nav class="tabbar">
+  <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
+  <a class="tb" href="watchlist.html"><span class="ti">⭐</span>觀察名單</a>
+  <a class="tb" href="news.html"><span class="ti">📰</span>新聞</a>
+  <a class="tb active" href="alerts.html"><span class="ti">⚡</span>快訊</a>
+  <a class="tb" href="profile.html"><span class="ti">👤</span>我的</a>
+</nav>
+
+<div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script>
+let cu = null, cp = null, currentTab = 'us';
+
+(async () => {
+  cu = await requireAuth();
+  if (!cu) return;
+  cp = await getProfile(cu.id);
+  const nb = document.getElementById('nav-plan');
+  nb.textContent = planLabel(cp?.plan || 'free');
+  nb.className = 'plan-badge ' + planBadge(cp?.plan || 'free');
+  checkNotifyStatus();
+  await loadAlerts('us');
+
+  // 即時訂閱新快訊
+  sb.channel('alerts').on('postgres_changes', {
+    event: 'INSERT', schema: 'public', table: 'alerts'
+  }, payload => {
+    const a = payload.new;
+    if (a.market === currentTab) {
+      prependAlert(a);
+      if (Notification.permission === 'granted') {
+        const isHL = a.signal === 'Higher Low Buy';
+        new Notification(isHL ? `🟢 ${a.symbol} HL 買點！` : `🔻 ${a.symbol} LL 出現`, {
+          body: `${a.timeframe} @ $${a.price}`,
+          icon: 'favicon.ico'
+        });
+      }
+    }
+  }).subscribe();
+})();
+
+function setTab(tab) {
+  currentTab = tab;
+  ['us','tw'].forEach(t => document.getElementById('tab-'+t).classList.toggle('active', t === tab));
+  loadAlerts(tab);
+}
+
+async function loadAlerts(market) {
+  document.getElementById('alerts-list').innerHTML = '<div class="empty">載入中...</div>';
+  const { data, error } = await sb.from('alerts')
+    .select('*')
+    .eq('market', market)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  const now = new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'});
+  document.getElementById('last-update').textContent = '更新於 ' + now;
+
+  if (error || !data || !data.length) {
+    document.getElementById('alerts-list').innerHTML = '<div class="empty">暫無快訊</div>';
+    return;
+  }
+  document.getElementById('alerts-list').innerHTML = data.map(a => renderAlert(a)).join('');
+}
+
+function renderAlert(a) {
+  const isHL = a.signal === 'Higher Low Buy';
+  const type = isHL ? 'hl' : 'll';
+  const icon = isHL ? '🟢' : '🔻';
+  const signalText = isHL ? 'Higher Low 買點 ⚡第二進場點' : 'Lower Low 出現 ⚠️第一進場點';
+  return `<div class="alert-card ${type}">
+    <div class="alert-meta">
+      <span class="alert-symbol">${a.symbol}</span>
+      <span class="alert-tf">${a.timeframe || ''}</span>
+      <span class="alert-time">${timeAgo(a.created_at)}</span>
+    </div>
+    <div class="alert-signal ${type}">${icon} ${signalText}</div>
+    <div class="alert-price">💰 價格：$${a.price}</div>
+    ${a.analysis ? `<div class="alert-analysis">${a.rating ? '<div class="alert-rating">' + a.rating + '</div>' : ''}${a.analysis}</div>` : ''}
+  </div>`;
+}
+
+function prependAlert(a) {
+  const list = document.getElementById('alerts-list');
+  if (list.querySelector('.empty')) list.innerHTML = '';
+  list.insertAdjacentHTML('afterbegin', renderAlert(a));
+  showToast(a.signal === 'Higher Low Buy' ? `🟢 ${a.symbol} HL 買點！` : `🔻 ${a.symbol} LL 出現`, a.signal === 'Higher Low Buy' ? 'success' : '');
+}
+
+function checkNotifyStatus() {
+  const btn = document.getElementById('notify-btn');
+  if (Notification.permission === 'granted') {
+    btn.textContent = '🔔 通知已開啟';
+    btn.classList.add('on');
+  }
+}
+
+async function toggleNotify() {
+  if (Notification.permission === 'granted') {
+    showToast('通知已開啟', 'success');
+    return;
+  }
+  const result = await Notification.requestPermission();
+  if (result === 'granted') {
+    document.getElementById('notify-btn').textContent = '🔔 通知已開啟';
+    document.getElementById('notify-btn').classList.add('on');
+    showToast('✅ 推播通知已開啟！', 'success');
+  }
+}
+
+function timeAgo(iso) {
+  if (!iso) return '—';
+  const d = (Date.now() - new Date(iso)) / 1000;
+  if (d < 60) return '剛剛';
+  if (d < 3600) return Math.floor(d/60) + '分鐘前';
+  if (d < 86400) return Math.floor(d/3600) + '小時前';
+  return Math.floor(d/86400) + '天前';
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + (type||'');
+  setTimeout(() => t.className = '', 2800);
+}
+</script>
+</body>
+</html>
