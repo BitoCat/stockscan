@@ -82,16 +82,15 @@ let cu = null, cp = null, currentTab = 'us';
     event: 'INSERT', schema: 'public', table: 'alerts'
   }, payload => {
     const a = payload.new;
-    if (a.market === currentTab) {
-      prependAlert(a);
-      if (Notification.permission === 'granted') {
-        const isHL = a.signal === 'Higher Low Buy';
-        new Notification(isHL ? `🟢 ${a.symbol} HL 買點！` : `🔻 ${a.symbol} LL 出現`, {
-          body: `${a.timeframe} @ $${a.price}`,
-          icon: 'favicon.ico'
-        });
-      }
-    }
+if (Notification.permission === 'granted') {
+  const prefs = JSON.parse(localStorage.getItem('notify_prefs') || '{"us":true,"tw":true}');
+  if (prefs[a.market]) {
+    new Notification(isHL ? `🟢 ${a.symbol} HL 買點！` : `🔻 ${a.symbol} LL 出現`, {
+      body: `${a.timeframe} @ $${a.price}`,
+      icon: 'favicon.ico'
+    });
+  }
+}
   }).subscribe();
 })();
 
@@ -152,16 +151,39 @@ function checkNotifyStatus() {
 }
 
 async function toggleNotify() {
-  if (Notification.permission === 'granted') {
-    showToast('通知已開啟', 'success');
-    return;
+  if (Notification.permission !== 'granted') {
+    const result = await Notification.requestPermission();
+    if (result !== 'granted') return;
   }
-  const result = await Notification.requestPermission();
-  if (result === 'granted') {
-    document.getElementById('notify-btn').textContent = '🔔 通知已開啟';
-    document.getElementById('notify-btn').classList.add('on');
-    showToast('✅ 推播通知已開啟！', 'success');
-  }
+  const prefs = JSON.parse(localStorage.getItem('notify_prefs') || '{"us":true,"tw":true}');
+  const menu = `
+    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:999;display:flex;align-items:center;justify-content:center" onclick="this.remove()">
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:24px;width:280px" onclick="event.stopPropagation()">
+        <div style="font-size:14px;font-weight:700;margin-bottom:16px">🔔 通知設定</div>
+        <label style="display:flex;align-items:center;gap:10px;margin-bottom:12px;cursor:pointer">
+          <input type="checkbox" id="pref-us" ${prefs.us?'checked':''} style="width:16px;height:16px">
+          <span style="font-size:13px">🇺🇸 美股快訊</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;margin-bottom:20px;cursor:pointer">
+          <input type="checkbox" id="pref-tw" ${prefs.tw?'checked':''} style="width:16px;height:16px">
+          <span style="font-size:13px">🇹🇼 台股快訊</span>
+        </label>
+        <button onclick="saveNotifyPrefs()" style="width:100%;background:var(--accent);color:#000;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">儲存設定</button>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend', menu);
+}
+
+function saveNotifyPrefs() {
+  const prefs = {
+    us: document.getElementById('pref-us').checked,
+    tw: document.getElementById('pref-tw').checked
+  };
+  localStorage.setItem('notify_prefs', JSON.stringify(prefs));
+  document.querySelector('[onclick="this.remove()"]')?.remove();
+  document.getElementById('notify-btn').textContent = '🔔 通知已設定';
+  document.getElementById('notify-btn').classList.add('on');
+  showToast('✅ 通知設定已儲存！', 'success');
 }
 
 function timeAgo(iso) {
