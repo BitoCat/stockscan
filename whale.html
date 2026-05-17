@@ -175,10 +175,10 @@ async function loadFilerPositions(cik,name){
   const ci={'New':'🆕','Add':'📈','Reduce':'📉','Sold':'🚪','Unchanged':'—'};
   document.getElementById('all-positions-list').innerHTML='<div class="section-title" style="margin-bottom:10px">'+name+' — '+quarters[0]+'</div>'+latest.map(p=>{const vm=p.market_value?(p.market_value/1000).toFixed(1):'—';return '<div class="card normal"><div class="card-top"><div><div style="font-size:13px;font-weight:600">'+(p.ticker||p.stock_name)+'</div><div class="card-name">'+(p.stock_name||'')+'</div></div><div class="card-value"><div class="mv">$'+vm+'M</div><div style="color:'+(cc[p.position_change_type]||'var(--muted)')+';font-size:12px;margin-top:3px">'+(ci[p.position_change_type]||'')+' '+p.position_change_type+'</div><div class="quarter">'+(p.pct_of_portfolio||0).toFixed(2)+'%</div></div></div></div>';}).join('');
 }
-function openDetail(t,q){alert(t+' ('+q+')\n點擊後可查看詳細建倉追蹤記錄');}
-function switchTab(n){document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['new','all','filers'][i]===n));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));document.getElementById('tab-'+n).classList.add('active');}
-function setFilter(f,el){currentFilter=f;document.querySelectorAll('.filter-bar .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderNewPositions(allNewPositions);}
-function setFilerFilter(cik,el){document.querySelectorAll('#filer-filter-bar .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');if(cik!=='all'){const f=filers.find(f=>f.cik===cik);if(f)loadFilerPositions(cik,f.name);}}
+window.openDetail = function(t,q){alert(t+' ('+q+')\n點擊後可查看詳細建倉追蹤記錄');}
+window.switchTab = function(n){document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['new','all','filers'][i]===n));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));document.getElementById('tab-'+n).classList.add('active');}
+window.setFilter = function(f,el){currentFilter=f;document.querySelectorAll('.filter-bar .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderNewPositions(allNewPositions);}
+window.setFilerFilter = function(cik,el){document.querySelectorAll('#filer-filter-bar .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');if(cik!=='all'){const f=filers.find(f=>f.cik===cik);if(f)loadFilerPositions(cik,f.name);}}
 init();
 </script>
 </body>
