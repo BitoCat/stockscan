@@ -165,7 +165,11 @@ async function loadFilers(){
   filers=data;
   const bar=document.getElementById('filer-filter-bar');
   data.forEach(f=>{const c=document.createElement('div');c.className='chip';c.textContent=f.short_name||f.name;c.dataset.cik=f.cik;c.onclick=()=>setFilerFilter(f.cik,c);bar.appendChild(c);});
-  document.getElementById('filers-list').innerHTML=data.map(f=>'<div class="card normal" onclick="loadFilerPositions(''+f.cik+'',''+f.name+'')"><div class="card-top"><div><div style="font-size:15px;font-weight:600">'+f.name+'</div><div class="card-name">CIK: '+f.cik+'</div></div><div style="font-size:20px">→</div></div></div>').join('');
+  const list=document.getElementById('filers-list');
+  list.innerHTML=data.map((f,i)=>'<div class="card normal" data-idx="'+i+'"><div class="card-top"><div><div style="font-size:15px;font-weight:600">'+f.name+'</div><div class="card-name">CIK: '+f.cik+'</div></div><div style="font-size:20px">→</div></div></div>').join('');
+  list.querySelectorAll('.card').forEach((el,i)=>{
+    el.addEventListener('click',()=>loadFilerPositions(data[i].cik,data[i].name));
+  });
 }
 async function loadFilerPositions(cik,name){
   switchTab('all');
