@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>交易大師 · 鯨魚追蹤</title>
+<link rel="stylesheet" href="css/base.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #060912; --bg2: #0d1220; --bg3: #131929;
+    --border: #1e2a40; --text: #e2e8f0; --muted: #64748b;
+    --purple: #7c3aed; --purple-light: #a78bfa;
+    --coral: #f97316; --coral-light: #fdba74;
+    --teal: #0d9488; --teal-light: #5eead4;
+    --amber: #d97706; --amber-light: #fcd34d;
+    --green: #16a34a; --red: #dc2626;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; padding-bottom: 80px; }
+  .header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 14px 16px; display: flex; align-items: center; gap: 10px; }
+  .header h1 { font-size: 17px; font-weight: 600; }
+  .header .badge { background: var(--purple); color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 10px; }
+  .tabs { display: flex; background: var(--bg2); border-bottom: 1px solid var(--border); overflow-x: auto; }
+  .tab { padding: 12px 18px; font-size: 13px; color: var(--muted); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; transition: all .2s; }
+  .tab.active { color: var(--purple-light); border-bottom-color: var(--purple); }
+  .filter-bar { padding: 12px 16px; display: flex; gap: 8px; overflow-x: auto; background: var(--bg2); border-bottom: 1px solid var(--border); }
+  .chip { padding: 5px 12px; border-radius: 20px; font-size: 12px; border: 1px solid var(--border); color: var(--muted); cursor: pointer; white-space: nowrap; transition: all .2s; }
+  .chip.active { border-color: var(--purple); color: var(--purple-light); background: rgba(124,58,237,.15); }
+  .section { padding: 12px 16px; }
+  .section-title { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .06em; margin-bottom: 10px; text-transform: uppercase; }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 10px; cursor: pointer; transition: border-color .2s; }
+  .card:hover { border-color: var(--purple); }
+  .card.new-pos { border-left: 3px solid var(--coral); }
+  .card.building { border-left: 3px solid var(--amber); }
+  .card.normal { border-left: 3px solid var(--border); }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .card-ticker { font-size: 18px; font-weight: 700; color: var(--text); }
+  .card-name { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .card-value { text-align: right; }
+  .card-value .mv { font-size: 15px; font-weight: 600; color: var(--teal-light); }
+  .card-value .quarter { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .card-filers { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+  .filer-tag { background: rgba(124,58,237,.2); color: var(--purple-light); border: 1px solid rgba(124,58,237,.3); border-radius: 6px; padding: 2px 8px; font-size: 11px; }
+  .filer-more { background: rgba(217,119,6,.2); color: var(--amber-light); border: 1px solid rgba(217,119,6,.3); border-radius: 6px; padding: 2px 8px; font-size: 11px; }
+  .progress-wrap { margin-top: 6px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 2px; transition: width .4s; }
+  .progress-fill.q1 { width: 25%; background: var(--coral); }
+  .progress-fill.q2 { width: 50%; background: var(--amber); }
+  .progress-fill.q3 { width: 75%; background: var(--teal); }
+  .progress-fill.q4 { width: 100%; background: var(--green); }
+  .badge-new { background: rgba(249,115,22,.2); color: var(--coral-light); border: 1px solid rgba(249,115,22,.3); border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: 500; }
+  .badge-building { background: rgba(217,119,6,.2); color: var(--amber-light); border: 1px solid rgba(217,119,6,.3); border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: 500; }
+  .stats-row { display: flex; gap: 8px; margin-top: 10px; }
+  .stat { flex: 1; background: var(--bg3); border-radius: 8px; padding: 8px 10px; text-align: center; }
+  .stat .val { font-size: 16px; font-weight: 700; color: var(--text); }
+  .stat .lbl { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .loading { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
+  .empty { text-align: center; padding: 40px 20px; color: var(--muted); }
+  .empty .icon { font-size: 36px; margin-bottom: 10px; }
+  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg2); border-top: 1px solid var(--border); display: flex; z-index: 100; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px 4px; font-size: 10px; color: var(--muted); text-decoration: none; cursor: pointer; gap: 3px; }
+  .nav-item.active { color: var(--purple-light); }
+  .nav-item .icon { font-size: 20px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+</style>
+</head>
+<body>
+<div class="header">
+  <span style="font-size:22px">🐋</span>
+  <div>
+    <h1>鯨魚追蹤</h1>
+    <div style="font-size:11px;color:var(--muted)" id="last-updated">資料載入中...</div>
+  </div>
+  <span class="badge" style="margin-left:auto">13F</span>
+</div>
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('new')">🆕 新建倉</div>
+  <div class="tab" onclick="switchTab('all')">📊 持股追蹤</div>
+  <div class="tab" onclick="switchTab('filers')">🏦 追蹤機構</div>
+</div>
+<div class="tab-content active" id="tab-new">
+  <div class="filter-bar">
+    <div class="chip active" onclick="setFilter('all',this)">全部</div>
+    <div class="chip" onclick="setFilter('multi',this)">≥2家共識</div>
+    <div class="chip" onclick="setFilter('building',this)">建倉中🔥</div>
+    <div class="chip" onclick="setFilter('pct1',this)">佔比≥1%</div>
+  </div>
+  <div class="section">
+    <div class="stats-row">
+      <div class="stat"><div class="val" id="stat-new">-</div><div class="lbl">新建倉標的</div></div>
+      <div class="stat"><div class="val" id="stat-multi">-</div><div class="lbl">多機構共識</div></div>
+      <div class="stat"><div class="val" id="stat-building">-</div><div class="lbl">持續建倉中</div></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title" id="quarter-label">載入中...</div>
+    <div id="new-positions-list"><div class="loading">🐋 載入鯨魚資料中...</div></div>
+  </div>
+</div>
+<div class="tab-content" id="tab-all">
+  <div class="filter-bar" id="filer-filter-bar">
+    <div class="chip active" data-cik="all" onclick="setFilerFilter('all',this)">全部</div>
+  </div>
+  <div class="section">
+    <div id="all-positions-list"><div class="loading">載入中...</div></div>
+  </div>
+</div>
+<div class="tab-content" id="tab-filers">
+  <div class="section">
+    <div class="section-title">目前追蹤機構</div>
+    <div id="filers-list"><div class="loading">載入中...</div></div>
+  </div>
+</div>
+<nav class="bottom-nav">
+  <a class="nav-item" href="index.html"><span class="icon">🏠</span>首頁</a>
+  <a class="nav-item" href="diagnosis.html"><span class="icon">🔍</span>健診</a>
+  <a class="nav-item" href="daily.html"><span class="icon">📊</span>盤面</a>
+  <a class="nav-item active" href="whale.html"><span class="icon">🐋</span>鯨魚</a>
+  <a class="nav-item" href="profile.html"><span class="icon">👤</span>我的</a>
+</nav>
+<script>
+const SUPABASE_URL='https://kldumnxdlgovaxtiszyn.supabase.co';
+const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
+let allNewPositions=[],filers=[],currentFilter='all';
+async function init(){await Promise.all([loadNewPositions(),loadFilers()]);}
+async function loadNewPositions(){
+  const{data,error}=await sb.from('whale_new_positions').select('*').order('filer_count',{ascending:false}).order('total_value',{ascending:false});
+  if(error||!data?.length){document.getElementById('new-positions-list').innerHTML='<div class="empty"><div class="icon">🐋</div><div>暫無資料</div></div>';return;}
+  allNewPositions=data;
+  const quarters=[...new Set(data.map(d=>d.quarter))].sort().reverse();
+  const latest=data.filter(d=>d.quarter===quarters[0]);
+  document.getElementById('stat-new').textContent=latest.length;
+  document.getElementById('stat-multi').textContent=latest.filter(d=>d.filer_count>=2).length;
+  document.getElementById('stat-building').textContent=latest.filter(d=>d.status==='Building').length;
+  document.getElementById('quarter-label').textContent='最新季度：'+quarters[0];
+  document.getElementById('last-updated').textContent='資料季度：'+quarters[0];
+  renderNewPositions(data);
+}
+function renderNewPositions(data){
+  const quarters=[...new Set(data.map(d=>d.quarter))].sort().reverse();
+  let filtered=data.filter(d=>d.quarter===quarters[0]);
+  if(currentFilter==='multi')filtered=filtered.filter(d=>d.filer_count>=2);
+  if(currentFilter==='building')filtered=filtered.filter(d=>d.status==='Building');
+  if(currentFilter==='pct1')filtered=filtered.filter(d=>d.avg_pct_portfolio>=1);
+  if(!filtered.length){document.getElementById('new-positions-list').innerHTML='<div class="empty"><div class="icon">🔍</div><div>此篩選條件無資料</div></div>';return;}
+  document.getElementById('new-positions-list').innerHTML=filtered.map(p=>{
+    const isB=p.status==='Building';
+    const vm=p.total_value?(p.total_value/1000).toFixed(1):'—';
+    const fa=(p.filers||[]).slice(0,3).map(f=>'<span class="filer-tag">'+f+'</span>').join('');
+    const fm=(p.filers||[]).length>3?'<span class="filer-more">+'+(p.filers.length-3)+' 家</span>':'';
+    const qh=p.quarters_held||1;
+    const pc=['q1','q2','q3','q4'][Math.min(qh-1,3)];
+    return '<div class="card '+(isB?'building':'new-pos')+'" onclick="openDetail(''+p.ticker+'',''+p.quarter+'')"><div class="card-top"><div>'+(isB?'<span class="badge-building">🔥 建倉中</span>':'<span class="badge-new">🆕 New</span>')+'<div class="card-ticker" style="margin-top:6px">'+(p.ticker||'—')+'</div><div class="card-name">'+(p.stock_name||'')+'</div></div><div class="card-value"><div class="mv">$'+vm+'M</div><div class="quarter">'+p.filer_count+' 家機構</div><div class="quarter">佔比 '+(p.avg_pct_portfolio||0).toFixed(2)+'%</div></div></div><div class="card-filers">'+fa+fm+'</div><div class="progress-wrap"><div class="progress-label"><span>建倉第 '+qh+' 季</span><span style="color:'+(isB?'var(--amber-light)':'var(--coral-light)')+';">'+(isB?'持續加碼中 ✅':'首次出現')+'</span></div><div class="progress-bar"><div class="progress-fill '+pc+'"></div></div></div></div>';
+  }).join('');
+}
+async function loadFilers(){
+  const{data}=await sb.from('whale_filers').select('*').eq('is_active',true);
+  if(!data?.length)return;
+  filers=data;
+  const bar=document.getElementById('filer-filter-bar');
+  data.forEach(f=>{const c=document.createElement('div');c.className='chip';c.textContent=f.short_name||f.name;c.dataset.cik=f.cik;c.onclick=()=>setFilerFilter(f.cik,c);bar.appendChild(c);});
+  document.getElementById('filers-list').innerHTML=data.map(f=>'<div class="card normal" onclick="loadFilerPositions(''+f.cik+'',''+f.name+'')"><div class="card-top"><div><div style="font-size:15px;font-weight:600">'+f.name+'</div><div class="card-name">CIK: '+f.cik+'</div></div><div style="font-size:20px">→</div></div></div>').join('');
+}
+async function loadFilerPositions(cik,name){
+  switchTab('all');
+  document.getElementById('all-positions-list').innerHTML='<div class="loading">載入中...</div>';
+  const{data}=await sb.from('whale_positions').select('*').eq('cik',cik).order('quarter',{ascending:false}).order('market_value',{ascending:false}).limit(100);
+  if(!data?.length){document.getElementById('all-positions-list').innerHTML='<div class="empty"><div class="icon">📭</div><div>暫無資料</div></div>';return;}
+  const quarters=[...new Set(data.map(d=>d.quarter))].sort().reverse();
+  const latest=data.filter(d=>d.quarter===quarters[0]);
+  const cc={'New':'var(--coral)','Add':'var(--teal-light)','Reduce':'var(--amber-light)','Sold':'var(--red)','Unchanged':'var(--muted)'};
+  const ci={'New':'🆕','Add':'📈','Reduce':'📉','Sold':'🚪','Unchanged':'—'};
+  document.getElementById('all-positions-list').innerHTML='<div class="section-title" style="margin-bottom:10px">'+name+' — '+quarters[0]+'</div>'+latest.map(p=>{const vm=p.market_value?(p.market_value/1000).toFixed(1):'—';return '<div class="card normal"><div class="card-top"><div><div style="font-size:13px;font-weight:600">'+(p.ticker||p.stock_name)+'</div><div class="card-name">'+(p.stock_name||'')+'</div></div><div class="card-value"><div class="mv">$'+vm+'M</div><div style="color:'+(cc[p.position_change_type]||'var(--muted)')+';font-size:12px;margin-top:3px">'+(ci[p.position_change_type]||'')+' '+p.position_change_type+'</div><div class="quarter">'+(p.pct_of_portfolio||0).toFixed(2)+'%</div></div></div></div>';}).join('');
+}
+function openDetail(t,q){alert(t+' ('+q+')\n點擊後可查看詳細建倉追蹤記錄');}
+function switchTab(n){document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['new','all','filers'][i]===n));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));document.getElementById('tab-'+n).classList.add('active');}
+function setFilter(f,el){currentFilter=f;document.querySelectorAll('.filter-bar .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderNewPositions(allNewPositions);}
+function setFilerFilter(cik,el){document.querySelectorAll('#filer-filter-bar .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');if(cik!=='all'){const f=filers.find(f=>f.cik===cik);if(f)loadFilerPositions(cik,f.name);}}
+init();
+</script>
+</body>
+</html>
