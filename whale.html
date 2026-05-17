@@ -146,15 +146,18 @@ function renderNewPositions(data){
   if(currentFilter==='building')filtered=filtered.filter(d=>d.status==='Building');
   if(currentFilter==='pct1')filtered=filtered.filter(d=>d.avg_pct_portfolio>=1);
   if(!filtered.length){document.getElementById('new-positions-list').innerHTML='<div class="empty"><div class="icon">🔍</div><div>此篩選條件無資料</div></div>';return;}
-  document.getElementById('new-positions-list').innerHTML=filtered.map(p=>{
+  document.getElementById('new-positions-list').innerHTML=filtered.map((p,i)=>{
     const isB=p.status==='Building';
     const vm=p.total_value?(p.total_value/1000).toFixed(1):'—';
     const fa=(p.filers||[]).slice(0,3).map(f=>'<span class="filer-tag">'+f+'</span>').join('');
     const fm=(p.filers||[]).length>3?'<span class="filer-more">+'+(p.filers.length-3)+' 家</span>':'';
     const qh=p.quarters_held||1;
     const pc=['q1','q2','q3','q4'][Math.min(qh-1,3)];
-    return '<div class="card '+(isB?'building':'new-pos')+'" onclick="openDetail(&apos;'+p.ticker+'&apos;,&apos;'+p.quarter+'&apos;)"><div class="card-top"><div>'+(isB?'<span class="badge-building">🔥 建倉中</span>':'<span class="badge-new">🆕 New</span>')+'<div class="card-ticker" style="margin-top:6px">'+(p.ticker||'—')+'</div><div class="card-name">'+(p.stock_name||'')+'</div></div><div class="card-value"><div class="mv">$'+vm+'M</div><div class="quarter">'+p.filer_count+' 家機構</div><div class="quarter">佔比 '+(p.avg_pct_portfolio||0).toFixed(2)+'%</div></div></div><div class="card-filers">'+fa+fm+'</div><div class="progress-wrap"><div class="progress-label"><span>建倉第 '+qh+' 季</span><span style="color:'+(isB?'var(--amber-light)':'var(--coral-light)')+';">'+(isB?'持續加碼中 ✅':'首次出現')+'</span></div><div class="progress-bar"><div class="progress-fill '+pc+'"></div></div></div></div>';
+    return '<div class="card '+(isB?'building':'new-pos')+'" data-idx="'+i+'"><div class="card-top"><div>'+(isB?'<span class="badge-building">🔥 建倉中</span>':'<span class="badge-new">🆕 New</span>')+'<div class="card-ticker" style="margin-top:6px">'+(p.ticker||'—')+'</div><div class="card-name">'+(p.stock_name||'')+'</div></div><div class="card-value"><div class="mv">$'+vm+'M</div><div class="quarter">'+p.filer_count+' 家機構</div><div class="quarter">佔比 '+(p.avg_pct_portfolio||0).toFixed(2)+'%</div></div></div><div class="card-filers">'+fa+fm+'</div><div class="progress-wrap"><div class="progress-label"><span>建倉第 '+qh+' 季</span><span style="color:'+(isB?'var(--amber-light)':'var(--coral-light)')+';">'+(isB?'持續加碼中 ✅':'首次出現')+'</span></div><div class="progress-bar"><div class="progress-fill '+pc+'"></div></div></div></div>';
   }).join('');
+  document.querySelectorAll('#new-positions-list .card').forEach((el,i)=>{
+    el.addEventListener('click',()=>openDetail(filtered[i].ticker,filtered[i].quarter));
+  });
 }
 async function loadFilers(){
   const{data}=await sb.from('whale_filers').select('*').eq('is_active',true);
