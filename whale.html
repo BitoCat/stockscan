@@ -234,7 +234,8 @@ window.openDetail=async function(p){
     const{data}=await sb.from('whale_positions')
       .select('filer_name,shares,market_value,pct_of_portfolio,stock_name')
       .eq('quarter',p.quarter)
-      .eq('ticker',p.ticker)
+      .in('filer_name', p.filers||[])
+      .ilike('stock_name', '%' + (p.stock_name||'').split(' ')[0] + '%')
       .eq('position_change_type','New')
       .order('market_value',{ascending:false});
     if(data&&data.length){
