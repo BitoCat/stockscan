@@ -70,10 +70,35 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <div class="tab-content active" id="tab-new">
   <div class="filter-bar">
     <div class="chip active" id="chip-all">全部</div>
+    <div class="chip" id="chip-stock">📈 個股</div>
+    <div class="chip" id="chip-etf">🗂 ETF</div>
     <div class="chip" id="chip-multi">≥2家共識</div>
     <div class="chip" id="chip-building">建倉中🔥</div>
     <div class="chip" id="chip-pct1">佔比≥1%</div>
   </div>
+然後在 JS 裡找到：
+
+javascript
+document.getElementById('chip-pct1').addEventListener('click',()=>setFilter('pct1'));
+後面加上：
+
+javascript
+document.getElementById('chip-stock').addEventListener('click',()=>setFilter('stock'));
+document.getElementById('chip-etf').addEventListener('click',()=>setFilter('etf'));
+最後在 renderNewPositions 函數裡找到：
+
+javascript
+if(currentFilter==='pct1')filtered=filtered.filter(d=>d.avg_pct_portfolio>=1);
+後面加上：
+
+javascript
+if(currentFilter==='stock')filtered=filtered.filter(d=>!['ETF','FUND','TRUST','SPDR','ISHARES'].some(k=>d.stock_name&&d.stock_name.toUpperCase().includes(k)));
+if(currentFilter==='etf')filtered=filtered.filter(d=>['ETF','FUND','TRUST','SPDR','ISHARES'].some(k=>d.stock_name&&d.stock_name.toUpperCase().includes(k)));
+慢慢吃，回來再做！🍱
+
+
+
+
   <div class="section">
     <div class="stats-row">
       <div class="stat"><div class="val" id="stat-new">-</div><div class="lbl">新建倉標的</div></div>
