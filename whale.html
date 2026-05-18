@@ -204,6 +204,34 @@ async function loadFilerPositions(cik,name){
     container.appendChild(div);
   });
 }
+function openDetail(p){
+  const existing=document.getElementById('detail-panel');
+  if(existing)existing.remove();
+  const ticker=p.ticker||p.stock_name;
+  const filers=(p.filers||[]).map(f=>'<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">🏦 '+f+'</div>').join('');
+  const panel=document.createElement('div');
+  panel.id='detail-panel';
+  panel.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:flex-end;';
+  panel.innerHTML=
+    '<div style="background:var(--bg2);border-radius:16px 16px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto;">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'+
+        '<div>'+
+          '<div style="font-size:22px;font-weight:700">'+ticker+'</div>'+
+          '<div style="font-size:13px;color:var(--muted)">'+p.stock_name+'</div>'+
+        '</div>'+
+        '<button onclick="document.getElementById(\'detail-panel\').remove()" style="background:var(--border);border:none;color:var(--text);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:14px">✕ 關閉</button>'+
+      '</div>'+
+      '<div style="display:flex;gap:10px;margin-bottom:20px;">'+
+        '<a href="diagnosis.html?ticker='+ticker+'" style="flex:1;background:var(--purple);color:#fff;border:none;padding:10px;border-radius:10px;text-align:center;text-decoration:none;font-size:13px;font-weight:500">🔍 AI健診</a>'+
+        '<a href="https://www.tradingview.com/chart/?symbol='+ticker+'" target="_blank" style="flex:1;background:var(--teal);color:#fff;border:none;padding:10px;border-radius:10px;text-align:center;text-decoration:none;font-size:13px;font-weight:500">📈 TradingView</a>'+
+        '<a href="https://finance.yahoo.com/quote/'+ticker+'" target="_blank" style="flex:1;background:var(--amber);color:#fff;border:none;padding:10px;border-radius:10px;text-align:center;text-decoration:none;font-size:13px;font-weight:500">💹 Yahoo</a>'+
+      '</div>'+
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">持有機構（'+p.filer_count+' 家）</div>'+
+      filers+
+    '</div>';
+  panel.addEventListener('click',function(e){if(e.target===panel)panel.remove();});
+  document.body.appendChild(panel);
+}
 async function init(){await Promise.all([loadNewPositions(),loadFilers()]);}
 init();
 </script>
