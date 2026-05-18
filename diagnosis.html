@@ -333,6 +333,20 @@ function toggleLoad(on){document.getElementById('loading').style.display=on?'blo
 function showErr(msg){const e=document.getElementById('err-box');e.textContent=msg;e.style.display='block';}
 function hideErr(){document.getElementById('err-box').style.display='none';}
 function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='show '+type;setTimeout(()=>t.className='',2800);}
+// 從 URL 參數自動帶入 ticker 並觸發分析
+(function(){
+  const urlParams = new URLSearchParams(window.location.search);
+  const ticker = urlParams.get('ticker');
+  if(ticker){
+    const inp = document.getElementById('stock-inp');
+    if(inp){
+      inp.value = ticker;
+      // 觸發分析按鈕
+      const btn = document.getElementById('analyze-btn');
+      if(btn) setTimeout(()=>btn.click(), 500);
+    }
+  }
+})();
 </script>
 </body>
 </html>
