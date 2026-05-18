@@ -204,7 +204,7 @@ async function loadFilerPositions(cik,name){
     container.appendChild(div);
   });
 }
-function openDetail(p){
+window.openDetail=function(p){
   const existing=document.getElementById('detail-panel');
   if(existing)existing.remove();
   const ticker=p.ticker||p.stock_name;
