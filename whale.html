@@ -123,7 +123,9 @@ document.getElementById('chip-all').addEventListener('click',()=>setFilter('all'
 document.getElementById('chip-multi').addEventListener('click',()=>setFilter('multi'));
 document.getElementById('chip-building').addEventListener('click',()=>setFilter('building'));
 document.getElementById('chip-pct1').addEventListener('click',()=>setFilter('pct1'));
-async function loadNewPositions(){
+document.getElementById('chip-stock').addEventListener('click',()=>setFilter('stock'));
+document.getElementById('chip-etf').addEventListener('click',()=>setFilter('etf'));
+  async function loadNewPositions(){
   const{data,error}=await sb.from('whale_new_positions').select('*').order('filer_count',{ascending:false}).order('total_value',{ascending:false}).limit(2000);
   if(error||!data||!data.length){document.getElementById('new-positions-list').innerHTML='<div class="empty"><div class="icon">🐋</div><div>暫無資料</div></div>';return;}
   allNewPositions=data;
