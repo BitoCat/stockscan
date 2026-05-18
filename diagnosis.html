@@ -189,7 +189,13 @@ async function analyze() {
         const r = await fetch(proxyUrl, {signal: AbortSignal.timeout(5000)});
         const raw = await r.json();
         pd = raw?.contents ? JSON.parse(raw.contents) : raw;
-        if (pd?.chart?.result?.[0]?.meta?.regularMarketPrice) break;
+        const result = pd?.chart?.result?.[0];
+    if (result?.meta?.regularMarketPrice) {
+      // 驗證回傳的 symbol 是否正確
+      const returnedSym = result.meta.symbol || '';
+      if (returnedSym.toUpperCase().includes(sym.toUpperCase())) break;
+      // symbol 不符，繼續試下一個 proxy
+    }
       } catch(e2) { continue; }
     }
     const result = pd?.chart?.result?.[0];
