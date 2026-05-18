@@ -145,7 +145,8 @@ function renderNewPositions(data){
   if(currentFilter==='building')filtered=filtered.filter(d=>d.status==='Building');
   if(currentFilter==='pct1')filtered=filtered.filter(d=>d.avg_pct_portfolio>=1);
   if(currentFilter==='stock')filtered=filtered.filter(d=>!['ETF','FUND','TRUST','SPDR','ISHARES'].some(k=>d.stock_name&&d.stock_name.toUpperCase().includes(k)));
-  if(currentFilter==='etf')filtered=filtered.filter(d=>['ETF','FUND','TRUST','SPDR','ISHARES'].some(k=>d.stock_name&&d.stock_name.toUpperCase().includes(k)));  if(!filtered.length){document.getElementById('new-positions-list').innerHTML='<div class="empty"><div class="icon">🔍</div><div>此篩選條件無資料</div></div>';return;}
+  if(currentFilter==='etf')filtered=filtered.filter(d=>['ETF','FUND','TRUST','SPDR','ISHARES'].some(k=>d.stock_name&&d.stock_name.toUpperCase().includes(k)));  
+  if(!filtered.length){document.getElementById('new-positions-list').innerHTML='<div class="empty"><div class="icon">🔍</div><div>此篩選條件無資料</div></div>';return;}
   const container=document.getElementById('new-positions-list');
   container.innerHTML='';
   filtered.forEach(function(p){
