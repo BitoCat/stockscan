@@ -341,9 +341,12 @@ function showToast(msg,type=''){const t=document.getElementById('toast');t.textC
     const inp = document.getElementById('stock-inp');
     if(inp){
       inp.value = ticker;
+      // 自動切換美股
+      const usBt = document.getElementById('mbt-us');
+      if(usBt) usBt.click();
       // 觸發分析按鈕
       const btn = document.getElementById('analyze-btn');
-      if(btn) setTimeout(()=>btn.click(), 500);
+      if(btn) setTimeout(()=>btn.click(), 800);
     }
   }
 })();
