@@ -175,31 +175,39 @@ async function analyze() {
 
   let livePrice = null, priceContext = '';
   try {
-    const yahooSym = currentMkt === 'tw' ? sym + '.TW' : sym;
-    const yahooSymAlt = currentMkt === 'tw' ? sym + '.TWO' : null;
-
-    async function tryFetchYahoo(symbol) {
-      const url = "https://query2.finance.yahoo.com/v8/finance/chart/" + symbol + "?interval=1d&range=3mo";
-      const proxies = [
-        "https://corsproxy.io/?" + encodeURIComponent(url),
-        "https://api.allorigins.win/get?url=" + encodeURIComponent(url),
-        "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url),
-        "https://thingproxy.freeboard.io/fetch/" + encodeURIComponent(url),
-      ];
-      for (const proxyUrl of proxies) {
-        try {
-          const r = await fetch(proxyUrl, {signal: AbortSignal.timeout(5000)});
-          const raw = await r.json();
-          const pd = raw?.contents ? JSON.parse(raw.contents) : raw;
-          const result = pd?.chart?.result?.[0];
-          if (result?.meta?.regularMarketPrice) return pd;
-        } catch(e2) { continue; }
+    let pd = null;
+    if (currentMkt === 'tw') {
+      // 台股用 Railway 後端抓，自動判斷上市/上櫃
+      try {
+        const r = await fetch('https://splendid-prosperity-production-41ab.up.railway.app/quote?symbol=' + sym, {signal: AbortSignal.timeout(8000)});
+        const data = await r.json();
+        if (data.price) {
+          pd = {chart:{result:[{meta:{regularMarketPrice:data.price,symbol:data.symbol,currency:data.currency},indicators:{quote:[{close:data.closes}]}}]}};
+        }
+      } catch(e) {}
+    } else {
+      // 美股用 Yahoo proxy
+      async function tryFetchYahoo(symbol) {
+        const url = "https://query2.finance.yahoo.com/v8/finance/chart/" + symbol + "?interval=1d&range=3mo";
+        const proxies = [
+          "https://corsproxy.io/?" + encodeURIComponent(url),
+          "https://api.allorigins.win/get?url=" + encodeURIComponent(url),
+          "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url),
+          "https://thingproxy.freeboard.io/fetch/" + encodeURIComponent(url),
+        ];
+        for (const proxyUrl of proxies) {
+          try {
+            const r = await fetch(proxyUrl, {signal: AbortSignal.timeout(5000)});
+            const raw = await r.json();
+            const pd = raw?.contents ? JSON.parse(raw.contents) : raw;
+            const result = pd?.chart?.result?.[0];
+            if (result?.meta?.regularMarketPrice) return pd;
+          } catch(e2) { continue; }
+        }
+        return null;
       }
-      return null;
+      pd = await tryFetchYahoo(sym);
     }
-
-    let pd = await tryFetchYahoo(yahooSym);
-    if (!pd && yahooSymAlt) pd = await tryFetchYahoo(yahooSymAlt);
     const result = pd?.chart?.result?.[0];
     const meta = result?.meta;
     const closes = result?.indicators?.quote?.[0]?.close || [];
