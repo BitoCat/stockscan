@@ -176,6 +176,7 @@ async function analyze() {
   let livePrice = null, priceContext = '';
   try {
     const yahooSym = currentMkt === 'tw' ? sym + '.TW' : sym;
+    const yahooSymAlt = currentMkt === 'tw' ? sym + '.TWO' : null;
     const yahooUrl = "https://query2.finance.yahoo.com/v8/finance/chart/" + yahooSym + "?interval=1d&range=3mo";
     const proxies = [
       "https://corsproxy.io/?" + encodeURIComponent(yahooUrl),
