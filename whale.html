@@ -126,7 +126,10 @@ document.getElementById('chip-all').addEventListener('click',()=>setFilter('all'
 document.getElementById('chip-multi').addEventListener('click',()=>setFilter('multi'));
 document.getElementById('chip-building').addEventListener('click',()=>setFilter('building'));
 document.getElementById('chip-pct1').addEventListener('click',()=>setFilter('pct1'));
-document.getElementById('chip-stock').addEventListener('click',()=>setFilter('stock'));
+document.getElementById('chip-sector-tech').addEventListener('click',()=>setFilter('sector-tech'));
+document.getElementById('chip-sector-health').addEventListener('click',()=>setFilter('sector-health'));
+document.getElementById('chip-sector-fin').addEventListener('click',()=>setFilter('sector-fin'));
+document.getElementById('chip-sector-ind').addEventListener('click',()=>setFilter('sector-ind'));document.getElementById('chip-stock').addEventListener('click',()=>setFilter('stock'));
 document.getElementById('chip-etf').addEventListener('click',()=>setFilter('etf'));
   async function loadNewPositions(){
   const{data,error}=await sb.from('whale_new_positions').select('*').order('filer_count',{ascending:false}).order('total_value',{ascending:false}).limit(2000);
