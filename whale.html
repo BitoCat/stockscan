@@ -274,6 +274,21 @@ const mergedData = Object.values(merged).sort((a,b) => b.market_value - a.market
     document.getElementById('detail-filers').innerHTML='<div style="color:var(--muted);font-size:13px;padding:10px 0">載入失敗</div>';
   }
 }
+window.addToWatchlist=async function(ticker, name){
+  const btn=document.getElementById('wl-btn');
+  if(btn) btn.disabled=true;
+  const user=(await sb.auth.getUser()).data.user;
+  if(!user){alert('請先登入');if(btn)btn.disabled=false;return;}
+  const{error}=await sb.from('watchlist').upsert({
+    user_id:user.id,
+    symbol:ticker,
+    market:'us',
+    name:name,
+    added_at:new Date().toISOString()
+  },{onConflict:'user_id,symbol'});
+  if(error){alert('儲存失敗');if(btn)btn.disabled=false;}
+  else{if(btn){btn.textContent='✅ 已加入';btn.style.background='var(--green)';}}
+}
 async function init(){await Promise.all([loadNewPositions(),loadFilers()]);}
 init();
 </script>
