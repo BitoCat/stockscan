@@ -251,7 +251,7 @@ data.forEach(d => {
   }
 });
 const mergedData = Object.values(merged).sort((a,b) => b.market_value - a.market_value);
-      document.getElementById('detail-filers').innerHTML=data.map(d=>{
+      document.getElementById('detail-filers').innerHTML=mergedData.map(d=>{
         const vm=d.market_value?(d.market_value/1000).toFixed(1):'—';
         const shares=d.shares?d.shares.toLocaleString():'—';
         const pct=(d.pct_of_portfolio||0).toFixed(2);
