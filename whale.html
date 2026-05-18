@@ -204,16 +204,15 @@ async function loadFilerPositions(cik,name){
     container.appendChild(div);
   });
 }
-window.openDetail=function(p){
+window.openDetail=async function(p){
   const existing=document.getElementById('detail-panel');
   if(existing)existing.remove();
   const ticker=p.ticker||p.stock_name;
-  const filers=(p.filers||[]).map(f=>'<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:13px">🏦 '+f+'</div>').join('');
   const panel=document.createElement('div');
   panel.id='detail-panel';
   panel.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:flex-end;';
   panel.innerHTML=
-    '<div style="background:var(--bg2);border-radius:16px 16px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto;">'+
+    '<div id="detail-inner" style="background:var(--bg2);border-radius:16px 16px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto;">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'+
         '<div>'+
           '<div style="font-size:22px;font-weight:700">'+ticker+'</div>'+
@@ -227,10 +226,38 @@ window.openDetail=function(p){
         '<a href="https://finance.yahoo.com/quote/'+ticker+'" target="_blank" style="flex:1;background:var(--amber);color:#fff;border:none;padding:10px;border-radius:10px;text-align:center;text-decoration:none;font-size:13px;font-weight:500">💹 Yahoo</a>'+
       '</div>'+
       '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">持有機構（'+p.filer_count+' 家）</div>'+
-      filers+
+      '<div id="detail-filers"><div style="color:var(--muted);font-size:13px;padding:10px 0">載入中...</div></div>'+
     '</div>';
   panel.addEventListener('click',function(e){if(e.target===panel)panel.remove();});
   document.body.appendChild(panel);
+  try{
+    const{data}=await sb.from('whale_positions')
+      .select('filer_name,shares,market_value,pct_of_portfolio')
+      .eq('quarter',p.quarter)
+      .eq('stock_name',p.stock_name)
+      .order('market_value',{ascending:false});
+    if(data&&data.length){
+      document.getElementById('detail-filers').innerHTML=data.map(d=>{
+        const vm=d.market_value?(d.market_value/1000).toFixed(1):'—';
+        const shares=d.shares?d.shares.toLocaleString():'—';
+        const pct=(d.pct_of_portfolio||0).toFixed(2);
+        return '<div style="padding:10px 0;border-bottom:1px solid var(--border);">'+
+          '<div style="display:flex;justify-content:space-between;">'+
+            '<div style="font-size:13px;font-weight:500">🏦 '+d.filer_name+'</div>'+
+            '<div style="font-size:12px;color:var(--teal-light);font-weight:600">$'+vm+'M</div>'+
+          '</div>'+
+          '<div style="display:flex;gap:12px;margin-top:4px;">'+
+            '<span style="font-size:11px;color:var(--muted)">股數：'+shares+'</span>'+
+            '<span style="font-size:11px;color:var(--muted)">佔投組：'+pct+'%</span>'+
+          '</div>'+
+        '</div>';
+      }).join('');
+    }else{
+      document.getElementById('detail-filers').innerHTML='<div style="color:var(--muted);font-size:13px;padding:10px 0">無詳細資料</div>';
+    }
+  }catch(e){
+    document.getElementById('detail-filers').innerHTML='<div style="color:var(--muted);font-size:13px;padding:10px 0">載入失敗</div>';
+  }
 }
 async function init(){await Promise.all([loadNewPositions(),loadFilers()]);}
 init();
