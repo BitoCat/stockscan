@@ -345,22 +345,22 @@ async function saveToWatchlist() {
   else{showToast('✅ 已加入觀察名單','success');}
 }
 
-function toggleLoad(on){document.getElementById('loading').style.display=on?'block':'none';document.getElementById('analyze-btn').disabled=on;}
-function showErr(msg){const e=document.getElementById('err-box');e.textContent=msg;e.style.display='block';}
-function hideErr(){document.getElementById('err-box').style.display='none';}
-function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='show '+type;setTimeout(()=>t.className='',2800);}
-// 從 URL 參數自動帶入 ticker 並觸發分析
 (function(){
   const urlParams = new URLSearchParams(window.location.search);
   const ticker = urlParams.get('ticker');
+  const market = urlParams.get('market');
   if(ticker){
     const inp = document.getElementById('stock-inp');
     if(inp){
       inp.value = ticker;
-      // 自動切換美股
-      const usBt = document.getElementById('mbt-us');
-      if(usBt) usBt.click();
-      // 觸發分析按鈕
+      // 依 market 參數決定切換哪個市場，預設美股
+      if(market === 'tw'){
+        const twBt = document.getElementById('mbt-tw');
+        if(twBt) twBt.click();
+      } else {
+        const usBt = document.getElementById('mbt-us');
+        if(usBt) usBt.click();
+      }
       const btn = document.getElementById('analyze-btn');
       if(btn) setTimeout(()=>btn.click(), 800);
     }
