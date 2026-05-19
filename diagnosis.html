@@ -175,6 +175,7 @@ async function analyze() {
   if (!sym) return;
   if (currentProfile?.plan === 'free') { showErr('此功能需要開通會員才能使用，請聯繫管理員開通。'); return; }
   const pts = await getPoints(currentUser.id);
+  toggleLoad(true);
   document.getElementById('res-card').classList.remove('show');
   hideErr();
 
