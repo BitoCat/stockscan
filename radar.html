@@ -511,7 +511,7 @@ window.openDetail = async function(p) {
         '<button onclick="document.getElementById(\'detail-panel\').remove()" style="background:var(--border);border:none;color:var(--text);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:14px">✕ 關閉</button>' +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">' +
-        '<a href="diagnosis.html?ticker=' + ticker + '" style="flex:1;min-width:80px;background:#7c3aed;color:#fff;padding:10px;border-radius:10px;text-align:center;text-decoration:none;font-size:12px;font-weight:500">🔍 AI健診</a>' +
+        '<a href="diagnosis.html?ticker=' + ticker + '&market=tw" style="flex:1;min-width:80px;background:#7c3aed;color:#fff;padding:10px;border-radius:10px;text-align:center;text-decoration:none;font-size:12px;font-weight:500">🔍 AI健診</a>' +
         '<a href="https://www.tradingview.com/chart/?symbol=' + tvSymbol + '" target="_blank" style="flex:1;min-width:80px;background:var(--teal);color:#fff;padding:10px;border-radius:10px;text-align:center;text-decoration:none;font-size:12px;font-weight:500">📈 TradingView</a>' +
         '<a href="https://finance.yahoo.com/quote/' + yahooSymbol + '" target="_blank" style="flex:1;min-width:80px;background:var(--amber);color:#fff;padding:10px;border-radius:10px;text-align:center;text-decoration:none;font-size:12px;font-weight:500">💹 Yahoo</a>' +
         '<button id="wl-btn" onclick="addToWatchlist(\'' + ticker + '\',\'' + name + '\')" style="flex:1;min-width:80px;background:var(--coral);color:#fff;border:none;padding:10px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:500">⭐ 觀察名單</button>' +
