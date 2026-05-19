@@ -188,7 +188,7 @@ async function analyze() {
         const r = await fetch('https://splendid-prosperity-production-41ab.up.railway.app/quote?symbol=' + sym, {signal: AbortSignal.timeout(8000)});
         const data = await r.json();
         if (data.price) {
-          pd = {chart:{result:[{meta:{regularMarketPrice:data.price,symbol:data.symbol,currency:data.currency},indicators:{quote:[{close:data.closes}]}}]}};
+          pd = {chart:{result:[{meta:{regularMarketPrice:data.price,symbol:data.symbol,currency:data.currency,shortName:data.name||data.symbol},indicators:{quote:[{close:data.closes}]}}]}};
         }
       } catch(e) {}
     } else {
