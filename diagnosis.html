@@ -168,14 +168,6 @@ async function analyze() {
   if (!sym) return;
   if (currentProfile?.plan === 'free') { showErr('此功能需要開通會員才能使用，請聯繫管理員開通。'); return; }
   const pts = await getPoints(currentUser.id);
-  if (pts < 1) { showErr('點數不足！請聯繫管理員儲值。'); return; }
-  function toggleLoad(on){
-  document.getElementById('loading').style.display = on ? 'block' : 'none';
-  document.getElementById('analyze-btn').disabled = on;
-}
-function showErr(msg){ const e=document.getElementById('err-box'); e.textContent=msg; e.style.display='block'; }
-function hideErr(){ document.getElementById('err-box').style.display='none'; }
-  toggleLoad(true);
   document.getElementById('res-card').classList.remove('show');
   hideErr();
 
