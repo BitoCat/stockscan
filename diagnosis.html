@@ -158,6 +158,13 @@ function setMkt(m) {
 }
 function quickPick(sym, mkt) { setMkt(mkt); document.getElementById('stock-inp').value = sym; analyze(); }
 
+function toggleLoad(on){
+  document.getElementById('loading').style.display = on ? 'block' : 'none';
+  document.getElementById('analyze-btn').disabled = on;
+}
+function showErr(msg){ const e=document.getElementById('err-box'); e.textContent=msg; e.style.display='block'; }
+function hideErr(){ document.getElementById('err-box').style.display='none'; }
+  
 async function analyze() {
   const sym = document.getElementById('stock-inp').value.trim().toUpperCase();
   // 只接受數字和英文
