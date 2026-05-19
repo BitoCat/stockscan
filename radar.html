@@ -300,7 +300,14 @@ function renderNewPositions(data) {
     }
   });
 
-  Object.values(merged).forEach(p => {
+  Object.values(merged).sort((a, b) => {
+  // 雙訊號優先，再按基金數，再按市值
+  const aB = bothTickers.has(a.ticker) ? 1 : 0;
+  const bB = bothTickers.has(b.ticker) ? 1 : 0;
+  if (bB !== aB) return bB - aB;
+  if (b.fund_count !== a.fund_count) return b.fund_count - a.fund_count;
+  return b.total_value - a.total_value;
+}).forEach(p => {
     const isBothSignal = bothTickers.has(p.ticker);
     const isForeign    = p.sources.includes('外資') && !isBothSignal;
     const isTrust      = p.sources.includes('投信') && !isBothSignal;
