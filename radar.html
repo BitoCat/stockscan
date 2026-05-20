@@ -246,8 +246,8 @@ async function loadNewPositions() {
   document.getElementById('stat-new').textContent = latest.length;
   document.getElementById('stat-trust').textContent = latest.filter(d => d.source === '投信').length;
   document.getElementById('stat-foreign').textContent = latest.filter(d => d.source === '外資').length;
-  document.getElementById('month-label').textContent = '最新月份：' + ymLabel;
-  document.getElementById('last-updated').textContent = '資料月份：' + ymLabel;
+  document.getElementById('month-label').textContent = '偵測期間：' + ymLabel + ' 首次進入基金前十大';
+  document.getElementById('last-updated').textContent = '偵測月份：' + ymLabel + '（投信申報資料，每月中旬更新）';
 
   renderNewPositions(data);
 }
