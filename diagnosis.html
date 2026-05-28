@@ -189,6 +189,7 @@ async function analyze() {
         const data = await r.json();
         if (data.price) {
           pd = {chart:{result:[{meta:{regularMarketPrice:data.price,symbol:data.symbol,currency:data.currency,shortName:data.name||data.symbol,previousClose:data.previousClose},indicators:{quote:[{close:data.closes,high:data.highs||[],low:data.lows||[]}]}}]}};
+          pd._eps = { forwardEps:data.forwardEps, trailingEps:data.trailingEps, forwardPE:data.forwardPE, trailingPE:data.trailingPE };
         }
       } catch(e) {}
     } else {
@@ -243,7 +244,8 @@ async function analyze() {
       const support_l=r60l.length?Math.min(...r60l).toFixed(2):null;
       const resistance_l=r60h.length?Math.max(...r60h).toFixed(2):null;
       const today=new Date(); const dateStr=today.getFullYear()+"年"+(today.getMonth()+1)+"月"+today.getDate()+"日";
-      livePrice = { name:meta.shortName||meta.longName||sym, price:meta.regularMarketPrice, high:meta.regularMarketDayHigh, low:meta.regularMarketDayLow, prev:meta.previousClose, changePct:(((meta.regularMarketPrice-meta.previousClose)/meta.previousClose)*100).toFixed(2), ma5,ma20,ma60,rsi,macd,support,resistance,support_s,resistance_s,support_l,resistance_l,date:dateStr };
+      const epsData = pd?._eps || {};
+      livePrice = { name:meta.shortName||meta.longName||sym, price:meta.regularMarketPrice, high:meta.regularMarketDayHigh, low:meta.regularMarketDayLow, prev:meta.previousClose, changePct:(((meta.regularMarketPrice-meta.previousClose)/meta.previousClose)*100).toFixed(2), ma5,ma20,ma60,rsi,macd,support,resistance,support_s,resistance_s,support_l,resistance_l,date:dateStr, forwardEps:epsData.forwardEps, trailingEps:epsData.trailingEps, forwardPE:epsData.forwardPE, trailingPE:epsData.trailingPE };
       priceContext = "\n\n[即時技術分析資料 "+dateStr+"]\n公司名稱: "+livePrice.name+"\n目前股價: "+livePrice.price+"\n漲跌幅: "+livePrice.changePct+"%\nMA5: "+(ma5||'N/A')+" MA20: "+(ma20||'N/A')+" MA60: "+(ma60||'N/A')+"\nRSI(14): "+(rsi||'N/A')+"\nMACD: "+(macd||'N/A')+"\n短線支撐: "+(support_s||'N/A')+" 短線壓力: "+(resistance_s||'N/A')+"\n中線支撐: "+(support||'N/A')+" 中線壓力: "+(resistance||'N/A')+"\n長線支撐: "+(support_l||'N/A')+" 長線壓力: "+(resistance_l||'N/A')+"\n[請根據以上真實技術指標進行分析]";
     }
   } catch(e) { console.log('股價抓取失敗', e); }
@@ -296,7 +298,13 @@ async function analyze() {
     const clean = raw.replace(/```json|```/g, '').trim();
     let obj;
     try { obj = JSON.parse(clean); } catch(e) { const m=clean.match(/\{[\s\S]*\}/); obj=JSON.parse(m[0]); }
-    if (livePrice?.price) { obj.currentPrice=livePrice.price; obj.changePct=livePrice.changePct; obj.stockName=displayName||livePrice.name; obj.support_s=livePrice.support_s; obj.resistance_s=livePrice.resistance_s; obj.support=livePrice.support; obj.resistance=livePrice.resistance; obj.support_l=livePrice.support_l; obj.resistance_l=livePrice.resistance_l; }
+    if (livePrice?.price) {
+      obj.currentPrice=livePrice.price; obj.changePct=livePrice.changePct;
+      // 用已查好的中文名（台股）或英文名（美股）覆蓋 AI 的猜測
+      obj.stockName = displayName || livePrice.name;
+      obj.support_s=livePrice.support_s; obj.resistance_s=livePrice.resistance_s; obj.support=livePrice.support; obj.resistance=livePrice.resistance; obj.support_l=livePrice.support_l; obj.resistance_l=livePrice.resistance_l;
+      obj.forwardEps=livePrice.forwardEps; obj.trailingEps=livePrice.trailingEps; obj.forwardPE=livePrice.forwardPE; obj.trailingPE=livePrice.trailingPE;
+    }
     lastResult = {...obj, symbol:sym, market:currentMkt};
     await deductPoint(currentUser.id, "AI 健診："+sym);
     const newPts = await getPoints(currentUser.id);
@@ -317,9 +325,18 @@ function renderResult(sym, d) {
   const gEl=document.getElementById('r-grade');
   gEl.textContent=grade;
   gEl.className='grade '+gradeClass(grade);
+  // 計算合理股價
+  const eps = d.forwardEps || d.trailingEps;
+  const pe = d.forwardPE || d.trailingPE;
+  const fairLow = eps ? (eps * 12).toFixed(0) : null;
+  const fairMid = (eps && pe) ? (eps * pe).toFixed(0) : null;
+  const fairHigh = eps ? (eps * 25).toFixed(0) : null;
+  const fairStr = fairMid ? fairLow+'～'+fairMid+'～'+fairHigh : (fairLow ? fairLow+'～'+fairHigh : '—');
+  const epsLabel = d.forwardEps ? '預估EPS '+d.forwardEps : (d.trailingEps ? '近四季EPS '+d.trailingEps : '');
   const mets=[
     {l:'趨勢',v:d.trend||'—',c:d.trend?.includes('上')?'up':d.trend?.includes('下')?'dn':''},
     {l:d.currentPrice?'即時股價':'本益比',v:d.currentPrice?String(d.currentPrice):(d.peRatio||'—'),c:d.changePct>0?'up':d.changePct<0?'dn':'',s:d.currentPrice?(d.changePct>0?'▲':'▼')+d.changePct+'%':'估計值'},
+    {l:'合理股價',v:fairStr,c:'',s:epsLabel||'12x／實際PE／25x'},
     {l:'短線支撐',v:d.support_s||d.support||'—',c:'up',s:'5日'},
     {l:'短線壓力',v:d.resistance_s||d.resistance||'—',c:'dn',s:'5日'},
     {l:'中線支撐',v:d.support||'—',c:'up',s:'20日'},
