@@ -39,6 +39,16 @@
   .ai-section-body { line-height:1.9; color:var(--text); font-size:13px; }
   .res-foot { padding:10px 18px; background:rgba(0,0,0,.3); border-top:1px solid var(--border); font-family:'Share Tech Mono',monospace; font-size:9px; color:var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px; }
   .pts-bar { background:linear-gradient(135deg,rgba(0,212,255,.08),rgba(155,89,182,.06)); border:1px solid rgba(0,212,255,.2); border-radius:10px; padding:10px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; }
+  .fair-block { grid-column: 1 / -1; margin-top: 4px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px 16px; }
+  .fair-title { font-size: 12px; color: var(--accent); font-weight: 600; margin-bottom: 4px; }
+  .fair-formula { font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+  .fair-range { display: flex; gap: 8px; }
+  .fair-item { flex: 1; text-align: center; background: rgba(255,255,255,0.04); border-radius: 8px; padding: 10px 4px; }
+  .fair-item.fair-mid { background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.2); }
+  .fair-label { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+  .fair-val { font-size: 18px; font-weight: 700; color: #fff; font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; }
+  .fair-item.fair-mid .fair-val { color: var(--accent); }
+  .fair-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -336,7 +346,6 @@ function renderResult(sym, d) {
   const mets=[
     {l:'趨勢',v:d.trend||'—',c:d.trend?.includes('上')?'up':d.trend?.includes('下')?'dn':''},
     {l:d.currentPrice?'即時股價':'本益比',v:d.currentPrice?String(d.currentPrice):(d.peRatio||'—'),c:d.changePct>0?'up':d.changePct<0?'dn':'',s:d.currentPrice?(d.changePct>0?'▲':'▼')+d.changePct+'%':'估計值'},
-    {l:'合理股價',v:fairStr,c:'',s:epsLabel||'12x／實際PE／25x'},
     {l:'短線支撐',v:d.support_s||d.support||'—',c:'up',s:'5日'},
     {l:'短線壓力',v:d.resistance_s||d.resistance||'—',c:'dn',s:'5日'},
     {l:'中線支撐',v:d.support||'—',c:'up',s:'20日'},
@@ -344,7 +353,29 @@ function renderResult(sym, d) {
     {l:'長線支撐',v:d.support_l||'—',c:'up',s:'60日'},
     {l:'長線壓力',v:d.resistance_l||'—',c:'dn',s:'60日'},
   ];
-  document.getElementById('r-metrics').innerHTML=mets.map(m=>'<div class="met"><div class="met-l">'+m.l+'</div><div class="met-v '+m.c+'">'+m.v+'</div>'+(m.s?'<div class="met-s">'+m.s+'</div>':'')+'</div>').join('');
+  const fairBlock = eps ? `
+    <div class="fair-block">
+      <div class="fair-title">📐 合理股價估算</div>
+      <div class="fair-formula">${epsLabel} × 本益比 = 合理股價</div>
+      <div class="fair-range">
+        <div class="fair-item">
+          <div class="fair-label">保守</div>
+          <div class="fair-val">${fairLow}</div>
+          <div class="fair-sub">12倍</div>
+        </div>
+        <div class="fair-item fair-mid">
+          <div class="fair-label">合理</div>
+          <div class="fair-val">${fairMid||'—'}</div>
+          <div class="fair-sub">${pe ? pe+'倍' : '—'}</div>
+        </div>
+        <div class="fair-item">
+          <div class="fair-label">樂觀</div>
+          <div class="fair-val">${fairHigh}</div>
+          <div class="fair-sub">25倍</div>
+        </div>
+      </div>
+    </div>` : '';
+  document.getElementById('r-metrics').innerHTML=mets.map(m=>'<div class="met"><div class="met-l">'+m.l+'</div><div class="met-v '+m.c+'">'+m.v+'</div>'+(m.s?'<div class="met-s">'+m.s+'</div>':'')+'</div>').join('')+fairBlock;
   document.getElementById('r-signals').innerHTML=(d.signals||[]).map(s=>'<div class="sig"><div class="dot '+s.type+'"></div><span>'+s.text+'</span></div>').join('');
   const analysisText = d.analysis || '';
   const sections = analysisText.split(/(?=\u3010)/);
