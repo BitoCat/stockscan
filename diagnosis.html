@@ -219,6 +219,16 @@ async function analyze() {
         return null;
       }
       pd = await tryFetchYahoo(sym);
+      // 美股：另外打後端取 EPS / PE 資料
+      if (pd) {
+        try {
+          const er = await fetch('https://splendid-prosperity-production-41ab.up.railway.app/quote?symbol=' + sym, {signal: AbortSignal.timeout(8000)});
+          const ed = await er.json();
+          if (ed.forwardEps || ed.trailingEps) {
+            pd._eps = { forwardEps:ed.forwardEps, trailingEps:ed.trailingEps, forwardPE:ed.forwardPE, trailingPE:ed.trailingPE };
+          }
+        } catch(e) {}
+      }
     }
     const result = pd?.chart?.result?.[0];
     const meta = result?.meta;
