@@ -249,7 +249,20 @@ async function analyze() {
   } catch(e) { console.log('股價抓取失敗', e); }
 
   const market = currentMkt === 'tw' ? '台灣股市(台股)' : '美國股市(美股)';
-  const companyHint = livePrice?.name ? "公司名稱是" + livePrice.name + "，" : "";
+  // 台股：提前查 Supabase 取中文名，讓 prompt 也用正確名稱
+  let twChineseName = null;
+  if (currentMkt === 'tw' && livePrice?.name) {
+    try {
+      const {data: rr} = await sb.from('tw_radar_new_positions').select('stock_name').eq('ticker', sym).limit(1).maybeSingle();
+      if (rr?.stock_name) twChineseName = rr.stock_name;
+      if (!twChineseName) {
+        const {data: fr} = await sb.from('tw_fund_positions').select('name').eq('ticker', sym).not('name', 'is', null).limit(1).maybeSingle();
+        if (fr?.name) twChineseName = fr.name;
+      }
+    } catch(e) {}
+  }
+  const displayName = twChineseName || livePrice?.name;
+  const companyHint = displayName ? "公司名稱是" + displayName + "，" : "";
 
   // 技術指標解讀
   const rsiVal = parseFloat(livePrice?.rsi || 50);
@@ -283,7 +296,7 @@ async function analyze() {
     const clean = raw.replace(/```json|```/g, '').trim();
     let obj;
     try { obj = JSON.parse(clean); } catch(e) { const m=clean.match(/\{[\s\S]*\}/); obj=JSON.parse(m[0]); }
-    if (livePrice?.price) { obj.currentPrice=livePrice.price; obj.changePct=livePrice.changePct; obj.stockName=livePrice.name; obj.support_s=livePrice.support_s; obj.resistance_s=livePrice.resistance_s; obj.support=livePrice.support; obj.resistance=livePrice.resistance; obj.support_l=livePrice.support_l; obj.resistance_l=livePrice.resistance_l; }
+    if (livePrice?.price) { obj.currentPrice=livePrice.price; obj.changePct=livePrice.changePct; obj.stockName=displayName||livePrice.name; obj.support_s=livePrice.support_s; obj.resistance_s=livePrice.resistance_s; obj.support=livePrice.support; obj.resistance=livePrice.resistance; obj.support_l=livePrice.support_l; obj.resistance_l=livePrice.resistance_l; }
     lastResult = {...obj, symbol:sym, market:currentMkt};
     await deductPoint(currentUser.id, "AI 健診："+sym);
     const newPts = await getPoints(currentUser.id);
