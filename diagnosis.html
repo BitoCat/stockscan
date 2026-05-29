@@ -313,7 +313,7 @@ async function analyze() {
     "\n\n技術指標解讀：RSI=" + (livePrice?.rsi||'N/A') + "(" + rsiNote + ")，" + maStatus + "，" + macdNote +
     "\n\n請輸出純JSON，格式如下（禁止使用markdown）：" +
     "{" +
-    "\"stockName\":\"公司全名\"," +
+    "\"stockName\":\"" + (displayName||sym) + "\"," +
     "\"sector\":\"產業別\"," +
     "\"healthScore\":75," +
     "\"grade\":\"強力買進\"," +
@@ -527,3 +527,4 @@ async function saveToWatchlist() {
 </script>
 </body>
 </html>
+
