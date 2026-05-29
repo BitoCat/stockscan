@@ -12,7 +12,7 @@
   --red:     #e74c3c;
   --purple:  #9b59b6;
   --text:    #c8d8f0;
-  --muted:   #4a6080;
+  --muted:   #7a90b0;
   --glow:    0 0 24px rgba(0,212,255,0.18);
   --radius:  12px;
 }
@@ -132,12 +132,12 @@ body::before {
 
 /* ── Chip ── */
 .chip {
-  background: rgba(0,212,255,.06); border: 1px solid rgba(0,212,255,.18);
-  border-radius: 20px; color: var(--accent);
-  font-family: 'Share Tech Mono',monospace; font-size: 11px;
-  padding: 3px 11px; cursor: pointer; transition: all .15s;
+  background: rgba(0,212,255,.08); border: 1px solid rgba(0,212,255,.3);
+  border-radius: 20px; color: #00d4ff;
+  font-family: 'Share Tech Mono',monospace; font-size: 14px;
+  padding: 6px 16px; cursor: pointer; transition: all .15s; font-weight: 600;
 }
-.chip:hover { background: rgba(0,212,255,.14); border-color: var(--accent); }
+.chip:hover { background: rgba(0,212,255,.18); border-color: var(--accent); }
 
 /* ── Top Nav ── */
 .topnav {
