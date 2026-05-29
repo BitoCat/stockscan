@@ -43,11 +43,27 @@
   .fair-title { font-size: 14px; color: #00d4ff; font-weight: 700; margin-bottom: 8px; letter-spacing: 1px; }
   .fair-formula { font-size: 13px; color: #ccd6f6; margin-bottom: 14px; line-height: 1.6; }
   .fair-main { font-size: 48px; font-weight: 900; color: #fff; font-family: 'Bebas Neue', sans-serif; letter-spacing: 2px; line-height: 1; margin-bottom: 10px; text-shadow: 0 0 20px rgba(0,212,255,0.5); }
-  .fair-note { font-size: 12px; color: #8892b0; line-height: 1.5; margin-top: 12px; }
-  .fair-pe-row { display: flex; gap: 8px; margin-top: 16px; }
-  .fair-pe-item { flex: 1; text-align: center; background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px 6px; border: 1px solid rgba(255,255,255,0.07); }
+  .fair-note { font-size: 12px; color: #8892b0; line-height: 1.5; margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .fair-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .fair-src { font-size: 11px; color: #7a90b0; }
+  .fair-section-title { font-size: 12px; color: #a8b8d8; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; }
+  .fair-analyst-row { display: flex; gap: 8px; }
+  .fair-analyst-item { flex: 1; text-align: center; background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px 6px; }
+  .fair-analyst-item.fair-analyst-mid { background: rgba(0,212,255,0.07); border: 1px solid rgba(0,212,255,0.2); }
+  .fair-analyst-label { font-size: 12px; color: #a8b8d8; margin-bottom: 6px; font-weight: 600; }
+  .fair-analyst-val { font-size: 22px; font-weight: 900; font-family: 'Bebas Neue',sans-serif; letter-spacing: 1px; }
+  .fair-analyst-val.lo { color: #ff9800; }
+  .fair-analyst-val.mid { color: #00d4ff; font-size: 26px; }
+  .fair-analyst-val.hi { color: #00e676; }
+  .fair-calc-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .fair-calc-item { flex: 1; min-width: 100px; text-align: center; background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px 8px; border: 1px solid rgba(255,255,255,0.07); }
+  .fair-calc-label { font-size: 12px; color: #a8b8d8; margin-bottom: 6px; font-weight: 600; }
+  .fair-calc-val { font-size: 20px; font-weight: 900; color: #fff; font-family: 'Bebas Neue',sans-serif; letter-spacing: 1px; }
+  .fair-calc-sub { font-size: 11px; color: #7a90b0; margin-top: 4px; }
+  .fair-pe-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .fair-pe-item { flex: 1; min-width: 80px; text-align: center; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 10px 6px; border: 1px solid rgba(255,255,255,0.06); }
   .fair-pe-label { font-size: 12px; color: #a8b8d8; margin-bottom: 6px; font-weight: 600; }
-  .fair-pe-val { font-size: 22px; font-weight: 700; color: #fff; font-family: 'Share Tech Mono',monospace; }
+  .fair-pe-val { font-size: 18px; font-weight: 700; color: #fff; font-family: 'Share Tech Mono',monospace; }
   .fair-pe-sub { font-size: 11px; color: #7a90b0; margin-top: 4px; line-height: 1.4; }
 </style>
 </head>
@@ -199,7 +215,7 @@ async function analyze() {
         const data = await r.json();
         if (data.price) {
           pd = {chart:{result:[{meta:{regularMarketPrice:data.price,symbol:data.symbol,currency:data.currency,shortName:data.name||data.symbol,previousClose:data.previousClose},indicators:{quote:[{close:data.closes,high:data.highs||[],low:data.lows||[]}]}}]}};
-          pd._eps = { forwardEps:data.forwardEps, trailingEps:data.trailingEps, forwardPE:data.forwardPE, trailingPE:data.trailingPE, pegRatio:data.pegRatio };
+          pd._eps = { forwardEps:data.forwardEps, trailingEps:data.trailingEps, forwardPE:data.forwardPE, trailingPE:data.trailingPE, pegRatio:data.pegRatio, earningsGrowth:data.earningsGrowth, industryPE:data.industryPE, targetMeanPrice:data.targetMeanPrice, targetLowPrice:data.targetLowPrice, targetHighPrice:data.targetHighPrice };
         }
       } catch(e) {}
     } else {
@@ -230,7 +246,7 @@ async function analyze() {
           const er = await fetch('https://splendid-prosperity-production-41ab.up.railway.app/quote?symbol=' + sym, {signal: AbortSignal.timeout(8000)});
           const ed = await er.json();
           if (ed.forwardEps || ed.trailingEps) {
-            pd._eps = { forwardEps:ed.forwardEps, trailingEps:ed.trailingEps, forwardPE:ed.forwardPE, trailingPE:ed.trailingPE, pegRatio:ed.pegRatio };
+            pd._eps = { forwardEps:ed.forwardEps, trailingEps:ed.trailingEps, forwardPE:ed.forwardPE, trailingPE:ed.trailingPE, pegRatio:ed.pegRatio, earningsGrowth:ed.earningsGrowth, industryPE:ed.industryPE, targetMeanPrice:ed.targetMeanPrice, targetLowPrice:ed.targetLowPrice, targetHighPrice:ed.targetHighPrice };
           }
         } catch(e) {}
       }
@@ -265,7 +281,7 @@ async function analyze() {
       const resistance_l=r60h.length?Math.max(...r60h).toFixed(2):null;
       const today=new Date(); const dateStr=today.getFullYear()+"年"+(today.getMonth()+1)+"月"+today.getDate()+"日";
       const epsData = pd?._eps || {};
-      livePrice = { name:meta.shortName||meta.longName||sym, price:meta.regularMarketPrice, high:meta.regularMarketDayHigh, low:meta.regularMarketDayLow, prev:meta.previousClose, changePct:(((meta.regularMarketPrice-meta.previousClose)/meta.previousClose)*100).toFixed(2), ma5,ma20,ma60,rsi,macd,support,resistance,support_s,resistance_s,support_l,resistance_l,date:dateStr, forwardEps:epsData.forwardEps, trailingEps:epsData.trailingEps, forwardPE:epsData.forwardPE, trailingPE:epsData.trailingPE, pegRatio:epsData.pegRatio };
+      livePrice = { name:meta.shortName||meta.longName||sym, price:meta.regularMarketPrice, high:meta.regularMarketDayHigh, low:meta.regularMarketDayLow, prev:meta.previousClose, changePct:(((meta.regularMarketPrice-meta.previousClose)/meta.previousClose)*100).toFixed(2), ma5,ma20,ma60,rsi,macd,support,resistance,support_s,resistance_s,support_l,resistance_l,date:dateStr, forwardEps:epsData.forwardEps, trailingEps:epsData.trailingEps, forwardPE:epsData.forwardPE, trailingPE:epsData.trailingPE, pegRatio:epsData.pegRatio, earningsGrowth:epsData.earningsGrowth, industryPE:epsData.industryPE, targetMeanPrice:epsData.targetMeanPrice, targetLowPrice:epsData.targetLowPrice, targetHighPrice:epsData.targetHighPrice };
       priceContext = "\n\n[即時技術分析資料 "+dateStr+"]\n公司名稱: "+livePrice.name+"\n目前股價: "+livePrice.price+"\n漲跌幅: "+livePrice.changePct+"%\nMA5: "+(ma5||'N/A')+" MA20: "+(ma20||'N/A')+" MA60: "+(ma60||'N/A')+"\nRSI(14): "+(rsi||'N/A')+"\nMACD: "+(macd||'N/A')+"\n短線支撐: "+(support_s||'N/A')+" 短線壓力: "+(resistance_s||'N/A')+"\n中線支撐: "+(support||'N/A')+" 中線壓力: "+(resistance||'N/A')+"\n長線支撐: "+(support_l||'N/A')+" 長線壓力: "+(resistance_l||'N/A')+"\n[請根據以上真實技術指標進行分析]";
     }
   } catch(e) { console.log('股價抓取失敗', e); }
@@ -323,7 +339,7 @@ async function analyze() {
       // 用已查好的中文名（台股）或英文名（美股）覆蓋 AI 的猜測
       obj.stockName = displayName || livePrice.name;
       obj.support_s=livePrice.support_s; obj.resistance_s=livePrice.resistance_s; obj.support=livePrice.support; obj.resistance=livePrice.resistance; obj.support_l=livePrice.support_l; obj.resistance_l=livePrice.resistance_l;
-      obj.forwardEps=livePrice.forwardEps; obj.trailingEps=livePrice.trailingEps; obj.forwardPE=livePrice.forwardPE; obj.trailingPE=livePrice.trailingPE; obj.pegRatio=livePrice.pegRatio;
+      obj.forwardEps=livePrice.forwardEps; obj.trailingEps=livePrice.trailingEps; obj.forwardPE=livePrice.forwardPE; obj.trailingPE=livePrice.trailingPE; obj.pegRatio=livePrice.pegRatio; obj.earningsGrowth=livePrice.earningsGrowth; obj.industryPE=livePrice.industryPE; obj.targetMeanPrice=livePrice.targetMeanPrice; obj.targetLowPrice=livePrice.targetLowPrice; obj.targetHighPrice=livePrice.targetHighPrice;
     }
     lastResult = {...obj, symbol:sym, market:currentMkt};
     await deductPoint(currentUser.id, "AI 健診："+sym);
@@ -363,16 +379,69 @@ function renderResult(sym, d) {
     {l:'長線支撐',v:d.support_l||'—',c:'up',s:'60日'},
     {l:'長線壓力',v:d.resistance_l||'—',c:'dn',s:'60日'},
   ];
-  const fairPrice = (eps && pe) ? (eps * pe).toFixed(0) : null;
+  // 各種估值計算
+  const trailingFair = (d.trailingEps && d.trailingPE) ? Math.round(d.trailingEps * d.trailingPE) : null;
+  const forwardFair  = (d.forwardEps  && d.forwardPE)  ? Math.round(d.forwardEps  * d.forwardPE)  : null;
+  const pegFair      = (d.forwardEps  && d.earningsGrowth) ? Math.round(d.forwardEps * d.earningsGrowth) : null;
+  const industryFair = (d.forwardEps  && d.industryPE)  ? Math.round(d.forwardEps  * d.industryPE)  : null;
   const pegVal = d.pegRatio;
   const pegColor = pegVal ? (pegVal < 1 ? '#00e676' : pegVal < 2 ? '#00d4ff' : '#ff5252') : '#7a90b0';
-  const pegNote = pegVal ? (pegVal < 1 ? '偏低，可能被低估' : pegVal < 2 ? '合理區間' : '偏高，留意風險') : '—';
-  const fairBlock = eps ? `
+  const pegNote = pegVal ? (pegVal < 1 ? '偏低' : pegVal < 2 ? '合理' : '偏高') : '';
+
+  const fmtPrice = v => v ? `<span class="fv-num">${v.toLocaleString()}</span>` : `<span class="fv-na">—</span>`;
+  const fmtPE    = v => v ? `<span class="fv-pe">${v}</span>` : `<span class="fv-na">—</span>`;
+
+  const hasAny = eps || d.targetMeanPrice;
+  const fairBlock = hasAny ? `
     <div class="fair-block">
-      <div class="fair-title">📐 合理股價估算</div>
-      <div class="fair-formula">${epsLabel}　×　本益比 ${pe||'—'} 倍　＝　合理股價</div>
-      <div class="fair-main">${fairPrice || '—'}</div>
-      <div class="fair-pe-row">
+      <div class="fair-header">
+        <span class="fair-title">📐 估值參考</span>
+        <span class="fair-src">資料來源：yfinance</span>
+      </div>
+
+      ${d.targetMeanPrice ? `
+      <div class="fair-section-title">分析師目標價</div>
+      <div class="fair-analyst-row">
+        <div class="fair-analyst-item">
+          <div class="fair-analyst-label">最低目標</div>
+          <div class="fair-analyst-val lo">${d.targetLowPrice?.toLocaleString() || '—'}</div>
+        </div>
+        <div class="fair-analyst-item fair-analyst-mid">
+          <div class="fair-analyst-label">平均目標</div>
+          <div class="fair-analyst-val mid">${d.targetMeanPrice?.toLocaleString() || '—'}</div>
+        </div>
+        <div class="fair-analyst-item">
+          <div class="fair-analyst-label">最高目標</div>
+          <div class="fair-analyst-val hi">${d.targetHighPrice?.toLocaleString() || '—'}</div>
+        </div>
+      </div>` : ''}
+
+      ${eps ? `
+      <div class="fair-section-title" style="margin-top:14px">EPS 估值（EPS × 本益比）</div>
+      <div class="fair-calc-row">
+        ${trailingFair ? `<div class="fair-calc-item">
+          <div class="fair-calc-label">歷史PE法</div>
+          <div class="fair-calc-val">${trailingFair.toLocaleString()}</div>
+          <div class="fair-calc-sub">EPS ${d.trailingEps} × ${d.trailingPE}倍</div>
+        </div>` : ''}
+        ${forwardFair ? `<div class="fair-calc-item">
+          <div class="fair-calc-label">預估PE法</div>
+          <div class="fair-calc-val">${forwardFair.toLocaleString()}</div>
+          <div class="fair-calc-sub">EPS ${d.forwardEps} × ${d.forwardPE}倍</div>
+        </div>` : ''}
+        ${pegFair ? `<div class="fair-calc-item">
+          <div class="fair-calc-label">PEG法</div>
+          <div class="fair-calc-val">${pegFair.toLocaleString()}</div>
+          <div class="fair-calc-sub">EPS ${d.forwardEps} × 成長率${d.earningsGrowth}%</div>
+        </div>` : ''}
+        ${industryFair ? `<div class="fair-calc-item">
+          <div class="fair-calc-label">產業PE法</div>
+          <div class="fair-calc-val">${industryFair.toLocaleString()}</div>
+          <div class="fair-calc-sub">EPS ${d.forwardEps} × 產業${d.industryPE}倍</div>
+        </div>` : ''}
+      </div>
+
+      <div class="fair-pe-row" style="margin-top:12px">
         <div class="fair-pe-item">
           <div class="fair-pe-label">歷史本益比</div>
           <div class="fair-pe-val">${d.trailingPE || '—'}</div>
@@ -385,11 +454,17 @@ function renderResult(sym, d) {
         </div>
         <div class="fair-pe-item">
           <div class="fair-pe-label">本益成長比</div>
-          <div class="fair-pe-val" style="color:${pegColor}">${pegVal || '—'}</div>
-          <div class="fair-pe-sub">PEG・${pegNote}</div>
+          <div class="fair-pe-val" style="color:${pegColor}">${pegVal || '—'}${pegNote ? ' '+pegNote : ''}</div>
+          <div class="fair-pe-sub">PEG Ratio</div>
         </div>
-      </div>
-      <div class="fair-note">依當前市場本益比推算，僅供參考，不同產業合理倍數不同</div>
+        ${d.industryPE ? `<div class="fair-pe-item">
+          <div class="fair-pe-label">產業平均PE</div>
+          <div class="fair-pe-val">${d.industryPE}</div>
+          <div class="fair-pe-sub">Industry P/E</div>
+        </div>` : ''}
+      </div>` : ''}
+
+      <div class="fair-note">以上數據來自 yfinance，僅供參考，不構成投資建議</div>
     </div>` : '';
   document.getElementById('r-metrics').innerHTML=mets.map(m=>'<div class="met"><div class="met-l">'+m.l+'</div><div class="met-v '+m.c+'">'+m.v+'</div>'+(m.s?'<div class="met-s">'+m.s+'</div>':'')+'</div>').join('')+fairBlock;
   document.getElementById('r-signals').innerHTML=(d.signals||[]).map(s=>'<div class="sig"><div class="dot '+s.type+'"></div><span>'+s.text+'</span></div>').join('');
