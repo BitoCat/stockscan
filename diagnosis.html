@@ -43,7 +43,12 @@
   .fair-title { font-size: 14px; color: #00d4ff; font-weight: 700; margin-bottom: 8px; letter-spacing: 1px; }
   .fair-formula { font-size: 13px; color: #ccd6f6; margin-bottom: 14px; line-height: 1.6; }
   .fair-main { font-size: 48px; font-weight: 900; color: #fff; font-family: 'Bebas Neue', sans-serif; letter-spacing: 2px; line-height: 1; margin-bottom: 10px; text-shadow: 0 0 20px rgba(0,212,255,0.5); }
-  .fair-note { font-size: 12px; color: #8892b0; line-height: 1.5; }
+  .fair-note { font-size: 12px; color: #8892b0; line-height: 1.5; margin-top: 12px; }
+  .fair-pe-row { display: flex; gap: 8px; margin-top: 16px; }
+  .fair-pe-item { flex: 1; text-align: center; background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px 6px; border: 1px solid rgba(255,255,255,0.07); }
+  .fair-pe-label { font-size: 12px; color: #a8b8d8; margin-bottom: 6px; font-weight: 600; }
+  .fair-pe-val { font-size: 22px; font-weight: 700; color: #fff; font-family: 'Share Tech Mono',monospace; }
+  .fair-pe-sub { font-size: 11px; color: #7a90b0; margin-top: 4px; line-height: 1.4; }
 </style>
 </head>
 <body>
@@ -194,7 +199,7 @@ async function analyze() {
         const data = await r.json();
         if (data.price) {
           pd = {chart:{result:[{meta:{regularMarketPrice:data.price,symbol:data.symbol,currency:data.currency,shortName:data.name||data.symbol,previousClose:data.previousClose},indicators:{quote:[{close:data.closes,high:data.highs||[],low:data.lows||[]}]}}]}};
-          pd._eps = { forwardEps:data.forwardEps, trailingEps:data.trailingEps, forwardPE:data.forwardPE, trailingPE:data.trailingPE };
+          pd._eps = { forwardEps:data.forwardEps, trailingEps:data.trailingEps, forwardPE:data.forwardPE, trailingPE:data.trailingPE, pegRatio:data.pegRatio };
         }
       } catch(e) {}
     } else {
@@ -225,7 +230,7 @@ async function analyze() {
           const er = await fetch('https://splendid-prosperity-production-41ab.up.railway.app/quote?symbol=' + sym, {signal: AbortSignal.timeout(8000)});
           const ed = await er.json();
           if (ed.forwardEps || ed.trailingEps) {
-            pd._eps = { forwardEps:ed.forwardEps, trailingEps:ed.trailingEps, forwardPE:ed.forwardPE, trailingPE:ed.trailingPE };
+            pd._eps = { forwardEps:ed.forwardEps, trailingEps:ed.trailingEps, forwardPE:ed.forwardPE, trailingPE:ed.trailingPE, pegRatio:ed.pegRatio };
           }
         } catch(e) {}
       }
@@ -260,7 +265,7 @@ async function analyze() {
       const resistance_l=r60h.length?Math.max(...r60h).toFixed(2):null;
       const today=new Date(); const dateStr=today.getFullYear()+"年"+(today.getMonth()+1)+"月"+today.getDate()+"日";
       const epsData = pd?._eps || {};
-      livePrice = { name:meta.shortName||meta.longName||sym, price:meta.regularMarketPrice, high:meta.regularMarketDayHigh, low:meta.regularMarketDayLow, prev:meta.previousClose, changePct:(((meta.regularMarketPrice-meta.previousClose)/meta.previousClose)*100).toFixed(2), ma5,ma20,ma60,rsi,macd,support,resistance,support_s,resistance_s,support_l,resistance_l,date:dateStr, forwardEps:epsData.forwardEps, trailingEps:epsData.trailingEps, forwardPE:epsData.forwardPE, trailingPE:epsData.trailingPE };
+      livePrice = { name:meta.shortName||meta.longName||sym, price:meta.regularMarketPrice, high:meta.regularMarketDayHigh, low:meta.regularMarketDayLow, prev:meta.previousClose, changePct:(((meta.regularMarketPrice-meta.previousClose)/meta.previousClose)*100).toFixed(2), ma5,ma20,ma60,rsi,macd,support,resistance,support_s,resistance_s,support_l,resistance_l,date:dateStr, forwardEps:epsData.forwardEps, trailingEps:epsData.trailingEps, forwardPE:epsData.forwardPE, trailingPE:epsData.trailingPE, pegRatio:epsData.pegRatio };
       priceContext = "\n\n[即時技術分析資料 "+dateStr+"]\n公司名稱: "+livePrice.name+"\n目前股價: "+livePrice.price+"\n漲跌幅: "+livePrice.changePct+"%\nMA5: "+(ma5||'N/A')+" MA20: "+(ma20||'N/A')+" MA60: "+(ma60||'N/A')+"\nRSI(14): "+(rsi||'N/A')+"\nMACD: "+(macd||'N/A')+"\n短線支撐: "+(support_s||'N/A')+" 短線壓力: "+(resistance_s||'N/A')+"\n中線支撐: "+(support||'N/A')+" 中線壓力: "+(resistance||'N/A')+"\n長線支撐: "+(support_l||'N/A')+" 長線壓力: "+(resistance_l||'N/A')+"\n[請根據以上真實技術指標進行分析]";
     }
   } catch(e) { console.log('股價抓取失敗', e); }
@@ -318,7 +323,7 @@ async function analyze() {
       // 用已查好的中文名（台股）或英文名（美股）覆蓋 AI 的猜測
       obj.stockName = displayName || livePrice.name;
       obj.support_s=livePrice.support_s; obj.resistance_s=livePrice.resistance_s; obj.support=livePrice.support; obj.resistance=livePrice.resistance; obj.support_l=livePrice.support_l; obj.resistance_l=livePrice.resistance_l;
-      obj.forwardEps=livePrice.forwardEps; obj.trailingEps=livePrice.trailingEps; obj.forwardPE=livePrice.forwardPE; obj.trailingPE=livePrice.trailingPE;
+      obj.forwardEps=livePrice.forwardEps; obj.trailingEps=livePrice.trailingEps; obj.forwardPE=livePrice.forwardPE; obj.trailingPE=livePrice.trailingPE; obj.pegRatio=livePrice.pegRatio;
     }
     lastResult = {...obj, symbol:sym, market:currentMkt};
     await deductPoint(currentUser.id, "AI 健診："+sym);
@@ -359,12 +364,32 @@ function renderResult(sym, d) {
     {l:'長線壓力',v:d.resistance_l||'—',c:'dn',s:'60日'},
   ];
   const fairPrice = (eps && pe) ? (eps * pe).toFixed(0) : null;
+  const pegVal = d.pegRatio;
+  const pegColor = pegVal ? (pegVal < 1 ? '#00e676' : pegVal < 2 ? '#00d4ff' : '#ff5252') : '#7a90b0';
+  const pegNote = pegVal ? (pegVal < 1 ? '偏低，可能被低估' : pegVal < 2 ? '合理區間' : '偏高，留意風險') : '—';
   const fairBlock = eps ? `
     <div class="fair-block">
       <div class="fair-title">📐 合理股價估算</div>
       <div class="fair-formula">${epsLabel}　×　本益比 ${pe||'—'} 倍　＝　合理股價</div>
       <div class="fair-main">${fairPrice || '—'}</div>
-      <div class="fair-note">此為依當前市場本益比推算，僅供參考，不同產業合理倍數不同</div>
+      <div class="fair-pe-row">
+        <div class="fair-pe-item">
+          <div class="fair-pe-label">歷史本益比</div>
+          <div class="fair-pe-val">${d.trailingPE || '—'}</div>
+          <div class="fair-pe-sub">Trailing P/E</div>
+        </div>
+        <div class="fair-pe-item">
+          <div class="fair-pe-label">預估本益比</div>
+          <div class="fair-pe-val">${d.forwardPE || '—'}</div>
+          <div class="fair-pe-sub">Forward P/E</div>
+        </div>
+        <div class="fair-pe-item">
+          <div class="fair-pe-label">本益成長比</div>
+          <div class="fair-pe-val" style="color:${pegColor}">${pegVal || '—'}</div>
+          <div class="fair-pe-sub">PEG・${pegNote}</div>
+        </div>
+      </div>
+      <div class="fair-note">依當前市場本益比推算，僅供參考，不同產業合理倍數不同</div>
     </div>` : '';
   document.getElementById('r-metrics').innerHTML=mets.map(m=>'<div class="met"><div class="met-l">'+m.l+'</div><div class="met-v '+m.c+'">'+m.v+'</div>'+(m.s?'<div class="met-s">'+m.s+'</div>':'')+'</div>').join('')+fairBlock;
   document.getElementById('r-signals').innerHTML=(d.signals||[]).map(s=>'<div class="sig"><div class="dot '+s.type+'"></div><span>'+s.text+'</span></div>').join('');
