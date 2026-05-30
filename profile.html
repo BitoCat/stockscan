@@ -88,32 +88,58 @@
   </div>
 
   <!-- 方案 -->
-  <div class="sec-head">💎 訂閱方案</div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px" id="plan-grid">
-    <div class="plan-opt" id="opt-free">
-      <div class="plan-name">🆓 免費版</div>
-      <div class="plan-price">$0</div>
-      <div class="plan-features">每日 AI 健診<br>基本功能</div>
-    </div>
-    <div class="plan-opt" id="opt-tw">
-      <div class="plan-name">🇹🇼 台股版</div>
-      <div class="plan-price" style="color:var(--accent)">洽詢</div>
-      <div class="plan-features">台股新聞<br>台股選股清單<br>AI 健診點數</div>
-    </div>
-    <div class="plan-opt" id="opt-us">
-      <div class="plan-name">🇺🇸 美股版</div>
-      <div class="plan-price" style="color:var(--accent)">洽詢</div>
-      <div class="plan-features">美股新聞<br>美股選股清單<br>AI 健診點數</div>
-    </div>
-    <div class="plan-opt" id="opt-all">
-      <div class="plan-name">🌏 全市場</div>
-      <div class="plan-price" style="color:var(--warn)">洽詢</div>
-      <div class="plan-features">台股＋美股<br>全部功能解鎖<br>優先推播通知</div>
+<div class="sec-head">💎 訂閱方案</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px" id="plan-grid">
+  <div class="plan-opt" id="opt-free">
+    <div class="plan-name">🆓 免費版</div>
+    <div class="plan-price">$0</div>
+    <div class="plan-features">每日 AI 健診<br>基本功能</div>
+  </div>
+  <div class="plan-opt" id="opt-tw">
+    <div class="plan-name">🇹🇼 台股版</div>
+    <div class="plan-price" style="color:var(--accent)">已含</div>
+    <div class="plan-features">台股新聞<br>台股選股清單<br>AI 健診點數</div>
+  </div>
+  <div class="plan-opt" id="opt-us">
+    <div class="plan-name">🇺🇸 美股版</div>
+    <div class="plan-price" style="color:var(--accent)">已含</div>
+    <div class="plan-features">美股新聞<br>美股選股清單<br>AI 健診點數</div>
+  </div>
+  <div class="plan-opt" id="opt-all">
+    <div class="plan-name">🌏 全市場</div>
+    <div class="plan-price" style="color:var(--warn)">NT$1,500/年</div>
+    <div class="plan-features">台股＋美股<br>全部功能解鎖<br>Telegram 雙頻道</div>
+  </div>
+</div>
+
+<!-- 加入/續費按鈕 -->
+<div id="join-section" style="text-align:center;margin-bottom:20px">
+  <!-- 免費會員顯示 -->
+  <div id="btn-join" style="display:none">
+    <a href="https://lohastyle.1shop-app.com/so4lw3" target="_blank"
+       style="display:inline-block;background:var(--accent);color:#000;font-weight:700;
+              padding:12px 32px;border-radius:10px;text-decoration:none;font-size:15px;
+              margin-bottom:8px">
+      🚀 立即加入 NT$1,500/年
+    </a>
+    <div style="font-size:11px;color:var(--muted)">
+      付款後請確認使用本站註冊 Email 付款，系統將自動升級帳號
     </div>
   </div>
-  <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:20px">
-    升級方案請聯繫：<a href="#" id="contact-link" style="color:var(--accent)">管理員</a>
+
+  <!-- 付費會員顯示 -->
+  <div id="btn-subscribed" style="display:none">
+    <div style="background:rgba(0,212,255,.08);border:1px solid var(--accent);
+                border-radius:10px;padding:12px 20px;display:inline-block">
+      <div style="color:var(--accent);font-weight:700;font-size:14px">✅ 已訂閱全市場方案</div>
+      <div id="expire-date" style="font-size:12px;color:var(--muted);margin-top:4px"></div>
+      <a href="https://lohastyle.1shop-app.com/so4lw3" target="_blank"
+         style="display:inline-block;margin-top:8px;font-size:12px;color:var(--accent)">
+        🔄 提前續費
+      </a>
+    </div>
   </div>
+</div>
 
   <!-- 帳號設定 -->
   <div class="sec-head">⚙️ 帳號設定</div>
