@@ -53,6 +53,44 @@
       <div class="sec-head" style="margin-bottom:0">會員管理 <span id="member-count" style="color:var(--accent)">0</span> 人</div>
       <button class="btn btn-primary btn-sm" onclick="loadMembers()">🔄 重新整理</button>
     </div>
+
+    <!-- 新增外國會員 -->
+    <div style="background:rgba(0,212,255,.05);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:12px">🌏 新增外國會員（PayPal / 支付寶）</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">姓名 *</div>
+          <input id="fm-name" type="text" placeholder="輸入姓名" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Email *</div>
+          <input id="fm-email" type="email" placeholder="輸入Email" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">付款方式 *</div>
+          <select id="fm-payment" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;box-sizing:border-box">
+            <option value="PayPal">PayPal</option>
+            <option value="Alipay">支付寶</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">收款金額 *</div>
+          <input id="fm-amt" type="number" placeholder="例如 1500" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">到期日（自動帶入380天後）</div>
+          <input id="fm-expires" type="date" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">備註</div>
+          <input id="fm-note" type="text" placeholder="選填，例如：微信介紹" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;box-sizing:border-box">
+        </div>
+      </div>
+      <button onclick="addForeignMember()" style="width:100%;background:var(--accent);color:#000;font-weight:700;padding:10px;border-radius:8px;border:none;cursor:pointer;font-size:14px">
+        ✅ 確認新增會員
+      </button>
+    </div>
+
     <div id="members-list"><div style="font-size:12px;color:var(--muted);text-align:center;padding:16px">點擊重新整理載入</div></div>
   </div>
 
@@ -288,6 +326,74 @@ async function replyMessage(msgId) {
   loadMessages();
 }
 
+// 新增外國會員
+function initForeignMemberForm() {
+  const d = new Date();
+  d.setDate(d.getDate() + 380);
+  document.getElementById("fm-expires").value = d.toISOString().split("T")[0];
+}
+
+async function addForeignMember() {
+  const name = document.getElementById("fm-name").value.trim();
+  const email = document.getElementById("fm-email").value.trim().toLowerCase();
+  const payment = document.getElementById("fm-payment").value;
+  const amt = document.getElementById("fm-amt").value.trim();
+  const expires = document.getElementById("fm-expires").value;
+  const note = document.getElementById("fm-note").value.trim();
+
+  // 防呆驗證
+  if (!name) { showToast("請填寫姓名", "error"); return; }
+  if (!email || !email.includes("@")) { showToast("請填寫正確的Email", "error"); return; }
+  if (!amt || isNaN(amt) || parseInt(amt) <= 0) { showToast("請填寫收款金額", "error"); return; }
+  if (!expires) { showToast("請確認到期日", "error"); return; }
+
+  // 確認視窗
+  const confirm_msg = `確認新增以下會員？\n\n姓名：${name}\nEmail：${email}\n付款方式：${payment}\n金額：${amt}\n到期日：${expires}`;
+  if (!confirm(confirm_msg)) return;
+
+  const tradeNo = payment.toUpperCase() + "_" + Date.now();
+
+  try {
+    // 寫入 memberships
+    const { error: e1 } = await sb.from("memberships").insert({
+      name: name,
+      email: email,
+      phone: "",
+      merchant_trade_no: tradeNo,
+      trade_amt: parseInt(amt),
+      payment_type: payment,
+      plan: "all",
+      paid_at: new Date().toISOString(),
+      expires_at: new Date(expires + "T23:59:59").toISOString(),
+      is_active: true,
+      note: note || null
+    });
+    if (e1) throw e1;
+
+    // 升級 profiles（如果有對應帳號）
+    const { data: users } = await sb.rpc("get_profile_by_email", { user_email: email });
+    if (users && users.length > 0) {
+      await sb.from("profiles").update({ plan: "all" }).eq("id", users[0].id);
+      showToast(`✅ 已新增會員並升級網站帳號：${name}`, "success");
+    } else {
+      showToast(`✅ 已新增會員（尚無網站帳號）：${name}`, "success");
+    }
+
+    // 清空表單
+    document.getElementById("fm-name").value = "";
+    document.getElementById("fm-email").value = "";
+    document.getElementById("fm-amt").value = "";
+    document.getElementById("fm-note").value = "";
+    initForeignMemberForm();
+
+    // 重新整理會員列表
+    loadMembers();
+
+  } catch(err) {
+    console.error(err);
+    showToast("新增失敗：" + (err.message || JSON.stringify(err)), "error");
+  }
+}  
 async function loadMembers() {
   const res = await sb.from("profiles").select("*").order("created_at", { ascending: false });
   if (res.error) { showToast("載入失敗", "error"); return; }
