@@ -319,6 +319,28 @@ function renderProfile() {
     document.getElementById("admin-panel").classList.add("show");
     loadMessages();
   }
+
+  // 控制加入/續費按鈕顯示
+  const isPaid = p.plan === "all" || p.plan === "admin";
+  document.getElementById("btn-join").style.display = isPaid ? "none" : "block";
+  document.getElementById("btn-subscribed").style.display = isPaid ? "block" : "none";
+
+  // 顯示到期日（從 memberships 表查詢）
+  if (isPaid) {
+    sb.from("memberships")
+      .select("expires_at")
+      .eq("email", currentUser.email)
+      .eq("is_active", true)
+      .order("expires_at", { ascending: false })
+      .limit(1)
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          const exp = new Date(data[0].expires_at);
+          const dateStr = exp.toLocaleDateString("zh-TW");
+          document.getElementById("expire-date").textContent = "到期日：" + dateStr;
+        }
+      });
+  }
 }
 
 async function loadSavedKey() {
