@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>交易大師 · 主力雷達</title>
 <link rel="stylesheet" href="css/base.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
 <style>
 /* ── 完全沿用 whale.html 的設計語言 ── */
 :root{--bg:#060912;--bg2:#0d1220;--bg3:#131929;--border:#1e2a40;--text:#e2e8f0;--muted:#64748b;--accent:#f5a623;--amber:#d97706;--amber-light:#fcd34d;--teal:#0d9488;--teal-light:#5eead4;--coral:#f97316;--coral-light:#fdba74;--trust:#14b8a6;--trust-light:#5eead4;--foreign:#a78bfa;--foreign-light:#c4b5fd;--both:#f97316;--both-light:#fdba74;--green:#16a34a;--red:#dc2626;}
@@ -246,7 +245,49 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 <script>
 const SUPABASE_URL = 'https://kldumnxdlgovaxtiszyn.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const SB_HEADERS = {
+  'apikey': SUPABASE_ANON,
+  'Authorization': 'Bearer ' + SUPABASE_ANON,
+  'Content-Type': 'application/json'
+};
+
+// Supabase fetch helper - 取代 supabase-js client
+async function sbQuery(table, params = {}) {
+  let url = SUPABASE_URL + '/rest/v1/' + table + '?';
+  const qs = [];
+  if (params.select) qs.push('select=' + encodeURIComponent(params.select));
+  if (params.eq) {
+    for (const [col, val] of Object.entries(params.eq)) {
+      qs.push(col + '=eq.' + encodeURIComponent(val));
+    }
+  }
+  if (params.neq) {
+    for (const [col, val] of Object.entries(params.neq)) {
+      qs.push(col + '=neq.' + encodeURIComponent(val));
+    }
+  }
+  if (params.gte) {
+    for (const [col, val] of Object.entries(params.gte)) {
+      qs.push(col + '=gte.' + encodeURIComponent(val));
+    }
+  }
+  if (params.order) {
+    for (const [col, asc] of params.order) {
+      qs.push('order=' + col + '.' + (asc ? 'asc' : 'desc'));
+    }
+  }
+  if (params.limit) qs.push('limit=' + params.limit);
+  if (params.offset) qs.push('offset=' + params.offset);
+  url += qs.join('&');
+  try {
+    const resp = await fetch(url, { headers: SB_HEADERS });
+    if (!resp.ok) return { data: [], error: resp.statusText };
+    const data = await resp.json();
+    return { data: Array.isArray(data) ? data : [], error: null };
+  } catch(e) {
+    return { data: [], error: e.message };
+  }
+}
 
 let allNewPositions = [];
 let allFundPositions = [];
@@ -307,12 +348,9 @@ function setFilter(f) {
    Tab 1：新建倉
 ══════════════════════════════════════════ */
 async function loadNewPositions() {
-  const { data, error } = await sb
-    .from('tw_radar_new_positions')
-    .select('*')
-    .order('fund_count', { ascending: false })
-    .order('total_value', { ascending: false })
-    .limit(500);
+  const { data, error } = await sbQuery('tw_radar_new_positions', {
+    select: '*', order: [['fund_count', false], ['total_value', false]], limit: 500
+  });
 
   if (error || !data || !data.length) {
     document.getElementById('new-positions-list').innerHTML =
@@ -704,17 +742,9 @@ window.openDetail = async function(p) {
 window.addToWatchlist = async function(ticker, name) {
   const btn = document.getElementById('wl-btn');
   if (btn) btn.disabled = true;
-  const user = (await sb.auth.getUser()).data.user;
-  if (!user) { alert('請先登入'); if (btn) btn.disabled = false; return; }
-  const { error } = await sb.from('watchlist').upsert({
-    user_id: user.id,
-    symbol: ticker,
-    market: 'tw',
-    name: name,
-    added_at: new Date().toISOString()
-  }, { onConflict: 'user_id,symbol' });
-  if (error) { alert('儲存失敗'); if (btn) btn.disabled = false; }
-  else { if (btn) { btn.textContent = '✅ 已加入'; btn.style.background = 'var(--green)'; } }
+  // watchlist 需要登入，暫時提示
+  alert('觀察名單功能需要登入');
+  if (btn) btn.disabled = false;
 };
 
 /* ══════════════════════════════════════════
@@ -726,11 +756,9 @@ function parseFunds(raw) {
 }
 
 async function getLatestMonth() {
-  const { data } = await sb
-    .from('tw_fund_positions')
-    .select('year_month')
-    .order('year_month', { ascending: false })
-    .limit(1);
+  const { data } = await sbQuery('tw_fund_positions', {
+    select: 'year_month', order: [['year_month', false]], limit: 1
+  });
   return data && data.length ? data[0].year_month : '';
 }
 
@@ -779,7 +807,7 @@ function fmtValue(vk) {
 async function loadEtfData() {
   etfLoaded = true;
   document.getElementById('etf-list').innerHTML = '<div class="loading">🧩 載入 ETF 資料中...</div>';
-  const { data: monthData } = await sb.from('tw_fund_positions').select('year_month').order('year_month',{ascending:false}).limit(1000);
+  const { data: monthData } = await sbQuery('tw_fund_positions', { select: 'year_month', order: [['year_month', false]], limit: 1000 });
   if (!monthData || !monthData.length) {
     document.getElementById('etf-list').innerHTML = '<div class="empty"><div class="icon">📭</div><div>暫無資料</div></div>';
     return;
@@ -813,9 +841,10 @@ async function loadEtfData() {
     });
   });
 
-  const { data, error } = await sb.from('tw_fund_positions')
-    .select('ticker, name, fund_id, fund_name, year_month, value_k, pct, rank')
-    .order('year_month',{ascending:false}).order('value_k',{ascending:false});
+  const { data, error } = await sbQuery('tw_fund_positions', {
+    select: 'ticker,name,fund_id,fund_name,year_month,value_k,pct,rank',
+    order: [['year_month', false], ['value_k', false]]
+  });
 
   if (error || !data) {
     document.getElementById('etf-list').innerHTML = '<div class="empty"><div class="icon">⚠️</div><div>載入失敗</div></div>';
@@ -893,10 +922,10 @@ async function loadConsensus() {
   const ymLabel = ym ? ym.slice(0,4)+'/'+ym.slice(4,6) : '';
   document.getElementById('cons-stat-month').textContent = ymLabel;
 
-  const { data } = await sb.from('tw_fund_positions')
-    .select('ticker, name, fund_id, fund_name, value_k, pct')
-    .eq('year_month', ym)
-    .order('value_k',{ascending:false});
+  const { data } = await sbQuery('tw_fund_positions', {
+    select: 'ticker,name,fund_id,fund_name,value_k,pct',
+    eq: { year_month: ym }, order: [['value_k', false]]
+  });
 
   if (!data || !data.length) {
     document.getElementById('consensus-list').innerHTML = '<div class="empty"><div class="icon">📭</div><div>暫無資料</div></div>';
