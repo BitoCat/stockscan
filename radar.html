@@ -7,43 +7,38 @@
 <link rel="stylesheet" href="css/base.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-/* ── 完全沿用 whale.html 的設計語言 ── */
 :root{--bg:#060912;--bg2:#0d1220;--bg3:#131929;--border:#1e2a40;--text:#e2e8f0;--muted:#64748b;--accent:#f5a623;--amber:#d97706;--amber-light:#fcd34d;--teal:#0d9488;--teal-light:#5eead4;--coral:#f97316;--coral-light:#fdba74;--trust:#14b8a6;--trust-light:#5eead4;--foreign:#a78bfa;--foreign-light:#c4b5fd;--both:#f97316;--both-light:#fdba74;--green:#16a34a;--red:#dc2626;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif;padding-bottom:80px;}
 
-/* ── Header ── */
 .header{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:10px;}
 .header h1{font-size:17px;font-weight:600;}
 .hbadge{background:var(--amber);color:#000;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;}
 
-/* ── Tabs ── */
 .tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);overflow-x:auto;}
-.tab{padding:12px 18px;font-size:13px;color:var(--muted);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{padding:12px 16px;font-size:13px;color:var(--muted);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s;flex:1;text-align:center;}
 .tab.active{color:var(--amber-light);border-bottom-color:var(--amber);}
 
-/* ── Filter chips ── */
-.filter-bar{padding:12px 16px;display:flex;gap:8px;overflow-x:auto;background:var(--bg2);border-bottom:1px solid var(--border);}
+.filter-bar{padding:10px 16px;display:flex;gap:8px;overflow-x:auto;background:var(--bg2);border-bottom:1px solid var(--border);}
 .filter-bar::-webkit-scrollbar{display:none;}
 .chip{padding:5px 12px;border-radius:20px;font-size:12px;border:1px solid var(--border);color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .2s;}
 .chip.active{border-color:var(--amber);color:var(--amber-light);background:rgba(217,119,6,.15);}
 
-/* ── Section ── */
 .section{padding:12px 16px;}
 .section-title{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.06em;margin-bottom:10px;text-transform:uppercase;}
 
-/* ── Stats row ── */
-.stats-row{display:flex;gap:8px;margin-top:10px;}
+.stats-row{display:flex;gap:8px;margin-bottom:14px;}
 .stat{flex:1;background:var(--bg3);border-radius:8px;padding:8px 10px;text-align:center;}
 .stat .val{font-size:16px;font-weight:700;color:var(--text);}
 .stat .lbl{font-size:10px;color:var(--muted);margin-top:2px;}
 
-/* ── Cards ── */
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color .2s;}
 .card:hover{border-color:var(--amber);}
 .card.trust-new{border-left:3px solid var(--trust);}
 .card.foreign-acc{border-left:3px solid var(--foreign);}
 .card.both-signal{border-left:3px solid var(--both);}
+.card.add-more{border-left:3px solid var(--amber);}
 .card.normal{border-left:3px solid var(--border);}
 
 .card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
@@ -53,42 +48,41 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 .card-value .mv{font-size:15px;font-weight:600;color:var(--teal-light);}
 .card-value .qt{font-size:11px;color:var(--muted);margin-top:2px;}
 
-/* ── Source tags ── */
 .tags-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
 .tag-trust{background:rgba(20,184,166,.2);color:var(--trust-light);border:1px solid rgba(20,184,166,.3);border-radius:6px;padding:2px 8px;font-size:11px;}
 .tag-foreign{background:rgba(167,139,250,.2);color:var(--foreign-light);border:1px solid rgba(167,139,250,.3);border-radius:6px;padding:2px 8px;font-size:11px;}
-.tag-more{background:rgba(217,119,6,.2);color:var(--amber-light);border:1px solid rgba(217,119,6,.3);border-radius:6px;padding:2px 8px;font-size:11px;}
+.tag-amber{background:rgba(217,119,6,.2);color:var(--amber-light);border:1px solid rgba(217,119,6,.3);border-radius:6px;padding:2px 8px;font-size:11px;}
+.tag-more{background:rgba(100,116,139,.2);color:var(--muted);border:1px solid rgba(100,116,139,.3);border-radius:6px;padding:2px 8px;font-size:11px;}
 
-/* ── Badges ── */
-.badge-new{background:rgba(20,184,166,.2);color:var(--trust-light);border:1px solid rgba(20,184,166,.3);border-radius:10px;padding:2px 8px;font-size:11px;font-weight:500;}
-.badge-foreign{background:rgba(167,139,250,.2);color:var(--foreign-light);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:2px 8px;font-size:11px;font-weight:500;}
-.badge-both{background:rgba(249,115,22,.2);color:var(--both-light);border:1px solid rgba(249,115,22,.3);border-radius:10px;padding:2px 8px;font-size:11px;font-weight:500;}
+.badge{border-radius:10px;padding:2px 8px;font-size:11px;font-weight:500;}
+.badge-new{background:rgba(20,184,166,.2);color:var(--trust-light);border:1px solid rgba(20,184,166,.3);}
+.badge-add{background:rgba(217,119,6,.2);color:var(--amber-light);border:1px solid rgba(217,119,6,.3);}
+.badge-foreign{background:rgba(167,139,250,.2);color:var(--foreign-light);border:1px solid rgba(167,139,250,.3);}
+.badge-both{background:rgba(249,115,22,.2);color:var(--both-light);border:1px solid rgba(249,115,22,.3);}
 
-/* ── Progress ── */
 .progress-wrap{margin-top:6px;}
 .progress-label{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px;}
 .progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
 .progress-fill{height:100%;border-radius:2px;transition:width .4s;}
-.fill-trust{background:var(--trust);}
-.fill-foreign{background:var(--foreign);}
-.fill-both{background:var(--both);}
 
-/* ── Source indicator dot ── */
-.source-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle;}
-.dot-trust{background:var(--trust);}
-.dot-foreign{background:var(--foreign);}
-.dot-both{background:var(--both);}
-
-/* ── Fund list in tab2 ── */
 .fund-row{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:border-color .2s;}
 .fund-row:hover{border-color:var(--amber);}
 
-/* ── Misc ── */
 .loading{text-align:center;padding:40px;color:var(--muted);font-size:14px;}
 .empty{text-align:center;padding:40px 20px;color:var(--muted);}
 .empty .icon{font-size:36px;margin-bottom:10px;}
+.empty .hint{font-size:12px;margin-top:8px;color:var(--muted);opacity:.7;}
 .tab-content{display:none;}
 .tab-content.active{display:block;}
+
+.info-box{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px;}
+.info-box .title{font-size:12px;color:var(--amber-light);font-weight:600;margin-bottom:4px;}
+.info-box .body{font-size:11px;color:var(--muted);line-height:1.6;}
+
+/* 持股追蹤子頁 */
+.sub-tabs{display:flex;gap:0;background:var(--bg3);border-radius:10px;padding:3px;margin-bottom:14px;}
+.sub-tab{flex:1;text-align:center;padding:7px 8px;font-size:12px;color:var(--muted);cursor:pointer;border-radius:8px;transition:all .2s;}
+.sub-tab.active{background:var(--bg2);color:var(--amber-light);font-weight:600;}
 </style>
 </head>
 <body>
@@ -105,20 +99,19 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 
 <!-- ── Tabs ── -->
 <div class="tabs">
-  <div class="tab active" id="tab-btn-new">🆕 新建倉</div>
-  <div class="tab" id="tab-btn-all">📊 持股追蹤</div>
-  <div class="tab" id="tab-btn-funds">🏦 追蹤法人</div>
-  <div class="tab" id="tab-btn-etf">🧩 ETF追蹤</div>
+  <div class="tab active" id="tab-btn-new">🆕 主力新建倉</div>
+  <div class="tab" id="tab-btn-hold">📊 主力持股追蹤</div>
+  <div class="tab" id="tab-btn-etf">🧩 主力ETF追蹤</div>
 </div>
 
 <!-- ══════════════════════════════════════════
-     Tab 1：新建倉
+     Tab 1：主力新建倉
 ══════════════════════════════════════════ -->
 <div class="tab-content active" id="tab-new">
   <div class="filter-bar">
     <div class="chip active" id="chip-all">全部</div>
-    <div class="chip" id="chip-trust">📋 投信新進</div>
-    <div class="chip" id="chip-foreign">🌏 外資買超</div>
+    <div class="chip" id="chip-new-only">🆕 純新進</div>
+    <div class="chip" id="chip-add">📈 持續加碼</div>
     <div class="chip" id="chip-both">🔥 雙訊號</div>
     <div class="chip" id="chip-multi">≥2檔基金</div>
     <div class="chip" id="chip-pct1">佔比≥1%</div>
@@ -127,62 +120,85 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
     <div class="chip" id="chip-sector-trad">🏭 傳產</div>
     <div class="chip" id="chip-sector-bio">🧬 生技</div>
   </div>
-
   <div class="section">
     <div class="stats-row">
-      <div class="stat"><div class="val" id="stat-new">-</div><div class="lbl">新建倉標的</div></div>
-      <div class="stat"><div class="val" id="stat-trust">-</div><div class="lbl">投信新進場</div></div>
-      <div class="stat"><div class="val" id="stat-foreign">-</div><div class="lbl">外資買超</div></div>
+      <div class="stat"><div class="val" id="stat-new">-</div><div class="lbl">新進場</div></div>
+      <div class="stat"><div class="val" id="stat-add">-</div><div class="lbl">持續加碼</div></div>
+      <div class="stat"><div class="val" id="stat-both">-</div><div class="lbl">雙訊號</div></div>
     </div>
-  </div>
-
-  <div class="section">
     <div class="section-title" id="month-label">載入中...</div>
     <div id="new-positions-list"><div class="loading">🎯 載入主力資料中...</div></div>
   </div>
 </div>
 
 <!-- ══════════════════════════════════════════
-     Tab 2：持股追蹤（依基金瀏覽）
+     Tab 2：主力持股追蹤
 ══════════════════════════════════════════ -->
-<div class="tab-content" id="tab-all">
-  <div class="filter-bar" id="fund-filter-bar">
-    <div class="chip active" id="chip-fund-all">全部</div>
-  </div>
-  <div class="section">
-    <div id="all-positions-list"><div class="loading">載入中...</div></div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     Tab 3：追蹤法人清單
-══════════════════════════════════════════ -->
-<div class="tab-content" id="tab-funds">
-  <div class="section">
-    <!-- 來源說明 -->
-    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px;">
-      <div style="font-size:12px;color:var(--amber-light);font-weight:600;margin-bottom:4px;">📌 資料來源說明</div>
-      <div style="font-size:11px;color:var(--muted);line-height:1.6;">
-        投信持股來自<b style="color:var(--text)">投信投顧公會（SITCA）</b>每月公告之基金前十大持股，每月更新。<br>
-        外資訊號來自<b style="color:var(--text)">TWSE / TPEx 三大法人</b>每日買賣超，系統偵測連續買超 ≥ 7 日標的。
-      </div>
+<div class="tab-content" id="tab-hold">
+  <div class="section" style="padding-bottom:0">
+    <div class="sub-tabs">
+      <div class="sub-tab active" id="sub-consensus">多方共識</div>
+      <div class="sub-tab" id="sub-fund">依基金查詢</div>
+      <div class="sub-tab" id="sub-fundlist">法人清單</div>
     </div>
-    <div class="section-title">目前追蹤法人</div>
-    <div id="funds-list"><div class="loading">載入中...</div></div>
+  </div>
+
+  <!-- 多方共識 -->
+  <div id="pane-consensus">
+    <div class="filter-bar">
+      <div class="chip active" id="cons-chip-all">全部</div>
+      <div class="chip" id="cons-chip-3up">≥3家基金</div>
+      <div class="chip" id="cons-chip-5up">≥5家基金</div>
+      <div class="chip" id="cons-chip-pct2">佔比≥2%</div>
+      <div class="chip" id="cons-chip-tech">💻 半導體</div>
+      <div class="chip" id="cons-chip-fin">🏦 金融</div>
+      <div class="chip" id="cons-chip-bio">🧬 生技</div>
+    </div>
+    <div class="section">
+      <div class="stats-row">
+        <div class="stat"><div class="val" id="cons-stat-count">-</div><div class="lbl">共識標的</div></div>
+        <div class="stat"><div class="val" id="cons-stat-top">-</div><div class="lbl">最高共識家數</div></div>
+        <div class="stat"><div class="val" id="cons-stat-month">-</div><div class="lbl">資料月份</div></div>
+      </div>
+      <div class="section-title">投信多方共識持股（依持有家數排序）</div>
+      <div id="consensus-list"><div class="loading">載入中...</div></div>
+    </div>
+  </div>
+
+  <!-- 依基金查詢 -->
+  <div id="pane-fund" style="display:none">
+    <div class="filter-bar" id="fund-filter-bar">
+      <div class="chip active" id="chip-fund-all">請選擇基金 →</div>
+    </div>
+    <div class="section">
+      <div id="all-positions-list"><div class="empty"><div class="icon">🏦</div><div>請從上方選擇基金</div></div></div>
+    </div>
+  </div>
+
+  <!-- 法人清單 -->
+  <div id="pane-fundlist" style="display:none">
+    <div class="section">
+      <div class="info-box">
+        <div class="title">📌 資料來源說明</div>
+        <div class="body">
+          投信持股來自<b style="color:var(--text)">投信投顧公會（SITCA）</b>每月公告之基金前十大持股，每月中旬更新。<br>
+          外資訊號來自<b style="color:var(--text)">TWSE / TPEx 三大法人</b>每日買賣超資料。
+        </div>
+      </div>
+      <div class="section-title">目前追蹤法人</div>
+      <div id="funds-list"><div class="loading">載入中...</div></div>
+    </div>
   </div>
 </div>
 
 <!-- ══════════════════════════════════════════
-     Tab 4：ETF 追蹤
+     Tab 3：主力ETF追蹤
 ══════════════════════════════════════════ -->
 <div class="tab-content" id="tab-etf">
-  <!-- 月份選擇 -->
   <div class="filter-bar" id="etf-month-bar">
-    <div class="chip active" id="chip-etf-latest">最新月份</div>
+    <div class="chip active">載入中...</div>
   </div>
-
-  <!-- 篩選條件 -->
-  <div class="filter-bar" style="padding-top:4px" id="etf-filter-bar">
+  <div class="filter-bar" id="etf-filter-bar">
     <div class="chip active" id="etf-chip-all">全部 ETF</div>
     <div class="chip" id="etf-chip-equity">📈 股票型</div>
     <div class="chip" id="etf-chip-bond">💰 債券型</div>
@@ -190,23 +206,16 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
     <div class="chip" id="etf-chip-multi2">≥2檔基金</div>
     <div class="chip" id="etf-chip-pct1">佔比≥1%</div>
   </div>
-
   <div class="section">
-    <!-- 統計卡 -->
-    <div class="stats-row" style="margin-bottom:14px">
+    <div class="stats-row">
       <div class="stat"><div class="val" id="etf-stat-count">-</div><div class="lbl">ETF 標的數</div></div>
       <div class="stat"><div class="val" id="etf-stat-funds">-</div><div class="lbl">持有基金數</div></div>
-      <div class="stat"><div class="val" id="etf-stat-value">-</div><div class="lbl">合計市值(億)</div></div>
+      <div class="stat"><div class="val" id="etf-stat-value">-</div><div class="lbl">合計市值</div></div>
     </div>
-
-    <!-- 資料說明 -->
-    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px;">
-      <div style="font-size:12px;color:var(--amber-light);font-weight:600;margin-bottom:4px;">📌 ETF 判斷方式</div>
-      <div style="font-size:11px;color:var(--muted);line-height:1.6;">
-        台股 ETF 代號通常為 <b style="color:var(--text)">純數字 4-5 碼（如 0056、006208）</b>或<b style="color:var(--text)">含字母（00757、00858R）</b>，從投信每月申報之前十大持股自動篩出。
-      </div>
+    <div class="info-box">
+      <div class="title">📌 ETF 判斷方式</div>
+      <div class="body">台股 ETF 代號通常為 <b style="color:var(--text)">0開頭 4-6 碼</b>（如 0056、006208）或<b style="color:var(--text)">末尾含字母</b>（如 00858R），從投信每月前十大持股自動篩出。</div>
     </div>
-
     <div class="section-title" id="etf-month-label">載入中...</div>
     <div id="etf-list"><div class="loading">🧩 載入 ETF 資料中...</div></div>
   </div>
@@ -229,648 +238,15 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 let allNewPositions = [];
-let allFundPositions = [];
 let currentFilter = 'all';
-
-/* ══════════════════════════════════════════
-   Tab 切換
-══════════════════════════════════════════ */
-function switchTab(n) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  document.getElementById('tab-btn-' + n).classList.add('active');
-  document.getElementById('tab-' + n).classList.add('active');
-}
-document.getElementById('tab-btn-new').addEventListener('click', () => switchTab('new'));
-document.getElementById('tab-btn-all').addEventListener('click', () => switchTab('all'));
-document.getElementById('tab-btn-funds').addEventListener('click', () => { switchTab('funds'); });
-document.getElementById('tab-btn-etf').addEventListener('click', () => { switchTab('etf'); if (!etfLoaded) loadEtfData(); });
-
-/* ══════════════════════════════════════════
-   篩選
-══════════════════════════════════════════ */
-function setFilter(f) {
-  currentFilter = f;
-  document.querySelectorAll('#tab-new .chip').forEach(c => c.classList.remove('active'));
-  document.getElementById('chip-' + f).classList.add('active');
-  renderNewPositions(allNewPositions);
-}
-['all','trust','foreign','both','multi','pct1',
- 'sector-tech','sector-fin','sector-trad','sector-bio'].forEach(f => {
-  document.getElementById('chip-' + f).addEventListener('click', () => setFilter(f));
-});
-
-/* ══════════════════════════════════════════
-   Tab 1：新建倉
-══════════════════════════════════════════ */
-async function loadNewPositions() {
-  const { data, error } = await sb
-    .from('tw_radar_new_positions')
-    .select('*')
-    .order('fund_count', { ascending: false })
-    .order('total_value', { ascending: false })
-    .limit(500);
-
-  if (error || !data || !data.length) {
-    document.getElementById('new-positions-list').innerHTML =
-      '<div class="empty"><div class="icon">🎯</div><div>暫無資料，請等待每月掃描</div></div>';
-    return;
-  }
-
-  allNewPositions = data;
-
-  // 取最新月份
-  const months = [...new Set(data.map(d => d.year_month))].sort().reverse();
-  const latest = data.filter(d => d.year_month === months[0]);
-  const ym = months[0];
-  const ymLabel = ym ? ym.slice(0,4) + '/' + ym.slice(4,6) : '';
-
-  document.getElementById('stat-new').textContent = latest.length;
-  document.getElementById('stat-trust').textContent = latest.filter(d => d.source === '投信').length;
-  document.getElementById('stat-foreign').textContent = latest.filter(d => d.source === '外資').length;
-  document.getElementById('month-label').textContent = '偵測期間：' + ymLabel + ' 首次進入基金前十大';
-  document.getElementById('last-updated').textContent = '偵測月份：' + ymLabel + '（投信申報資料，每月中旬更新）';
-
-  renderNewPositions(data);
-}
-
-function renderNewPositions(data) {
-  const months = [...new Set(data.map(d => d.year_month))].sort().reverse();
-  let filtered = data.filter(d => d.year_month === months[0]);
-
-  // 篩選邏輯
-  if (currentFilter === 'trust')   filtered = filtered.filter(d => d.source === '投信');
-  if (currentFilter === 'foreign') filtered = filtered.filter(d => d.source === '外資');
-  if (currentFilter === 'both') {
-    // 同一 ticker 同時出現投信與外資
-    const tickers = new Set(
-      filtered.filter(d => d.source === '投信').map(d => d.ticker)
-    );
-    filtered = filtered.filter(d => tickers.has(d.ticker));
-  }
-  if (currentFilter === 'multi')  filtered = filtered.filter(d => d.fund_count >= 2);
-  if (currentFilter === 'pct1')   filtered = filtered.filter(d => d.avg_pct >= 1);
-  if (currentFilter === 'sector-tech') filtered = filtered.filter(d => isTech(d));
-  if (currentFilter === 'sector-fin')  filtered = filtered.filter(d => isFin(d));
-  if (currentFilter === 'sector-trad') filtered = filtered.filter(d => isTrad(d));
-  if (currentFilter === 'sector-bio')  filtered = filtered.filter(d => isBio(d));
-
-  if (!filtered.length) {
-    document.getElementById('new-positions-list').innerHTML =
-      '<div class="empty"><div class="icon">🔍</div><div>此篩選條件無資料</div></div>';
-    return;
-  }
-
-  const container = document.getElementById('new-positions-list');
-  container.innerHTML = '';
-
-  // 找出雙訊號 tickers
-  const trustTickers   = new Set(filtered.filter(d => d.source === '投信').map(d => d.ticker));
-  const foreignTickers = new Set(filtered.filter(d => d.source === '外資').map(d => d.ticker));
-  const bothTickers    = new Set([...trustTickers].filter(t => foreignTickers.has(t)));
-
-  // 依 ticker 合併（雙訊號顯示一張卡）
-  const merged = {};
-  filtered.forEach(p => {
-    const t = p.ticker;
-    if (!merged[t]) {
-      merged[t] = { ...p, sources: [p.source], all_funds: parseFunds(p.funds) };
-    } else {
-      if (!merged[t].sources.includes(p.source)) merged[t].sources.push(p.source);
-      merged[t].all_funds = [...new Set([...merged[t].all_funds, ...parseFunds(p.funds)])];
-      merged[t].fund_count = Math.max(merged[t].fund_count, p.fund_count);
-    }
-  });
-
-  Object.values(merged).sort((a, b) => {
-  // 雙訊號優先，再按基金數，再按市值
-  const aB = bothTickers.has(a.ticker) ? 1 : 0;
-  const bB = bothTickers.has(b.ticker) ? 1 : 0;
-  if (bB !== aB) return bB - aB;
-  if (b.fund_count !== a.fund_count) return b.fund_count - a.fund_count;
-  return b.total_value - a.total_value;
-}).forEach(p => {
-    const isBothSignal = bothTickers.has(p.ticker);
-    const isForeign    = p.sources.includes('外資') && !isBothSignal;
-    const isTrust      = p.sources.includes('投信') && !isBothSignal;
-
-    const cardClass = isBothSignal ? 'both-signal' : isForeign ? 'foreign-acc' : 'trust-new';
-
-    // Badge
-    let badge = '';
-    if (isBothSignal) {
-      badge = '<span class="badge-both">🔥 雙訊號共振</span>';
-    } else if (isForeign) {
-      badge = '<span class="badge-foreign">🌏 外資連續買超</span>';
-    } else {
-      badge = '<span class="badge-new">📋 投信新建倉</span>';
-    }
-
-    // 數值
-    const vmRaw = p.total_value || 0;
-    const vmStr = isForeign
-      ? (vmRaw >= 1000 ? (vmRaw / 1000).toFixed(1) + '千張' : vmRaw + ' 張')
-      : (vmRaw >= 1000 ? (vmRaw / 1000).toFixed(1) + ' 億' : vmRaw + ' 千元');
-
-    const fundCount = p.fund_count || 1;
-    const fundsArr  = p.all_funds || [];
-    const tagsHtml  = fundsArr.slice(0, 3).map(f =>
-      '<span class="' + (isForeign ? 'tag-foreign' : 'tag-trust') + '">' + f + '</span>'
-    ).join('') + (fundsArr.length > 3
-      ? '<span class="tag-more">+' + (fundsArr.length - 3) + ' 家</span>' : '');
-
-    // 狀態文字
-    const statusText = isBothSignal
-      ? '投信 + 外資同步進場，共振訊號強烈 💪'
-      : isForeign
-        ? '外資連續買超 ' + (p.buy_days || fundCount) + ' 日，持續觀察 👀'
-        : fundCount >= 2
-          ? '共 ' + fundCount + ' 檔基金同步新進場，共識強 💪'
-          : '本月首次進入基金前十大，持續觀察 👀';
-
-    // Progress fill class
-    const fillClass = isBothSignal ? 'fill-both' : isForeign ? 'fill-foreign' : 'fill-trust';
-    const fillPct   = Math.min(100, fundCount * 20 + 20) + '%';
-
-    // 右側數值顯示
-    const rightLabel = isForeign ? '買超張數' : (fundCount + ' 檔基金');
-
-    const div = document.createElement('div');
-    div.className = 'card ' + cardClass;
-    div.innerHTML =
-      '<div class="card-top">' +
-        '<div>' +
-          badge +
-          '<div class="card-ticker" style="margin-top:6px">' + (p.ticker || '—') + '</div>' +
-          '<div class="card-name">' + (p.name || '') + '</div>' +
-        '</div>' +
-        '<div class="card-value">' +
-          '<div class="mv">' + vmStr + '</div>' +
-          '<div class="qt">' + rightLabel + '</div>' +
-          (p.avg_pct ? '<div class="qt">佔比 ' + parseFloat(p.avg_pct).toFixed(2) + '%</div>' : '') +
-        '</div>' +
-      '</div>' +
-      '<div class="tags-row">' + tagsHtml + '</div>' +
-      '<div class="progress-wrap">' +
-        '<div class="progress-label">' +
-          '<span>' + (isForeign ? '買超強度' : '基金共識') + '</span>' +
-          '<span style="color:' + (isBothSignal ? 'var(--both-light)' : isForeign ? 'var(--foreign-light)' : 'var(--trust-light)') + '">' + statusText + '</span>' +
-        '</div>' +
-        '<div class="progress-bar"><div class="progress-fill ' + fillClass + '" style="width:' + fillPct + '"></div></div>' +
-      '</div>';
-
-    div.addEventListener('click', () => openDetail(p));
-    container.appendChild(div);
-  });
-}
-
-/* ══════════════════════════════════════════
-   Tab 2：持股追蹤（依基金）
-══════════════════════════════════════════ */
-async function loadFundList() {
-  const { data } = await sb
-    .from('tw_fund_positions')
-    .select('fund_id, fund_name, company')
-    .order('fund_name');
-
-  if (!data || !data.length) return;
-
-  // 去重
-  const seen = new Set();
-  const funds = data.filter(f => {
-    if (seen.has(f.fund_id)) return false;
-    seen.add(f.fund_id);
-    return true;
-  });
-
-  // Filter bar chips
-  const bar = document.getElementById('fund-filter-bar');
-  funds.slice(0, 20).forEach(f => {
-    const c = document.createElement('div');
-    c.className = 'chip';
-    c.textContent = (f.fund_name || f.fund_id).slice(0, 12);
-    c.addEventListener('click', () => {
-      document.querySelectorAll('#fund-filter-bar .chip').forEach(ch => ch.classList.remove('active'));
-      c.classList.add('active');
-      loadFundPositions(f.fund_id, f.fund_name);
-    });
-    bar.appendChild(c);
-  });
-
-  // Tab 3 fund list
-  const list = document.getElementById('funds-list');
-  list.innerHTML = '';
-  funds.forEach(f => {
-    const div = document.createElement('div');
-    div.className = 'fund-row';
-    div.innerHTML =
-      '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-        '<div>' +
-          '<div style="font-size:14px;font-weight:600">' + (f.fund_name || f.fund_id) + '</div>' +
-          '<div style="font-size:11px;color:var(--muted);margin-top:2px">' + (f.company || '') + ' · 月更前十大持股</div>' +
-        '</div>' +
-        '<div style="font-size:18px;color:var(--muted)">→</div>' +
-      '</div>';
-    div.addEventListener('click', () => {
-      loadFundPositions(f.fund_id, f.fund_name);
-      switchTab('all');
-    });
-    list.appendChild(div);
-  });
-}
-
-async function loadFundPositions(fundId, fundName) {
-  switchTab('all');
-  document.getElementById('all-positions-list').innerHTML = '<div class="loading">載入中...</div>';
-
-  const { data } = await sb
-    .from('tw_fund_positions')
-    .select('*')
-    .eq('fund_id', fundId)
-    .order('year_month', { ascending: false })
-    .order('rank')
-    .limit(100);
-
-  if (!data || !data.length) {
-    document.getElementById('all-positions-list').innerHTML =
-      '<div class="empty"><div class="icon">📭</div><div>暫無資料</div></div>';
-    return;
-  }
-
-  const months = [...new Set(data.map(d => d.year_month))].sort().reverse();
-  const latest = data.filter(d => d.year_month === months[0]);
-  const ym = months[0];
-  const ymLabel = ym ? ym.slice(0,4) + '/' + ym.slice(4,6) : '';
-
-  const container = document.getElementById('all-positions-list');
-  container.innerHTML =
-    '<div class="section-title" style="margin-bottom:10px">' +
-      (fundName || fundId) + ' — ' + ymLabel +
-    '</div>';
-
-  latest.forEach(p => {
-    const vmStr = p.value_k
-      ? p.value_k >= 100000
-        ? (p.value_k / 100000).toFixed(2) + ' 億'
-        : (p.value_k / 1000).toFixed(1) + ' 千萬'
-      : '—';
-
-    const div = document.createElement('div');
-    div.className = 'card normal';
-    div.innerHTML =
-      '<div class="card-top">' +
-        '<div>' +
-          '<div style="font-size:15px;font-weight:600">' + p.ticker + '</div>' +
-          '<div class="card-name">' + (p.name || '') + '</div>' +
-        '</div>' +
-        '<div class="card-value">' +
-          '<div class="mv">' + vmStr + '</div>' +
-          '<div class="qt">排名 #' + p.rank + '</div>' +
-          '<div class="qt">佔淨值 ' + parseFloat(p.pct || 0).toFixed(2) + '%</div>' +
-        '</div>' +
-      '</div>';
-    div.addEventListener('click', () => openDetail({ ticker: p.ticker, name: p.name, source: '投信' }));
-    container.appendChild(div);
-  });
-}
-
-/* ══════════════════════════════════════════
-   Detail Panel（與 whale.html 一致）
-══════════════════════════════════════════ */
-window.openDetail = async function(p) {
-  const existing = document.getElementById('detail-panel');
-  if (existing) existing.remove();
-
-  const ticker  = p.ticker || '';
-  const name    = p.name || '';
-  // 台股 TradingView 格式 TWSE:XXXX or TPEX:XXXX
-  const tvSymbol = ticker.length <= 4 ? 'TWSE:' + ticker : ticker;
-  const yahooSymbol = ticker + '.TW';
-
-  const panel = document.createElement('div');
-  panel.id = 'detail-panel';
-  panel.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:flex-end;';
-  panel.innerHTML =
-    '<div id="detail-inner" style="background:var(--bg2);border-radius:16px 16px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto;">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
-        '<div>' +
-          '<div style="font-size:22px;font-weight:700">' + ticker + '</div>' +
-          '<div style="font-size:13px;color:var(--muted)">' + name + '</div>' +
-        '</div>' +
-        '<button onclick="document.getElementById(\'detail-panel\').remove()" style="background:var(--border);border:none;color:var(--text);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:14px">✕ 關閉</button>' +
-      '</div>' +
-      '<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">' +
-        '<a href="diagnosis.html?ticker=' + ticker + '&market=tw" style="flex:1;min-width:80px;background:#7c3aed;color:#fff;padding:10px;border-radius:10px;text-align:center;text-decoration:none;font-size:12px;font-weight:500">🔍 AI健診</a>' +
-        '<a href="https://www.tradingview.com/chart/?symbol=' + tvSymbol + '" target="_blank" style="flex:1;min-width:80px;background:var(--teal);color:#fff;padding:10px;border-radius:10px;text-align:center;text-decoration:none;font-size:12px;font-weight:500">📈 TradingView</a>' +
-        '<a href="https://finance.yahoo.com/quote/' + yahooSymbol + '" target="_blank" style="flex:1;min-width:80px;background:var(--amber);color:#fff;padding:10px;border-radius:10px;text-align:center;text-decoration:none;font-size:12px;font-weight:500">💹 Yahoo</a>' +
-        '<button id="wl-btn" onclick="addToWatchlist(\'' + ticker + '\',\'' + name + '\')" style="flex:1;min-width:80px;background:var(--coral);color:#fff;border:none;padding:10px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:500">⭐ 觀察名單</button>' +
-      '</div>' +
-      '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">投信持股明細（最新月份）</div>' +
-      '<div id="detail-holdings"><div style="color:var(--muted);font-size:13px;padding:10px 0">載入中...</div></div>' +
-      '<div style="font-size:12px;color:var(--muted);margin:14px 0 8px;">外資近期動向</div>' +
-      '<div id="detail-foreign"><div style="color:var(--muted);font-size:13px;padding:10px 0">載入中...</div></div>' +
-    '</div>';
-
-  panel.addEventListener('click', e => { if (e.target === panel) panel.remove(); });
-  document.body.appendChild(panel);
-
-  // ── 投信持股明細 ──
-  try {
-    const months2 = await getLatestMonth();
-    const { data: hData } = await sb
-      .from('tw_fund_positions')
-      .select('fund_name, rank, shares, value_k, pct')
-      .eq('ticker', ticker)
-      .eq('year_month', months2)
-      .order('pct', { ascending: false });
-
-    if (hData && hData.length) {
-      document.getElementById('detail-holdings').innerHTML = hData.map(d => {
-        const vmStr = d.value_k
-          ? d.value_k >= 100000 ? (d.value_k/100000).toFixed(2)+' 億' : (d.value_k/1000).toFixed(1)+' 千萬'
-          : '—';
-        return '<div style="padding:10px 0;border-bottom:1px solid var(--border);">' +
-          '<div style="display:flex;justify-content:space-between;">' +
-            '<div style="font-size:13px;font-weight:500">📋 ' + (d.fund_name || '') + '</div>' +
-            '<div style="font-size:12px;color:var(--trust-light);font-weight:600">' + vmStr + '</div>' +
-          '</div>' +
-          '<div style="display:flex;gap:12px;margin-top:4px;">' +
-            '<span style="font-size:11px;color:var(--muted)">排名：#' + d.rank + '</span>' +
-            '<span style="font-size:11px;color:var(--muted)">佔淨值：' + parseFloat(d.pct||0).toFixed(2) + '%</span>' +
-          '</div>' +
-        '</div>';
-      }).join('');
-    } else {
-      document.getElementById('detail-holdings').innerHTML =
-        '<div style="color:var(--muted);font-size:13px;padding:10px 0">本月無投信前十大持股資料</div>';
-    }
-  } catch(e) {
-    document.getElementById('detail-holdings').innerHTML =
-      '<div style="color:var(--muted);font-size:13px;padding:10px 0">載入失敗</div>';
-  }
-
-  // ── 外資近期買賣超 ──
-  try {
-    const cutoff = getDateNDaysAgo(15);
-    const { data: fData } = await sb
-      .from('tw_institutional')
-      .select('date, foreign_net, trust_net, total_net')
-      .eq('ticker', ticker)
-      .gte('date', cutoff)
-      .order('date', { ascending: false })
-      .limit(10);
-
-    if (fData && fData.length) {
-      const totalForeignNet = fData.reduce((s, d) => s + (d.foreign_net || 0), 0);
-      const buyDays = fData.filter(d => d.foreign_net > 0).length;
-      document.getElementById('detail-foreign').innerHTML =
-        '<div style="display:flex;gap:8px;margin-bottom:10px;">' +
-          '<div style="flex:1;background:var(--bg3);border-radius:8px;padding:8px;text-align:center;">' +
-            '<div style="font-size:16px;font-weight:700;color:' + (totalForeignNet>0?'var(--teal-light)':'var(--red)') + '">' +
-              (totalForeignNet > 0 ? '+' : '') + totalForeignNet.toLocaleString() + '</div>' +
-            '<div style="font-size:10px;color:var(--muted);margin-top:2px">近期累計買賣超（張）</div>' +
-          '</div>' +
-          '<div style="flex:1;background:var(--bg3);border-radius:8px;padding:8px;text-align:center;">' +
-            '<div style="font-size:16px;font-weight:700;color:var(--amber-light)">' + buyDays + '/' + fData.length + '</div>' +
-            '<div style="font-size:10px;color:var(--muted);margin-top:2px">買超天數</div>' +
-          '</div>' +
-        '</div>' +
-        fData.map(d => {
-          const net = d.foreign_net || 0;
-          const color = net > 0 ? 'var(--teal-light)' : net < 0 ? 'var(--red)' : 'var(--muted)';
-          const sign  = net > 0 ? '+' : '';
-          return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);">' +
-            '<span style="font-size:12px;color:var(--muted)">' + formatDate(d.date) + '</span>' +
-            '<span style="font-size:12px;font-weight:600;color:' + color + '">' + sign + net.toLocaleString() + ' 張</span>' +
-          '</div>';
-        }).join('');
-    } else {
-      document.getElementById('detail-foreign').innerHTML =
-        '<div style="color:var(--muted);font-size:13px;padding:10px 0">無外資近期資料</div>';
-    }
-  } catch(e) {
-    document.getElementById('detail-foreign').innerHTML =
-      '<div style="color:var(--muted);font-size:13px;padding:10px 0">載入失敗</div>';
-  }
-};
-
-/* ══════════════════════════════════════════
-   Tab 4：ETF 追蹤
-══════════════════════════════════════════ */
+let holdLoaded = false;
 let etfLoaded = false;
-let allEtfData = [];    // 原始列（每個 {ticker,name,fund_id,fund_name,year_month,shares,value_k,pct,rank}）
-let etfSummary = [];    // 每個 ticker 的彙整列
+let allEtfData = [];
 let etfCurrentMonth = '';
 let etfCurrentFilter = 'all';
 let etfAllMonths = [];
-
-// ETF 判斷：4-5碼純數字開頭 0，或含字母的00xxx 系列
-function isEtf(ticker) {
-  if (!ticker) return false;
-  return /^0\d{3,5}[A-Za-z]?$/.test(ticker.trim());
-}
-
-// ETF 類型分類
-function etfType(ticker) {
-  if (!ticker) return 'other';
-  const t = ticker.toUpperCase();
-  // 槓桿/反向：代號通常含 L(槓桿)或 R(反向)
-  if (/[LR]$/.test(t)) return 'leverage';
-  // 債券型：006206X 等，或已知代號段（粗分）
-  const n = parseInt(t);
-  if (n >= 6200 && n <= 6239) return 'bond';
-  // 預設股票型
-  return 'equity';
-}
-
-async function loadEtfData() {
-  etfLoaded = true;
-  document.getElementById('etf-list').innerHTML = '<div class="loading">🧩 載入 ETF 資料中...</div>';
-
-  // 取所有月份清單（降序取最近6個月）
-  const { data: monthData } = await sb
-    .from('tw_fund_positions')
-    .select('year_month')
-    .order('year_month', { ascending: false })
-    .limit(1000);
-
-  if (!monthData || !monthData.length) {
-    document.getElementById('etf-list').innerHTML =
-      '<div class="empty"><div class="icon">📭</div><div>暫無 ETF 資料</div></div>';
-    return;
-  }
-
-  etfAllMonths = [...new Set(monthData.map(d => d.year_month))].sort().reverse().slice(0, 6);
-  etfCurrentMonth = etfAllMonths[0];
-
-  // 建立月份選擇 chips
-  const monthBar = document.getElementById('etf-month-bar');
-  monthBar.innerHTML = '';
-  etfAllMonths.forEach((m, i) => {
-    const label = m.slice(0,4) + '/' + m.slice(4,6);
-    const c = document.createElement('div');
-    c.className = 'chip' + (i === 0 ? ' active' : '');
-    c.textContent = label;
-    c.dataset.month = m;
-    c.addEventListener('click', () => {
-      document.querySelectorAll('#etf-month-bar .chip').forEach(ch => ch.classList.remove('active'));
-      c.classList.add('active');
-      etfCurrentMonth = m;
-      renderEtf();
-    });
-    monthBar.appendChild(c);
-  });
-
-  // 篩選器事件
-  ['all','equity','bond','leverage','multi2','pct1'].forEach(f => {
-    const el = document.getElementById('etf-chip-' + f);
-    if (el) el.addEventListener('click', () => {
-      document.querySelectorAll('#etf-filter-bar .chip').forEach(c => c.classList.remove('active'));
-      el.classList.add('active');
-      etfCurrentFilter = f;
-      renderEtf();
-    });
-  });
-
-  // 載入資料（一次全載，再前端篩月份）
-  const { data, error } = await sb
-    .from('tw_fund_positions')
-    .select('ticker, name, fund_id, fund_name, year_month, shares, value_k, pct, rank')
-    .order('year_month', { ascending: false })
-    .order('value_k', { ascending: false });
-
-  if (error || !data) {
-    document.getElementById('etf-list').innerHTML =
-      '<div class="empty"><div class="icon">⚠️</div><div>載入失敗</div></div>';
-    return;
-  }
-
-  allEtfData = data.filter(d => isEtf(d.ticker));
-  renderEtf();
-}
-
-function renderEtf() {
-  const monthData = allEtfData.filter(d => d.year_month === etfCurrentMonth);
-  const ym = etfCurrentMonth;
-  const ymLabel = ym ? ym.slice(0,4) + '/' + ym.slice(4,6) : '';
-
-  // 彙整每支 ETF（合計持有基金數、總市值）
-  const map = {};
-  monthData.forEach(d => {
-    if (!map[d.ticker]) {
-      map[d.ticker] = {
-        ticker: d.ticker,
-        name: d.name || d.ticker,
-        funds: [],
-        totalValue: 0,
-        maxPct: 0,
-        type: etfType(d.ticker)
-      };
-    }
-    const entry = map[d.ticker];
-    if (!entry.funds.find(f => f.id === d.fund_id)) {
-      entry.funds.push({ id: d.fund_id, name: d.fund_name, pct: parseFloat(d.pct || 0), rank: d.rank });
-    }
-    entry.totalValue += (d.value_k || 0);
-    entry.maxPct = Math.max(entry.maxPct, parseFloat(d.pct || 0));
-  });
-
-  let etfs = Object.values(map).sort((a, b) => b.funds.length - a.funds.length || b.totalValue - a.totalValue);
-
-  // 篩選
-  if (etfCurrentFilter === 'equity')   etfs = etfs.filter(e => e.type === 'equity');
-  if (etfCurrentFilter === 'bond')     etfs = etfs.filter(e => e.type === 'bond');
-  if (etfCurrentFilter === 'leverage') etfs = etfs.filter(e => e.type === 'leverage');
-  if (etfCurrentFilter === 'multi2')   etfs = etfs.filter(e => e.funds.length >= 2);
-  if (etfCurrentFilter === 'pct1')     etfs = etfs.filter(e => e.maxPct >= 1);
-
-  // 統計
-  const totalFundsSet = new Set(monthData.map(d => d.fund_id));
-  const totalValueSum = etfs.reduce((s, e) => s + e.totalValue, 0);
-  document.getElementById('etf-stat-count').textContent  = etfs.length;
-  document.getElementById('etf-stat-funds').textContent  = totalFundsSet.size;
-  document.getElementById('etf-stat-value').textContent  = totalValueSum >= 100000
-    ? (totalValueSum / 100000).toFixed(1) : (totalValueSum / 1000).toFixed(1) + '千萬';
-  document.getElementById('etf-month-label').textContent = ymLabel + ' 投信持有 ETF 清單（共 ' + etfs.length + ' 檔）';
-
-  const container = document.getElementById('etf-list');
-
-  if (!etfs.length) {
-    container.innerHTML = '<div class="empty"><div class="icon">🔍</div><div>此篩選條件無 ETF</div></div>';
-    return;
-  }
-
-  container.innerHTML = '';
-  etfs.forEach(e => {
-    const vmStr = e.totalValue >= 100000
-      ? (e.totalValue / 100000).toFixed(2) + ' 億'
-      : (e.totalValue / 1000).toFixed(1) + ' 千萬';
-
-    const typeLabel = e.type === 'bond' ? '💰 債券' : e.type === 'leverage' ? '⚡ 槓桿/反向' : '📈 股票';
-    const typeColor = e.type === 'bond' ? 'var(--trust-light)' : e.type === 'leverage' ? 'var(--coral-light)' : 'var(--amber-light)';
-    const borderColor = e.type === 'bond' ? 'var(--trust)' : e.type === 'leverage' ? 'var(--coral)' : 'var(--amber)';
-
-    // 基金標籤（最多顯示3個）
-    const tagsHtml = e.funds.slice(0, 3).map(f =>
-      '<span class="tag-trust">' + (f.name || f.id).slice(0, 14) + '</span>'
-    ).join('') + (e.funds.length > 3
-      ? '<span class="tag-more">+' + (e.funds.length - 3) + ' 家</span>' : '');
-
-    // 進度條（依基金數，最多5家滿格）
-    const barPct = Math.min(100, e.funds.length * 20) + '%';
-
-    const div = document.createElement('div');
-    div.className = 'card';
-    div.style.borderLeftColor = borderColor;
-    div.style.borderLeftWidth = '3px';
-    div.style.borderLeftStyle = 'solid';
-    div.innerHTML =
-      '<div class="card-top">' +
-        '<div>' +
-          '<span style="font-size:11px;font-weight:600;color:' + typeColor + ';background:rgba(255,255,255,.07);border-radius:6px;padding:2px 7px;">' + typeLabel + '</span>' +
-          '<div class="card-ticker" style="margin-top:6px">' + e.ticker + '</div>' +
-          '<div class="card-name">' + e.name + '</div>' +
-        '</div>' +
-        '<div class="card-value">' +
-          '<div class="mv">' + vmStr + '</div>' +
-          '<div class="qt">' + e.funds.length + ' 檔基金持有</div>' +
-          '<div class="qt">最高佔比 ' + e.maxPct.toFixed(2) + '%</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="tags-row">' + tagsHtml + '</div>' +
-      '<div class="progress-wrap">' +
-        '<div class="progress-label">' +
-          '<span>基金共識</span>' +
-          '<span style="color:' + typeColor + '">' +
-            (e.funds.length >= 3 ? '多家投信同步持有 💪' : e.funds.length === 2 ? '兩家基金共同持有' : '單一基金持有') +
-          '</span>' +
-        '</div>' +
-        '<div class="progress-bar"><div class="progress-fill" style="width:' + barPct + ';background:' + borderColor + '"></div></div>' +
-      '</div>';
-
-    div.addEventListener('click', () => openDetail({ ticker: e.ticker, name: e.name, source: '投信' }));
-    container.appendChild(div);
-  });
-}
-
-/* ══════════════════════════════════════════
-   加入觀察名單
-══════════════════════════════════════════ */
-window.addToWatchlist = async function(ticker, name) {
-  const btn = document.getElementById('wl-btn');
-  if (btn) btn.disabled = true;
-  const user = (await sb.auth.getUser()).data.user;
-  if (!user) { alert('請先登入'); if (btn) btn.disabled = false; return; }
-  const { error } = await sb.from('watchlist').upsert({
-    user_id: user.id,
-    symbol: ticker,
-    market: 'tw',
-    name: name,
-    added_at: new Date().toISOString()
-  }, { onConflict: 'user_id,symbol' });
-  if (error) { alert('儲存失敗'); if (btn) btn.disabled = false; }
-  else { if (btn) { btn.textContent = '✅ 已加入'; btn.style.background = 'var(--green)'; } }
-};
+let consData = [];
+let consFilter = 'all';
 
 /* ══════════════════════════════════════════
    工具函式
@@ -879,40 +255,643 @@ function parseFunds(raw) {
   if (!raw) return [];
   try { return JSON.parse(raw); } catch(e) { return []; }
 }
-
 async function getLatestMonth() {
-  const { data } = await sb
-    .from('tw_fund_positions')
-    .select('year_month')
-    .order('year_month', { ascending: false })
-    .limit(1);
+  const { data } = await sb.from('tw_fund_positions').select('year_month').order('year_month',{ascending:false}).limit(1);
   return data && data.length ? data[0].year_month : '';
 }
-
 function getDateNDaysAgo(n) {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
+  const d = new Date(); d.setDate(d.getDate()-n);
   return d.toISOString().slice(0,10).replace(/-/g,'');
 }
-
 function formatDate(d) {
-  if (!d || d.length < 8) return d;
-  return d.slice(0,4) + '/' + d.slice(4,6) + '/' + d.slice(6,8);
+  if (!d||d.length<8) return d;
+  return d.slice(0,4)+'/'+d.slice(4,6)+'/'+d.slice(6,8);
+}
+function fmtValue(vk) {
+  if (!vk) return '—';
+  return vk >= 100000 ? (vk/100000).toFixed(2)+' 億' : (vk/1000).toFixed(1)+' 千萬';
+}
+function isTech(p) { const t=parseInt(p.ticker); return t>=2300&&t<=3699; }
+function isFin(p)  { const t=parseInt(p.ticker); return t>=2800&&t<=2899; }
+function isBio(p)  { const t=parseInt(p.ticker); return t>=4100&&t<=4999; }
+function isTrad(p) { const t=parseInt(p.ticker); return t>=1000&&t<=2299; }
+function isEtf(ticker) {
+  if (!ticker) return false;
+  return /^0\d{3,5}[A-Za-z]?$/.test(ticker.trim());
+}
+function etfType(ticker) {
+  const t = ticker.toUpperCase();
+  if (/[LR]$/.test(t)) return 'leverage';
+  const n = parseInt(t);
+  if (n>=6200&&n<=6239) return 'bond';
+  return 'equity';
 }
 
-// 板塊分類（依股票代號範圍粗分，可日後補充 sector 欄位）
-function isTech(p)   { const t = parseInt(p.ticker); return t >= 2300 && t <= 3699; }
-function isFin(p)    { const t = parseInt(p.ticker); return t >= 2800 && t <= 2899; }
-function isBio(p)    { const t = parseInt(p.ticker); return t >= 4100 && t <= 4999; }
-function isTrad(p)   { const t = parseInt(p.ticker); return t >= 1000 && t <= 2299; }
+/* ══════════════════════════════════════════
+   Tab 切換
+══════════════════════════════════════════ */
+function switchTab(n) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-btn-'+n).classList.add('active');
+  document.getElementById('tab-'+n).classList.add('active');
+}
+document.getElementById('tab-btn-new').addEventListener('click', ()=>switchTab('new'));
+document.getElementById('tab-btn-hold').addEventListener('click', ()=>{ switchTab('hold'); if(!holdLoaded) loadHoldTab(); });
+document.getElementById('tab-btn-etf').addEventListener('click', ()=>{ switchTab('etf'); if(!etfLoaded) loadEtfData(); });
+
+/* 持股追蹤子頁切換 */
+function switchSubTab(n) {
+  ['consensus','fund','fundlist'].forEach(s=>{
+    document.getElementById('sub-'+s).classList.remove('active');
+    document.getElementById('pane-'+s).style.display='none';
+  });
+  document.getElementById('sub-'+n).classList.add('active');
+  document.getElementById('pane-'+n).style.display='block';
+}
+document.getElementById('sub-consensus').addEventListener('click',()=>switchSubTab('consensus'));
+document.getElementById('sub-fund').addEventListener('click',()=>switchSubTab('fund'));
+document.getElementById('sub-fundlist').addEventListener('click',()=>switchSubTab('fundlist'));
+
+/* ══════════════════════════════════════════
+   Tab 1：主力新建倉
+══════════════════════════════════════════ */
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('#tab-new .chip').forEach(c=>c.classList.remove('active'));
+  document.getElementById('chip-'+f).classList.add('active');
+  renderNewPositions(allNewPositions);
+}
+['all','new-only','add','both','multi','pct1','sector-tech','sector-fin','sector-trad','sector-bio'].forEach(f=>{
+  document.getElementById('chip-'+f).addEventListener('click',()=>setFilter(f));
+});
+
+async function loadNewPositions() {
+  const { data, error } = await sb
+    .from('tw_radar_new_positions')
+    .select('*')
+    .order('fund_count',{ascending:false})
+    .order('total_value',{ascending:false})
+    .limit(500);
+
+  if (error || !data || !data.length) {
+    document.getElementById('new-positions-list').innerHTML =
+      '<div class="empty"><div class="icon">⏳</div><div>等待下月 SITCA 資料更新</div><div class="hint">每月中旬自動更新，目前尚無新建倉個股</div></div>';
+    document.getElementById('last-updated').textContent = '每月中旬自動更新';
+    return;
+  }
+
+  allNewPositions = data;
+  const months = [...new Set(data.map(d=>d.year_month))].sort().reverse();
+  const ym = months[0];
+  const ymLabel = ym ? ym.slice(0,4)+'/'+ym.slice(4,6) : '';
+  const latest = data.filter(d=>d.year_month===ym);
+
+  const trustNew = latest.filter(d=>d.source==='投信'&&d.status==='新建倉');
+  const trustAdd = latest.filter(d=>d.source==='投信'&&d.status==='持續加碼');
+  const bothSig  = latest.filter(d=>d.source==='雙訊號');
+
+  document.getElementById('stat-new').textContent  = trustNew.length;
+  document.getElementById('stat-add').textContent  = trustAdd.length;
+  document.getElementById('stat-both').textContent = bothSig.length;
+  document.getElementById('month-label').textContent = ymLabel + ' 投信主力動向（相較上月）';
+  document.getElementById('last-updated').textContent = '偵測月份：'+ymLabel+'（每月中旬更新）';
+
+  renderNewPositions(data);
+}
+
+function renderNewPositions(data) {
+  const months = [...new Set(data.map(d=>d.year_month))].sort().reverse();
+  let filtered = data.filter(d=>d.year_month===months[0]);
+
+  if (currentFilter==='new-only')     filtered = filtered.filter(d=>d.status==='新建倉');
+  if (currentFilter==='add')          filtered = filtered.filter(d=>d.status==='持續加碼');
+  if (currentFilter==='both')         filtered = filtered.filter(d=>d.source==='雙訊號');
+  if (currentFilter==='multi')        filtered = filtered.filter(d=>d.fund_count>=2);
+  if (currentFilter==='pct1')         filtered = filtered.filter(d=>d.avg_pct>=1);
+  if (currentFilter==='sector-tech')  filtered = filtered.filter(d=>isTech(d));
+  if (currentFilter==='sector-fin')   filtered = filtered.filter(d=>isFin(d));
+  if (currentFilter==='sector-trad')  filtered = filtered.filter(d=>isTrad(d));
+  if (currentFilter==='sector-bio')   filtered = filtered.filter(d=>isBio(d));
+
+  const container = document.getElementById('new-positions-list');
+  if (!filtered.length) {
+    container.innerHTML = '<div class="empty"><div class="icon">🔍</div><div>此篩選條件無資料</div></div>';
+    return;
+  }
+  container.innerHTML = '';
+
+  filtered.sort((a,b)=>{
+    const order = {'雙訊號':0,'新建倉':1,'持續加碼':2};
+    const oa = order[a.source]??order[a.status]??3;
+    const ob = order[b.source]??order[b.status]??3;
+    if (oa!==ob) return oa-ob;
+    return b.fund_count-a.fund_count || b.total_value-a.total_value;
+  }).forEach(p=>{
+    const isBoth = p.source==='雙訊號';
+    const isAdd  = p.status==='持續加碼';
+    const cardClass = isBoth ? 'both-signal' : isAdd ? 'add-more' : 'trust-new';
+    const borderCol  = isBoth ? 'var(--both)' : isAdd ? 'var(--amber)' : 'var(--trust)';
+    const fillCol    = isBoth ? 'var(--both)' : isAdd ? 'var(--amber)' : 'var(--trust)';
+
+    let badge = '';
+    if (isBoth)      badge = '<span class="badge badge-both">🔥 雙訊號共振</span>';
+    else if (isAdd)  badge = '<span class="badge badge-add">📈 投信持續加碼</span>';
+    else             badge = '<span class="badge badge-new">🆕 投信新進場</span>';
+
+    const vmStr = fmtValue(p.total_value);
+    const fundsArr = parseFunds(p.funds);
+    const tagsHtml = fundsArr.slice(0,3).map(f=>
+      '<span class="tag-trust">'+f+'</span>'
+    ).join('')+(fundsArr.length>3?'<span class="tag-more">+'+( fundsArr.length-3)+' 家</span>':'');
+
+    const fillPct = Math.min(100, p.fund_count*20+20)+'%';
+    const statusText = isBoth
+      ? '投信 + 外資同步進場 💪'
+      : isAdd
+        ? '佔比較上月增加，持續加碼中 📈'
+        : p.fund_count>=2
+          ? '共 '+p.fund_count+' 檔基金同步進場 💪'
+          : '本月首次進入基金前十大 👀';
+
+    const div = document.createElement('div');
+    div.className = 'card '+cardClass;
+    div.innerHTML =
+      '<div class="card-top">'+
+        '<div>'+badge+
+          '<div class="card-ticker" style="margin-top:6px">'+p.ticker+'</div>'+
+          '<div class="card-name">'+(p.name||'')+'</div>'+
+        '</div>'+
+        '<div class="card-value">'+
+          '<div class="mv">'+vmStr+'</div>'+
+          '<div class="qt">'+p.fund_count+' 檔基金</div>'+
+          (p.avg_pct?'<div class="qt">佔比 '+parseFloat(p.avg_pct).toFixed(2)+'%</div>':'')+
+        '</div>'+
+      '</div>'+
+      '<div class="tags-row">'+tagsHtml+'</div>'+
+      '<div class="progress-wrap">'+
+        '<div class="progress-label"><span>'+(isBoth?'共振強度':'基金共識')+'</span>'+
+          '<span style="color:'+fillCol+'">'+statusText+'</span></div>'+
+        '<div class="progress-bar"><div class="progress-fill" style="width:'+fillPct+';background:'+fillCol+'"></div></div>'+
+      '</div>';
+    div.addEventListener('click',()=>openDetail(p));
+    container.appendChild(div);
+  });
+}
+
+/* ══════════════════════════════════════════
+   Tab 2：主力持股追蹤
+══════════════════════════════════════════ */
+async function loadHoldTab() {
+  holdLoaded = true;
+  await Promise.all([loadConsensus(), loadFundList()]);
+}
+
+/* 多方共識 */
+async function loadConsensus() {
+  document.getElementById('consensus-list').innerHTML = '<div class="loading">載入中...</div>';
+  const ym = await getLatestMonth();
+  const ymLabel = ym ? ym.slice(0,4)+'/'+ym.slice(4,6) : '';
+  document.getElementById('cons-stat-month').textContent = ymLabel;
+
+  const { data } = await sb
+    .from('tw_fund_positions')
+    .select('ticker, name, fund_id, fund_name, value_k, pct, rank')
+    .eq('year_month', ym)
+    .order('value_k',{ascending:false});
+
+  if (!data||!data.length) {
+    document.getElementById('consensus-list').innerHTML='<div class="empty"><div class="icon">📭</div><div>暫無資料</div></div>';
+    return;
+  }
+
+  // 彙整：過濾 ETF，只留個股
+  const map = {};
+  data.filter(d=>!isEtf(d.ticker)).forEach(d=>{
+    if (!map[d.ticker]) map[d.ticker]={
+      ticker:d.ticker, name:d.name||d.ticker,
+      funds:[], totalValue:0, maxPct:0
+    };
+    const e=map[d.ticker];
+    if (!e.funds.find(f=>f.id===d.fund_id))
+      e.funds.push({id:d.fund_id,name:d.fund_name,pct:parseFloat(d.pct||0)});
+    e.totalValue+=(d.value_k||0);
+    e.maxPct=Math.max(e.maxPct,parseFloat(d.pct||0));
+  });
+
+  consData = Object.values(map).sort((a,b)=>b.funds.length-a.funds.length||b.totalValue-a.totalValue);
+  const topCount = consData.length ? consData[0].funds.length : 0;
+  document.getElementById('cons-stat-top').textContent = topCount+'家';
+
+  // 篩選器事件
+  ['all','3up','5up','pct2','tech','fin','bio'].forEach(f=>{
+    const el=document.getElementById('cons-chip-'+f);
+    if(el) el.addEventListener('click',()=>{
+      document.querySelectorAll('#pane-consensus .chip').forEach(c=>c.classList.remove('active'));
+      el.classList.add('active');
+      consFilter=f;
+      renderConsensus();
+    });
+  });
+  renderConsensus();
+}
+
+function renderConsensus() {
+  let list = [...consData];
+  if (consFilter==='3up')  list=list.filter(e=>e.funds.length>=3);
+  if (consFilter==='5up')  list=list.filter(e=>e.funds.length>=5);
+  if (consFilter==='pct2') list=list.filter(e=>e.maxPct>=2);
+  if (consFilter==='tech') list=list.filter(e=>isTech(e));
+  if (consFilter==='fin')  list=list.filter(e=>isFin(e));
+  if (consFilter==='bio')  list=list.filter(e=>isBio(e));
+
+  document.getElementById('cons-stat-count').textContent = list.length;
+
+  const container = document.getElementById('consensus-list');
+  if (!list.length) {
+    container.innerHTML='<div class="empty"><div class="icon">🔍</div><div>此篩選條件無資料</div></div>';
+    return;
+  }
+  container.innerHTML='';
+  list.forEach(e=>{
+    const vmStr = fmtValue(e.totalValue);
+    const fc = e.funds.length;
+    const barPct = Math.min(100,fc*14)+'%';
+    const borderCol = fc>=5?'var(--both)':fc>=3?'var(--trust)':'var(--border)';
+    const tagsHtml = e.funds.slice(0,3).map(f=>
+      '<span class="tag-trust">'+(f.name||f.id).slice(0,14)+'</span>'
+    ).join('')+(fc>3?'<span class="tag-more">+'+( fc-3)+' 家</span>':'');
+
+    const div=document.createElement('div');
+    div.className='card normal';
+    div.style.borderLeftColor=borderCol;
+    div.style.borderLeftWidth='3px';
+    div.style.borderLeftStyle='solid';
+    div.innerHTML=
+      '<div class="card-top">'+
+        '<div>'+
+          '<div class="card-ticker">'+e.ticker+'</div>'+
+          '<div class="card-name">'+e.name+'</div>'+
+        '</div>'+
+        '<div class="card-value">'+
+          '<div class="mv">'+vmStr+'</div>'+
+          '<div class="qt">'+fc+' 檔基金持有</div>'+
+          '<div class="qt">最高佔比 '+e.maxPct.toFixed(2)+'%</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="tags-row">'+tagsHtml+'</div>'+
+      '<div class="progress-wrap">'+
+        '<div class="progress-label"><span>基金共識</span>'+
+          '<span style="color:'+borderCol+'">'+(fc>=5?'超高共識 🔥':fc>=3?'高共識 💪':fc>=2?'兩家共同持有':'單一基金')+'</span></div>'+
+        '<div class="progress-bar"><div class="progress-fill" style="width:'+barPct+';background:'+borderCol+'"></div></div>'+
+      '</div>';
+    div.addEventListener('click',()=>openDetail({ticker:e.ticker,name:e.name,source:'投信'}));
+    container.appendChild(div);
+  });
+}
+
+/* 依基金查詢 */
+async function loadFundList() {
+  const { data } = await sb.from('tw_fund_positions').select('fund_id, fund_name, company').order('fund_name');
+  if (!data||!data.length) return;
+
+  const seen=new Set();
+  const funds=data.filter(f=>{
+    if(seen.has(f.fund_id)) return false;
+    seen.add(f.fund_id); return true;
+  });
+
+  // Filter chips
+  const bar=document.getElementById('fund-filter-bar');
+  bar.innerHTML='';
+  funds.slice(0,20).forEach(f=>{
+    const c=document.createElement('div');
+    c.className='chip';
+    c.textContent=(f.fund_name||f.fund_id).slice(0,12);
+    c.addEventListener('click',()=>{
+      document.querySelectorAll('#fund-filter-bar .chip').forEach(ch=>ch.classList.remove('active'));
+      c.classList.add('active');
+      loadFundPositions(f.fund_id,f.fund_name);
+    });
+    bar.appendChild(c);
+  });
+
+  // 法人清單
+  const list=document.getElementById('funds-list');
+  list.innerHTML='';
+  funds.forEach(f=>{
+    const div=document.createElement('div');
+    div.className='fund-row';
+    div.innerHTML=
+      '<div style="display:flex;justify-content:space-between;align-items:center;">'+
+        '<div>'+
+          '<div style="font-size:14px;font-weight:600">'+(f.fund_name||f.fund_id)+'</div>'+
+          '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+(f.company||'')+' · 月更前十大持股</div>'+
+        '</div>'+
+        '<div style="font-size:18px;color:var(--muted)">→</div>'+
+      '</div>';
+    div.addEventListener('click',()=>{
+      switchSubTab('fund');
+      loadFundPositions(f.fund_id,f.fund_name);
+    });
+    list.appendChild(div);
+  });
+}
+
+async function loadFundPositions(fundId,fundName) {
+  document.getElementById('all-positions-list').innerHTML='<div class="loading">載入中...</div>';
+  const { data } = await sb
+    .from('tw_fund_positions').select('*')
+    .eq('fund_id',fundId)
+    .order('year_month',{ascending:false}).order('rank').limit(100);
+
+  if (!data||!data.length) {
+    document.getElementById('all-positions-list').innerHTML='<div class="empty"><div class="icon">📭</div><div>暫無資料</div></div>';
+    return;
+  }
+  const months=[...new Set(data.map(d=>d.year_month))].sort().reverse();
+  const latest=data.filter(d=>d.year_month===months[0]);
+  const ym=months[0];
+  const ymLabel=ym?ym.slice(0,4)+'/'+ym.slice(4,6):'';
+  const container=document.getElementById('all-positions-list');
+  container.innerHTML='<div class="section-title" style="margin-bottom:10px">'+(fundName||fundId)+' — '+ymLabel+'</div>';
+
+  latest.forEach(p=>{
+    const div=document.createElement('div');
+    div.className='card normal';
+    div.innerHTML=
+      '<div class="card-top">'+
+        '<div>'+
+          '<div style="font-size:15px;font-weight:600">'+p.ticker+'</div>'+
+          '<div class="card-name">'+(p.name||'')+'</div>'+
+        '</div>'+
+        '<div class="card-value">'+
+          '<div class="mv">'+fmtValue(p.value_k)+'</div>'+
+          '<div class="qt">排名 #'+p.rank+'</div>'+
+          '<div class="qt">佔淨值 '+parseFloat(p.pct||0).toFixed(2)+'%</div>'+
+        '</div>'+
+      '</div>';
+    div.addEventListener('click',()=>openDetail({ticker:p.ticker,name:p.name,source:'投信'}));
+    container.appendChild(div);
+  });
+}
+
+/* ══════════════════════════════════════════
+   Tab 3：主力ETF追蹤
+══════════════════════════════════════════ */
+async function loadEtfData() {
+  etfLoaded=true;
+  document.getElementById('etf-list').innerHTML='<div class="loading">🧩 載入 ETF 資料中...</div>';
+
+  const { data:monthData } = await sb.from('tw_fund_positions').select('year_month').order('year_month',{ascending:false}).limit(1000);
+  if (!monthData||!monthData.length) {
+    document.getElementById('etf-list').innerHTML='<div class="empty"><div class="icon">📭</div><div>暫無資料</div></div>';
+    return;
+  }
+  etfAllMonths=[...new Set(monthData.map(d=>d.year_month))].sort().reverse().slice(0,6);
+  etfCurrentMonth=etfAllMonths[0];
+
+  // 月份 chips
+  const monthBar=document.getElementById('etf-month-bar');
+  monthBar.innerHTML='';
+  etfAllMonths.forEach((m,i)=>{
+    const label=m.slice(0,4)+'/'+m.slice(4,6);
+    const c=document.createElement('div');
+    c.className='chip'+(i===0?' active':'');
+    c.textContent=label;
+    c.dataset.month=m;
+    c.addEventListener('click',()=>{
+      document.querySelectorAll('#etf-month-bar .chip').forEach(ch=>ch.classList.remove('active'));
+      c.classList.add('active');
+      etfCurrentMonth=m;
+      renderEtf();
+    });
+    monthBar.appendChild(c);
+  });
+
+  // 篩選器事件
+  ['all','equity','bond','leverage','multi2','pct1'].forEach(f=>{
+    const el=document.getElementById('etf-chip-'+f);
+    if(el) el.addEventListener('click',()=>{
+      document.querySelectorAll('#etf-filter-bar .chip').forEach(c=>c.classList.remove('active'));
+      el.classList.add('active');
+      etfCurrentFilter=f;
+      renderEtf();
+    });
+  });
+
+  const { data,error } = await sb
+    .from('tw_fund_positions')
+    .select('ticker, name, fund_id, fund_name, year_month, value_k, pct, rank')
+    .order('year_month',{ascending:false})
+    .order('value_k',{ascending:false});
+
+  if (error||!data) {
+    document.getElementById('etf-list').innerHTML='<div class="empty"><div class="icon">⚠️</div><div>載入失敗</div></div>';
+    return;
+  }
+  allEtfData=data.filter(d=>isEtf(d.ticker));
+  renderEtf();
+}
+
+function renderEtf() {
+  const monthData=allEtfData.filter(d=>d.year_month===etfCurrentMonth);
+  const ym=etfCurrentMonth;
+  const ymLabel=ym?ym.slice(0,4)+'/'+ym.slice(4,6):'';
+
+  const map={};
+  monthData.forEach(d=>{
+    if (!map[d.ticker]) map[d.ticker]={ticker:d.ticker,name:d.name||d.ticker,funds:[],totalValue:0,maxPct:0,type:etfType(d.ticker)};
+    const e=map[d.ticker];
+    if (!e.funds.find(f=>f.id===d.fund_id)) e.funds.push({id:d.fund_id,name:d.fund_name,pct:parseFloat(d.pct||0)});
+    e.totalValue+=(d.value_k||0);
+    e.maxPct=Math.max(e.maxPct,parseFloat(d.pct||0));
+  });
+
+  let etfs=Object.values(map).sort((a,b)=>b.funds.length-a.funds.length||b.totalValue-a.totalValue);
+  if (etfCurrentFilter==='equity')   etfs=etfs.filter(e=>e.type==='equity');
+  if (etfCurrentFilter==='bond')     etfs=etfs.filter(e=>e.type==='bond');
+  if (etfCurrentFilter==='leverage') etfs=etfs.filter(e=>e.type==='leverage');
+  if (etfCurrentFilter==='multi2')   etfs=etfs.filter(e=>e.funds.length>=2);
+  if (etfCurrentFilter==='pct1')     etfs=etfs.filter(e=>e.maxPct>=1);
+
+  const totalFundsSet=new Set(monthData.map(d=>d.fund_id));
+  const totalValueSum=etfs.reduce((s,e)=>s+e.totalValue,0);
+  document.getElementById('etf-stat-count').textContent=etfs.length;
+  document.getElementById('etf-stat-funds').textContent=totalFundsSet.size;
+  document.getElementById('etf-stat-value').textContent=fmtValue(totalValueSum);
+  document.getElementById('etf-month-label').textContent=ymLabel+' 投信持有 ETF（共 '+etfs.length+' 檔）';
+
+  const container=document.getElementById('etf-list');
+  if (!etfs.length) {
+    container.innerHTML='<div class="empty"><div class="icon">🔍</div><div>此篩選條件無 ETF</div></div>';
+    return;
+  }
+  container.innerHTML='';
+  etfs.forEach(e=>{
+    const vmStr=fmtValue(e.totalValue);
+    const typeLabel=e.type==='bond'?'💰 債券':e.type==='leverage'?'⚡ 槓桿/反向':'📈 股票';
+    const typeColor=e.type==='bond'?'var(--trust-light)':e.type==='leverage'?'var(--coral-light)':'var(--amber-light)';
+    const borderColor=e.type==='bond'?'var(--trust)':e.type==='leverage'?'var(--coral)':'var(--amber)';
+    const fc=e.funds.length;
+    const tagsHtml=e.funds.slice(0,3).map(f=>
+      '<span class="tag-trust">'+(f.name||f.id).slice(0,14)+'</span>'
+    ).join('')+(fc>3?'<span class="tag-more">+'+( fc-3)+' 家</span>':'');
+    const barPct=Math.min(100,fc*20)+'%';
+
+    const div=document.createElement('div');
+    div.className='card';
+    div.style.cssText='border-left:3px solid '+borderColor+';';
+    div.innerHTML=
+      '<div class="card-top">'+
+        '<div>'+
+          '<span style="font-size:11px;font-weight:600;color:'+typeColor+';background:rgba(255,255,255,.07);border-radius:6px;padding:2px 7px;">'+typeLabel+'</span>'+
+          '<div class="card-ticker" style="margin-top:6px">'+e.ticker+'</div>'+
+          '<div class="card-name">'+e.name+'</div>'+
+        '</div>'+
+        '<div class="card-value">'+
+          '<div class="mv">'+vmStr+'</div>'+
+          '<div class="qt">'+fc+' 檔基金持有</div>'+
+          '<div class="qt">最高佔比 '+e.maxPct.toFixed(2)+'%</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="tags-row">'+tagsHtml+'</div>'+
+      '<div class="progress-wrap">'+
+        '<div class="progress-label"><span>基金共識</span>'+
+          '<span style="color:'+typeColor+'">'+(fc>=3?'多家投信同步持有 💪':fc===2?'兩家基金持有':'單一基金持有')+'</span></div>'+
+        '<div class="progress-bar"><div class="progress-fill" style="width:'+barPct+';background:'+borderColor+'"></div></div>'+
+      '</div>';
+    div.addEventListener('click',()=>openDetail({ticker:e.ticker,name:e.name,source:'投信'}));
+    container.appendChild(div);
+  });
+}
+
+/* ══════════════════════════════════════════
+   Detail Panel
+══════════════════════════════════════════ */
+window.openDetail = async function(p) {
+  const existing=document.getElementById('detail-panel');
+  if(existing) existing.remove();
+  const ticker=p.ticker||'';
+  const name=p.name||'';
+  const tvSymbol=ticker.length<=4?'TWSE:'+ticker:ticker;
+  const yahooSymbol=ticker+'.TW';
+
+  const panel=document.createElement('div');
+  panel.id='detail-panel';
+  panel.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:flex-end;';
+  panel.innerHTML=
+    '<div id="detail-inner" style="background:var(--bg2);border-radius:16px 16px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto;">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'+
+        '<div>'+
+          '<div style="font-size:22px;font-weight:700">'+ticker+'</div>'+
+          '<div style="font-size:13px;color:var(--muted)">'+name+'</div>'+
+        '</div>'+
+        '<button onclick="document.getElementById(\'detail-panel\').remove()" style="background:var(--border);border:none;color:var(--text);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:14px">✕ 關閉</button>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">'+
+        '<a href="diagnosis.html?ticker='+ticker+'&market=tw" style="flex:1;min-width:80px;background:#7c3aed;color:#fff;padding:10px;border-radius:10px;text-align:center;text-decoration:none;font-size:12px;font-weight:500">🔍 AI健診</a>'+
+        '<a href="https://www.tradingview.com/chart/?symbol='+tvSymbol+'" target="_blank" style="flex:1;min-width:80px;background:var(--teal);color:#fff;padding:10px;border-radius:10px;text-align:center;text-decoration:none;font-size:12px;font-weight:500">📈 TradingView</a>'+
+        '<a href="https://finance.yahoo.com/quote/'+yahooSymbol+'" target="_blank" style="flex:1;min-width:80px;background:var(--amber);color:#fff;padding:10px;border-radius:10px;text-align:center;text-decoration:none;font-size:12px;font-weight:500">💹 Yahoo</a>'+
+        '<button id="wl-btn" onclick="addToWatchlist(\''+ticker+'\',\''+name+'\')" style="flex:1;min-width:80px;background:var(--coral);color:#fff;border:none;padding:10px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:500">⭐ 觀察名單</button>'+
+      '</div>'+
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">投信持股明細（最新月份）</div>'+
+      '<div id="detail-holdings"><div style="color:var(--muted);font-size:13px;padding:10px 0">載入中...</div></div>'+
+      '<div style="font-size:12px;color:var(--muted);margin:14px 0 8px;">外資近期動向</div>'+
+      '<div id="detail-foreign"><div style="color:var(--muted);font-size:13px;padding:10px 0">載入中...</div></div>'+
+    '</div>';
+
+  panel.addEventListener('click',e=>{if(e.target===panel) panel.remove();});
+  document.body.appendChild(panel);
+
+  // 投信持股明細
+  try {
+    const months2=await getLatestMonth();
+    const { data:hData } = await sb.from('tw_fund_positions')
+      .select('fund_name, rank, shares, value_k, pct')
+      .eq('ticker',ticker).eq('year_month',months2)
+      .order('pct',{ascending:false});
+    if(hData&&hData.length) {
+      document.getElementById('detail-holdings').innerHTML=hData.map(d=>
+        '<div style="padding:10px 0;border-bottom:1px solid var(--border);">'+
+          '<div style="display:flex;justify-content:space-between;">'+
+            '<div style="font-size:13px;font-weight:500">📋 '+(d.fund_name||'')+'</div>'+
+            '<div style="font-size:12px;color:var(--trust-light);font-weight:600">'+fmtValue(d.value_k)+'</div>'+
+          '</div>'+
+          '<div style="display:flex;gap:12px;margin-top:4px;">'+
+            '<span style="font-size:11px;color:var(--muted)">排名：#'+d.rank+'</span>'+
+            '<span style="font-size:11px;color:var(--muted)">佔淨值：'+parseFloat(d.pct||0).toFixed(2)+'%</span>'+
+          '</div>'+
+        '</div>'
+      ).join('');
+    } else {
+      document.getElementById('detail-holdings').innerHTML='<div style="color:var(--muted);font-size:13px;padding:10px 0">本月無投信前十大持股資料</div>';
+    }
+  } catch(e) {
+    document.getElementById('detail-holdings').innerHTML='<div style="color:var(--muted);font-size:13px;padding:10px 0">載入失敗</div>';
+  }
+
+  // 外資近期買賣超
+  try {
+    const cutoff=getDateNDaysAgo(15);
+    const { data:fData } = await sb.from('tw_institutional')
+      .select('date, foreign_net, trust_net, total_net')
+      .eq('ticker',ticker).gte('date',cutoff)
+      .order('date',{ascending:false}).limit(10);
+    if(fData&&fData.length) {
+      const totalForeignNet=fData.reduce((s,d)=>s+(d.foreign_net||0),0);
+      const buyDays=fData.filter(d=>d.foreign_net>0).length;
+      document.getElementById('detail-foreign').innerHTML=
+        '<div style="display:flex;gap:8px;margin-bottom:10px;">'+
+          '<div style="flex:1;background:var(--bg3);border-radius:8px;padding:8px;text-align:center;">'+
+            '<div style="font-size:16px;font-weight:700;color:'+(totalForeignNet>0?'var(--teal-light)':'var(--red)')+'">'+
+              (totalForeignNet>0?'+':'')+totalForeignNet.toLocaleString()+'</div>'+
+            '<div style="font-size:10px;color:var(--muted);margin-top:2px">近期累計買賣超（張）</div>'+
+          '</div>'+
+          '<div style="flex:1;background:var(--bg3);border-radius:8px;padding:8px;text-align:center;">'+
+            '<div style="font-size:16px;font-weight:700;color:var(--amber-light)">'+buyDays+'/'+fData.length+'</div>'+
+            '<div style="font-size:10px;color:var(--muted);margin-top:2px">買超天數</div>'+
+          '</div>'+
+        '</div>'+
+        fData.map(d=>{
+          const net=d.foreign_net||0;
+          const color=net>0?'var(--teal-light)':net<0?'var(--red)':'var(--muted)';
+          return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);">'+
+            '<span style="font-size:12px;color:var(--muted)">'+formatDate(d.date)+'</span>'+
+            '<span style="font-size:12px;font-weight:600;color:'+color+'">'+(net>0?'+':'')+net.toLocaleString()+' 張</span>'+
+          '</div>';
+        }).join('');
+    } else {
+      document.getElementById('detail-foreign').innerHTML='<div style="color:var(--muted);font-size:13px;padding:10px 0">無外資近期資料</div>';
+    }
+  } catch(e) {
+    document.getElementById('detail-foreign').innerHTML='<div style="color:var(--muted);font-size:13px;padding:10px 0">載入失敗</div>';
+  }
+};
+
+/* ══════════════════════════════════════════
+   加入觀察名單
+══════════════════════════════════════════ */
+window.addToWatchlist = async function(ticker,name) {
+  const btn=document.getElementById('wl-btn');
+  if(btn) btn.disabled=true;
+  const user=(await sb.auth.getUser()).data.user;
+  if(!user){alert('請先登入');if(btn) btn.disabled=false;return;}
+  const {error}=await sb.from('watchlist').upsert({
+    user_id:user.id,symbol:ticker,market:'tw',name:name,
+    added_at:new Date().toISOString()
+  },{onConflict:'user_id,symbol'});
+  if(error){alert('儲存失敗');if(btn) btn.disabled=false;}
+  else{if(btn){btn.textContent='✅ 已加入';btn.style.background='var(--green)';}}
+};
 
 /* ══════════════════════════════════════════
    Init
 ══════════════════════════════════════════ */
-async function init() {
-  await Promise.all([loadNewPositions(), loadFundList()]);
-}
 init();
+async function init() {
+  await loadNewPositions();
+}
 </script>
 </body>
 </html>
