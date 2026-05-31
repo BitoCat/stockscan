@@ -108,6 +108,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
   <div class="tab active" id="tab-btn-new">🆕 新建倉</div>
   <div class="tab" id="tab-btn-all">📊 持股追蹤</div>
   <div class="tab" id="tab-btn-funds">🏦 追蹤法人</div>
+  <div class="tab" id="tab-btn-etf">🧩 ETF追蹤</div>
 </div>
 
 <!-- ══════════════════════════════════════════
@@ -171,6 +172,46 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════
+     Tab 4：ETF 追蹤
+══════════════════════════════════════════ -->
+<div class="tab-content" id="tab-etf">
+  <!-- 月份選擇 -->
+  <div class="filter-bar" id="etf-month-bar">
+    <div class="chip active" id="chip-etf-latest">最新月份</div>
+  </div>
+
+  <!-- 篩選條件 -->
+  <div class="filter-bar" style="padding-top:4px" id="etf-filter-bar">
+    <div class="chip active" id="etf-chip-all">全部 ETF</div>
+    <div class="chip" id="etf-chip-equity">📈 股票型</div>
+    <div class="chip" id="etf-chip-bond">💰 債券型</div>
+    <div class="chip" id="etf-chip-leverage">⚡ 槓桿反向</div>
+    <div class="chip" id="etf-chip-multi2">≥2檔基金</div>
+    <div class="chip" id="etf-chip-pct1">佔比≥1%</div>
+  </div>
+
+  <div class="section">
+    <!-- 統計卡 -->
+    <div class="stats-row" style="margin-bottom:14px">
+      <div class="stat"><div class="val" id="etf-stat-count">-</div><div class="lbl">ETF 標的數</div></div>
+      <div class="stat"><div class="val" id="etf-stat-funds">-</div><div class="lbl">持有基金數</div></div>
+      <div class="stat"><div class="val" id="etf-stat-value">-</div><div class="lbl">合計市值(億)</div></div>
+    </div>
+
+    <!-- 資料說明 -->
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+      <div style="font-size:12px;color:var(--amber-light);font-weight:600;margin-bottom:4px;">📌 ETF 判斷方式</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.6;">
+        台股 ETF 代號通常為 <b style="color:var(--text)">純數字 4-5 碼（如 0056、006208）</b>或<b style="color:var(--text)">含字母（00757、00858R）</b>，從投信每月申報之前十大持股自動篩出。
+      </div>
+    </div>
+
+    <div class="section-title" id="etf-month-label">載入中...</div>
+    <div id="etf-list"><div class="loading">🧩 載入 ETF 資料中...</div></div>
+  </div>
+</div>
+
 <!-- ── 底部導覽 ── -->
 <nav class="tabbar">
   <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
@@ -202,7 +243,8 @@ function switchTab(n) {
 }
 document.getElementById('tab-btn-new').addEventListener('click', () => switchTab('new'));
 document.getElementById('tab-btn-all').addEventListener('click', () => switchTab('all'));
-document.getElementById('tab-btn-funds').addEventListener('click', () => switchTab('funds'));
+document.getElementById('tab-btn-funds').addEventListener('click', () => { switchTab('funds'); });
+document.getElementById('tab-btn-etf').addEventListener('click', () => { switchTab('etf'); if (!etfLoaded) loadEtfData(); });
 
 /* ══════════════════════════════════════════
    篩選
@@ -611,6 +653,205 @@ window.openDetail = async function(p) {
       '<div style="color:var(--muted);font-size:13px;padding:10px 0">載入失敗</div>';
   }
 };
+
+/* ══════════════════════════════════════════
+   Tab 4：ETF 追蹤
+══════════════════════════════════════════ */
+let etfLoaded = false;
+let allEtfData = [];    // 原始列（每個 {ticker,name,fund_id,fund_name,year_month,shares,value_k,pct,rank}）
+let etfSummary = [];    // 每個 ticker 的彙整列
+let etfCurrentMonth = '';
+let etfCurrentFilter = 'all';
+let etfAllMonths = [];
+
+// ETF 判斷：4-5碼純數字開頭 0，或含字母的00xxx 系列
+function isEtf(ticker) {
+  if (!ticker) return false;
+  return /^0\d{3,4}[A-Za-z]?$/.test(ticker.trim());
+}
+
+// ETF 類型分類
+function etfType(ticker) {
+  if (!ticker) return 'other';
+  const t = ticker.toUpperCase();
+  // 槓桿/反向：代號通常含 L(槓桿)或 R(反向)
+  if (/[LR]$/.test(t)) return 'leverage';
+  // 債券型：006206X 等，或已知代號段（粗分）
+  const n = parseInt(t);
+  if (n >= 6200 && n <= 6239) return 'bond';
+  // 預設股票型
+  return 'equity';
+}
+
+async function loadEtfData() {
+  etfLoaded = true;
+  document.getElementById('etf-list').innerHTML = '<div class="loading">🧩 載入 ETF 資料中...</div>';
+
+  // 取所有月份清單（降序取最近6個月）
+  const { data: monthData } = await sb
+    .from('tw_fund_positions')
+    .select('year_month')
+    .order('year_month', { ascending: false })
+    .limit(1000);
+
+  if (!monthData || !monthData.length) {
+    document.getElementById('etf-list').innerHTML =
+      '<div class="empty"><div class="icon">📭</div><div>暫無 ETF 資料</div></div>';
+    return;
+  }
+
+  etfAllMonths = [...new Set(monthData.map(d => d.year_month))].sort().reverse().slice(0, 6);
+  etfCurrentMonth = etfAllMonths[0];
+
+  // 建立月份選擇 chips
+  const monthBar = document.getElementById('etf-month-bar');
+  monthBar.innerHTML = '';
+  etfAllMonths.forEach((m, i) => {
+    const label = m.slice(0,4) + '/' + m.slice(4,6);
+    const c = document.createElement('div');
+    c.className = 'chip' + (i === 0 ? ' active' : '');
+    c.textContent = label;
+    c.dataset.month = m;
+    c.addEventListener('click', () => {
+      document.querySelectorAll('#etf-month-bar .chip').forEach(ch => ch.classList.remove('active'));
+      c.classList.add('active');
+      etfCurrentMonth = m;
+      renderEtf();
+    });
+    monthBar.appendChild(c);
+  });
+
+  // 篩選器事件
+  ['all','equity','bond','leverage','multi2','pct1'].forEach(f => {
+    const el = document.getElementById('etf-chip-' + f);
+    if (el) el.addEventListener('click', () => {
+      document.querySelectorAll('#etf-filter-bar .chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      etfCurrentFilter = f;
+      renderEtf();
+    });
+  });
+
+  // 載入資料（一次全載，再前端篩月份）
+  const { data, error } = await sb
+    .from('tw_fund_positions')
+    .select('ticker, name, fund_id, fund_name, year_month, shares, value_k, pct, rank')
+    .order('year_month', { ascending: false })
+    .order('value_k', { ascending: false });
+
+  if (error || !data) {
+    document.getElementById('etf-list').innerHTML =
+      '<div class="empty"><div class="icon">⚠️</div><div>載入失敗</div></div>';
+    return;
+  }
+
+  allEtfData = data.filter(d => isEtf(d.ticker));
+  renderEtf();
+}
+
+function renderEtf() {
+  const monthData = allEtfData.filter(d => d.year_month === etfCurrentMonth);
+  const ym = etfCurrentMonth;
+  const ymLabel = ym ? ym.slice(0,4) + '/' + ym.slice(4,6) : '';
+
+  // 彙整每支 ETF（合計持有基金數、總市值）
+  const map = {};
+  monthData.forEach(d => {
+    if (!map[d.ticker]) {
+      map[d.ticker] = {
+        ticker: d.ticker,
+        name: d.name || d.ticker,
+        funds: [],
+        totalValue: 0,
+        maxPct: 0,
+        type: etfType(d.ticker)
+      };
+    }
+    const entry = map[d.ticker];
+    if (!entry.funds.find(f => f.id === d.fund_id)) {
+      entry.funds.push({ id: d.fund_id, name: d.fund_name, pct: parseFloat(d.pct || 0), rank: d.rank });
+    }
+    entry.totalValue += (d.value_k || 0);
+    entry.maxPct = Math.max(entry.maxPct, parseFloat(d.pct || 0));
+  });
+
+  let etfs = Object.values(map).sort((a, b) => b.funds.length - a.funds.length || b.totalValue - a.totalValue);
+
+  // 篩選
+  if (etfCurrentFilter === 'equity')   etfs = etfs.filter(e => e.type === 'equity');
+  if (etfCurrentFilter === 'bond')     etfs = etfs.filter(e => e.type === 'bond');
+  if (etfCurrentFilter === 'leverage') etfs = etfs.filter(e => e.type === 'leverage');
+  if (etfCurrentFilter === 'multi2')   etfs = etfs.filter(e => e.funds.length >= 2);
+  if (etfCurrentFilter === 'pct1')     etfs = etfs.filter(e => e.maxPct >= 1);
+
+  // 統計
+  const totalFundsSet = new Set(monthData.map(d => d.fund_id));
+  const totalValueSum = etfs.reduce((s, e) => s + e.totalValue, 0);
+  document.getElementById('etf-stat-count').textContent  = etfs.length;
+  document.getElementById('etf-stat-funds').textContent  = totalFundsSet.size;
+  document.getElementById('etf-stat-value').textContent  = totalValueSum >= 100000
+    ? (totalValueSum / 100000).toFixed(1) : (totalValueSum / 1000).toFixed(1) + '千萬';
+  document.getElementById('etf-month-label').textContent = ymLabel + ' 投信持有 ETF 清單（共 ' + etfs.length + ' 檔）';
+
+  const container = document.getElementById('etf-list');
+
+  if (!etfs.length) {
+    container.innerHTML = '<div class="empty"><div class="icon">🔍</div><div>此篩選條件無 ETF</div></div>';
+    return;
+  }
+
+  container.innerHTML = '';
+  etfs.forEach(e => {
+    const vmStr = e.totalValue >= 100000
+      ? (e.totalValue / 100000).toFixed(2) + ' 億'
+      : (e.totalValue / 1000).toFixed(1) + ' 千萬';
+
+    const typeLabel = e.type === 'bond' ? '💰 債券' : e.type === 'leverage' ? '⚡ 槓桿/反向' : '📈 股票';
+    const typeColor = e.type === 'bond' ? 'var(--trust-light)' : e.type === 'leverage' ? 'var(--coral-light)' : 'var(--amber-light)';
+    const borderColor = e.type === 'bond' ? 'var(--trust)' : e.type === 'leverage' ? 'var(--coral)' : 'var(--amber)';
+
+    // 基金標籤（最多顯示3個）
+    const tagsHtml = e.funds.slice(0, 3).map(f =>
+      '<span class="tag-trust">' + (f.name || f.id).slice(0, 14) + '</span>'
+    ).join('') + (e.funds.length > 3
+      ? '<span class="tag-more">+' + (e.funds.length - 3) + ' 家</span>' : '');
+
+    // 進度條（依基金數，最多5家滿格）
+    const barPct = Math.min(100, e.funds.length * 20) + '%';
+
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.style.borderLeftColor = borderColor;
+    div.style.borderLeftWidth = '3px';
+    div.style.borderLeftStyle = 'solid';
+    div.innerHTML =
+      '<div class="card-top">' +
+        '<div>' +
+          '<span style="font-size:11px;font-weight:600;color:' + typeColor + ';background:rgba(255,255,255,.07);border-radius:6px;padding:2px 7px;">' + typeLabel + '</span>' +
+          '<div class="card-ticker" style="margin-top:6px">' + e.ticker + '</div>' +
+          '<div class="card-name">' + e.name + '</div>' +
+        '</div>' +
+        '<div class="card-value">' +
+          '<div class="mv">' + vmStr + '</div>' +
+          '<div class="qt">' + e.funds.length + ' 檔基金持有</div>' +
+          '<div class="qt">最高佔比 ' + e.maxPct.toFixed(2) + '%</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="tags-row">' + tagsHtml + '</div>' +
+      '<div class="progress-wrap">' +
+        '<div class="progress-label">' +
+          '<span>基金共識</span>' +
+          '<span style="color:' + typeColor + '">' +
+            (e.funds.length >= 3 ? '多家投信同步持有 💪' : e.funds.length === 2 ? '兩家基金共同持有' : '單一基金持有') +
+          '</span>' +
+        '</div>' +
+        '<div class="progress-bar"><div class="progress-fill" style="width:' + barPct + ';background:' + borderColor + '"></div></div>' +
+      '</div>';
+
+    div.addEventListener('click', () => openDetail({ ticker: e.ticker, name: e.name, source: '投信' }));
+    container.appendChild(div);
+  });
+}
 
 /* ══════════════════════════════════════════
    加入觀察名單
