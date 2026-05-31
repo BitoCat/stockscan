@@ -509,10 +509,9 @@ function renderNewPositions(data) {
    Tab 2：持股追蹤（依基金）
 ══════════════════════════════════════════ */
 async function loadFundList() {
-  const { data } = await sb
-    .from('tw_fund_positions')
-    .select('fund_id, fund_name, company')
-    .order('fund_name');
+  const { data } = await sbQuery('tw_fund_positions', {
+    select: 'fund_id,fund_name,company', order: [['fund_name', true]]
+  });
 
   if (!data || !data.length) return;
 
@@ -565,13 +564,10 @@ async function loadFundPositions(fundId, fundName) {
   switchTab('all');
   document.getElementById('all-positions-list').innerHTML = '<div class="loading">載入中...</div>';
 
-  const { data } = await sb
-    .from('tw_fund_positions')
-    .select('*')
-    .eq('fund_id', fundId)
-    .order('year_month', { ascending: false })
-    .order('rank')
-    .limit(100);
+  const { data } = await sbQuery('tw_fund_positions', {
+    select: '*', eq: { fund_id: fundId },
+    order: [['year_month', false], ['rank', true]], limit: 100
+  });
 
   if (!data || !data.length) {
     document.getElementById('all-positions-list').innerHTML =
@@ -659,12 +655,10 @@ window.openDetail = async function(p) {
   // ── 投信持股明細 ──
   try {
     const months2 = await getLatestMonth();
-    const { data: hData } = await sb
-      .from('tw_fund_positions')
-      .select('fund_name, rank, shares, value_k, pct')
-      .eq('ticker', ticker)
-      .eq('year_month', months2)
-      .order('pct', { ascending: false });
+    const { data: hData } = await sbQuery('tw_fund_positions', {
+      select: 'fund_name,rank,shares,value_k,pct',
+      eq: { ticker: ticker, year_month: months2 }, order: [['pct', false]]
+    });
 
     if (hData && hData.length) {
       document.getElementById('detail-holdings').innerHTML = hData.map(d => {
@@ -694,13 +688,11 @@ window.openDetail = async function(p) {
   // ── 外資近期買賣超 ──
   try {
     const cutoff = getDateNDaysAgo(15);
-    const { data: fData } = await sb
-      .from('tw_institutional')
-      .select('date, foreign_net, trust_net, total_net')
-      .eq('ticker', ticker)
-      .gte('date', cutoff)
-      .order('date', { ascending: false })
-      .limit(10);
+    const { data: fData } = await sbQuery('tw_institutional', {
+      select: 'date,foreign_net,trust_net,total_net',
+      eq: { ticker: ticker }, gte: { date: cutoff },
+      order: [['date', false]], limit: 10
+    });
 
     if (fData && fData.length) {
       const totalForeignNet = fData.reduce((s, d) => s + (d.foreign_net || 0), 0);
