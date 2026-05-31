@@ -667,7 +667,7 @@ let etfAllMonths = [];
 // ETF 判斷：4-5碼純數字開頭 0，或含字母的00xxx 系列
 function isEtf(ticker) {
   if (!ticker) return false;
-  return /^0\d{3,4}[A-Za-z]?$/.test(ticker.trim());
+  return /^0\d{3,5}[A-Za-z]?$/.test(ticker.trim());
 }
 
 // ETF 類型分類
