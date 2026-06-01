@@ -173,12 +173,7 @@
 </nav>
 <div id="toast"></div>
 
-<script src="js/supabase.js"></script>
 <script>
-let cu = null, cp = null;
-let currentMarket = 'tw';
-let cache = { tw: null, us: null };
-
 const SUPABASE_URL = 'https://kldumnxdlgovaxtiszyn.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI';
 const SB_HEADERS = {
@@ -186,26 +181,25 @@ const SB_HEADERS = {
   'Authorization': 'Bearer ' + SUPABASE_ANON,
 };
 
-(async () => {
-  cu = await requireAuth();
-  if (!cu) return;
-  cp = await getProfile(cu.id);
-  const nb = document.getElementById('nav-plan');
-  nb.textContent = planLabel(cp?.plan || 'free');
-  nb.className = 'plan-badge ' + planBadge(cp?.plan || 'free');
+async function sbFetch(table, params = {}) {
+  let url = SUPABASE_URL + '/rest/v1/' + table + '?';
+  const qs = [];
+  if (params.select) qs.push('select=' + encodeURIComponent(params.select));
+  if (params.eq) for (const [k, v] of Object.entries(params.eq)) qs.push(k + '=eq.' + encodeURIComponent(v));
+  if (params.order) for (const [col, asc] of params.order) qs.push('order=' + col + '.' + (asc ? 'asc' : 'desc'));
+  if (params.limit) qs.push('limit=' + params.limit);
+  url += qs.join('&');
+  const resp = await fetch(url, { headers: SB_HEADERS });
+  if (!resp.ok) return [];
+  return await resp.json();
+}
 
-  if (cp?.plan === 'free') {
-    document.getElementById('news-list').innerHTML =
-      "<div class='empty-state'>" +
-      "<div class='icon'>🔒</div>" +
-      "<div class='title'>需要開通會員</div>" +
-      "<div class='hint'>新聞日報功能需要開通會員才能使用<br>請聯繫管理員開通您的帳號</div>" +
-      "</div>";
-    document.getElementById('update-info').textContent = '需要開通會員';
-    return;
-  }
-  await loadNews('tw');
-})();
+let cu = null, cp = null;
+let currentMarket = 'tw';
+let cache = { tw: null, us: null };
+
+// 直接載入，不需要認證（新聞為公開內容）
+loadNews('tw');
 
 function switchMarket(market) {
   currentMarket = market;
@@ -237,22 +231,17 @@ async function loadNews(market, force = false) {
   try {
     const today = new Date().toISOString().slice(0, 10);
     // 先抓今天
-    let { data } = await sb.from('daily_news')
-      .select('*')
-      .eq('market', market)
-      .eq('report_date', today)
-      .order('published_at', { ascending: false })
-      .limit(50);
+    let data = await sbFetch('daily_news', {
+      select: '*', eq: { market: market, report_date: today },
+      order: [['published_at', false]], limit: 50
+    });
 
     // 今天沒資料，抓最新一天
     if (!data || !data.length) {
-      const res2 = await sb.from('daily_news')
-        .select('*')
-        .eq('market', market)
-        .order('report_date', { ascending: false })
-        .order('published_at', { ascending: false })
-        .limit(50);
-      data = res2.data;
+      data = await sbFetch('daily_news', {
+        select: '*', eq: { market: market },
+        order: [['report_date', false], ['published_at', false]], limit: 50
+      });
     }
 
     cache[market] = data || [];
