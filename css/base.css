@@ -149,7 +149,7 @@ body::before {
 .logo { display: flex; align-items: baseline; gap: 6px; text-decoration: none; }
 .logo-main { font-family: 'Bebas Neue',sans-serif; font-size: 24px; letter-spacing: 3px; color: #fff; }
 .logo-main span { color: var(--accent); }
-.logo-ver { font-family: 'Share Tech Mono',monospace; font-size: 9px; color: var(--muted); letter-spacing: 2px; }
+.logo-ver { font-family: 'Share Tech Mono',monospace; font-size: 16px; color: var(--muted); letter-spacing: 2px; }
 
 /* ── Bottom tab bar ── */
 .tabbar {
