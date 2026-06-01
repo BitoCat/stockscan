@@ -292,9 +292,13 @@ function renderNews(data, market) {
     card.className = 'news-card';
 
     const ago = timeAgo(n.published_at);
+    const langBadge = n.lang === 'en'
+      ? '<span style="font-size:10px;padding:2px 6px;border-radius:3px;border:1px solid rgba(255,165,0,.4);color:#ffaa00;background:rgba(255,165,0,.08);">🇺🇸 英文</span>'
+      : '';
     card.innerHTML =
       '<div class="news-meta">' +
         '<span class="news-source">' + (n.source || '未知來源') + '</span>' +
+        langBadge +
         '<span class="news-date">' + ago + '</span>' +
       '</div>' +
       '<div class="news-title">' + (n.title || '') + '</div>' +
