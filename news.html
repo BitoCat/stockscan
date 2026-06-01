@@ -3,55 +3,165 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>交易大師 · 市場新聞</title>
+<meta name="theme-color" content="#060912">
+<title>交易大師 · 新聞日報</title>
 <link rel="stylesheet" href="css/base.css">
 <style>
-.cat-tabs { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:16px; scrollbar-width:none; }
-.cat-tabs::-webkit-scrollbar { display:none; }
-.cat-tab { flex-shrink:0; background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:20px; color:var(--muted); font-size:12px; font-family:'Noto Sans TC',sans-serif; padding:7px 16px; cursor:pointer; transition:all .2s; white-space:nowrap; }
-.cat-tab.active { background:rgba(0,212,255,.12); border-color:var(--accent); color:var(--accent); font-weight:600; }
-.news-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:10px; transition:all .2s; }
-.news-card:hover { border-color:var(--border2); }
-.news-meta { display:flex; align-items:center; gap:7px; margin-bottom:8px; flex-wrap:wrap; }
-.news-source { font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--accent); background:rgba(0,212,255,.08); border:1px solid rgba(0,212,255,.2); border-radius:4px; padding:2px 8px; }
-.news-date { font-size:10px; color:var(--muted); }
-.news-lang { font-size:9px; padding:2px 6px; border-radius:3px; border:1px solid var(--border); color:var(--muted); }
-.news-title { font-size:14px; font-weight:500; line-height:1.55; color:var(--text); margin-bottom:8px; }
-.news-title a { color:inherit; text-decoration:none; }
-.news-title a:hover { color:var(--accent); }
-.ai-summary { background:rgba(0,212,255,.05); border:1px solid rgba(0,212,255,.15); border-radius:8px; padding:10px 12px; margin-top:8px; font-size:12px; color:var(--text); line-height:1.7; display:none; }
-.ai-summary.show { display:block; }
-.ai-btn { background:none; border:1px solid rgba(0,212,255,.3); border-radius:6px; color:var(--accent); font-size:11px; padding:4px 10px; cursor:pointer; transition:all .2s; font-family:'Noto Sans TC',sans-serif; }
-.ai-btn:hover { background:rgba(0,212,255,.1); }
-.news-foot { display:flex; align-items:center; justify-content:space-between; margin-top:8px; flex-wrap:wrap; gap:6px; }
-.source-legend { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
-.src-chip { font-size:10px; padding:3px 10px; border-radius:10px; border:1px solid var(--border); color:var(--muted); }
-.refresh-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-.last-update { font-size:11px; color:var(--muted); }
+.report-header {
+  background: linear-gradient(135deg, rgba(0,212,255,.08), rgba(155,89,182,.06));
+  border: 1px solid rgba(0,212,255,.2);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.report-title { font-size: 16px; font-weight: 700; color: #fff; }
+.report-date { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.report-count { font-family: 'Share Tech Mono', monospace; font-size: 13px; color: var(--accent); }
+
+.news-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  transition: border-color .2s;
+  cursor: pointer;
+}
+.news-card:hover { border-color: var(--border2); }
+.news-card:active { border-color: var(--accent); }
+
+.news-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.news-source {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(0,212,255,.08);
+  border: 1px solid rgba(0,212,255,.2);
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+.news-date { font-size: 11px; color: var(--muted); }
+.news-title {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.6;
+  color: var(--text);
+}
+.news-link {
+  display: block;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+  opacity: .8;
+}
+.news-link:hover { opacity: 1; }
+
+.mkt-tabs {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.mkt-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-family: 'Noto Sans TC', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 11px;
+  cursor: pointer;
+  transition: all .2s;
+  text-align: center;
+}
+.mkt-tab.active {
+  background: var(--accent);
+  color: #000;
+}
+
+.update-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.update-info { font-size: 12px; color: var(--muted); }
+.refresh-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+}
+.empty-state .icon { font-size: 48px; margin-bottom: 14px; }
+.empty-state .title { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+.empty-state .hint { font-size: 13px; line-height: 1.7; }
 </style>
 </head>
 <body>
+
 <nav class="topnav">
   <a class="logo" href="index.html"><span class="logo-main">交易<span>大師</span></span><span class="logo-ver">PRO</span></a>
-  <div style="display:flex;align-items:center;gap:8px">
-    <span id="nav-plan" class="plan-badge plan-free">FREE</span>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span id="nav-plan" class="plan-badge plan-all">全市場</span>
     <button class="btn btn-ghost btn-sm" onclick="signOut()">登出</button>
   </div>
 </nav>
+
 <div class="page-wrap">
-  <div class="cat-tabs">
-    <button class="cat-tab active" id="tab-macro" onclick="setTab('macro')">🌐 總經/Fed</button>
-    <button class="cat-tab" id="tab-us" onclick="setTab('us')">🇺🇸 美股科技</button>
-    <button class="cat-tab" id="tab-tw" onclick="setTab('tw')">🇹🇼 台股產業</button>
-    <button class="cat-tab" id="tab-crypto" onclick="setTab('crypto')">₿ 加密貨幣</button>
-    <button class="cat-tab" id="tab-official" onclick="setTab('official')">📢 交易大師</button>
+  <div class="sec-head">📰 新聞日報</div>
+
+  <!-- 市場切換 -->
+  <div class="mkt-tabs">
+    <button class="mkt-tab active" id="tab-tw" onclick="switchMarket('tw')">🇹🇼 台股日報</button>
+    <button class="mkt-tab" id="tab-us" onclick="switchMarket('us')">🇺🇸 美股日報</button>
   </div>
-  <div class="refresh-bar">
-    <span class="last-update" id="last-update">載入中...</span>
-    <button class="btn btn-ghost btn-sm" onclick="loadNews(currentTab, true)">🔄 重新整理</button>
+
+  <!-- 更新資訊 -->
+  <div class="update-bar">
+    <div class="update-info" id="update-info">載入中...</div>
+    <button class="refresh-btn" onclick="loadNews(currentMarket, true)">↻ 重新整理</button>
   </div>
-  <div id="news-list"><div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">抓取最新新聞...</div></div></div>
+
+  <!-- 日報標頭 -->
+  <div class="report-header" id="report-header" style="display:none">
+    <div>
+      <div class="report-title" id="report-title">交易大師台股日報</div>
+      <div class="report-date" id="report-date"></div>
+    </div>
+    <div class="report-count" id="report-count"></div>
+  </div>
+
+  <!-- 新聞列表 -->
+  <div id="news-list">
+    <div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入日報中...</div></div>
+  </div>
 </div>
+
 <nav class="tabbar">
   <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
   <a class="tb" href="watchlist.html"><span class="ti">⭐</span>觀察名單</a>
@@ -62,11 +172,19 @@
   <a class="tb" href="profile.html"><span class="ti">👤</span>我的</a>
 </nav>
 <div id="toast"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script src="js/supabase.js"></script>
 <script>
-let cu = null, cp = null, currentTab = 'macro';
-let newsCache = {};
+let cu = null, cp = null;
+let currentMarket = 'tw';
+let cache = { tw: null, us: null };
+
+const SUPABASE_URL = 'https://kldumnxdlgovaxtiszyn.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI';
+const SB_HEADERS = {
+  'apikey': SUPABASE_ANON,
+  'Authorization': 'Bearer ' + SUPABASE_ANON,
+};
 
 (async () => {
   cu = await requireAuth();
@@ -75,192 +193,130 @@ let newsCache = {};
   const nb = document.getElementById('nav-plan');
   nb.textContent = planLabel(cp?.plan || 'free');
   nb.className = 'plan-badge ' + planBadge(cp?.plan || 'free');
-  // 檢查方案權限
+
   if (cp?.plan === 'free') {
     document.getElementById('news-list').innerHTML =
-      "<div style='text-align:center;padding:60px 20px;background:rgba(255,255,255,.02);border:1px dashed var(--border);border-radius:12px;margin-top:20px'>" +
-      "<div style='font-size:48px;margin-bottom:16px'>🔒</div>" +
-      "<div style='font-size:16px;font-weight:700;margin-bottom:8px'>需要開通會員</div>" +
-      "<div style='font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px'>新聞功能需要開通會員才能使用<br>請聯繫管理員開通您的帳號</div>" +
-      "<a href='contact.html' class='btn btn-primary' style='text-decoration:none'>✉️ 聯繫管理員</a>" +
+      "<div class='empty-state'>" +
+      "<div class='icon'>🔒</div>" +
+      "<div class='title'>需要開通會員</div>" +
+      "<div class='hint'>新聞日報功能需要開通會員才能使用<br>請聯繫管理員開通您的帳號</div>" +
       "</div>";
-    document.getElementById('last-update').textContent = '需要開通會員';
+    document.getElementById('update-info').textContent = '需要開通會員';
     return;
   }
-  await loadNews('macro');
+  await loadNews('tw');
 })();
 
-function setTab(tab) {
-  currentTab = tab;
-  ['official','macro','us','tw','crypto'].forEach(t => {
-    document.getElementById('tab-'+t).classList.toggle('active', t === tab);
-  });
-  loadNews(tab);
+function switchMarket(market) {
+  currentMarket = market;
+  document.getElementById('tab-tw').classList.toggle('active', market === 'tw');
+  document.getElementById('tab-us').classList.toggle('active', market === 'us');
+  loadNews(market);
 }
 
-const TAB_CONFIG = {
-  official: {
-    label: '交易大師新聞', emoji: '📢',
-    sources: ['交易大師'],
-    keywords: '交易大師官方公告',
-    prompt_hint: '這是官方新聞區'
-  },
-  macro: {
-    label: '總經/Fed', emoji: '🌐',
-    sources: ['Reuters', 'Bloomberg', 'WSJ', 'Financial Times', 'CNBC', '鉅亨網', '經濟日報', 'Nikkei Asia'],
-    keywords: '聯準會Fed利率通膨美國經濟GDP就業數據財政部',
-    prompt_hint: '涵蓋Fed政策、美國經濟數據、全球總經、債券市場、匯率'
-  },
-  us: {
-    label: '美股科技', emoji: '🇺🇸',
-    sources: ['Bloomberg', 'TechCrunch', 'The Verge', 'WSJ', 'CNBC', 'Seeking Alpha', 'Barrons', '鉅亨美股'],
-    keywords: 'NVIDIA Apple Microsoft Google Meta Tesla Amazon美股納斯達克財報',
-    prompt_hint: '涵蓋美股財報、科技公司動態、AI產業、分析師評級、機構動向'
-  },
-  tw: {
-    label: '台股產業', emoji: '🇹🇼',
-    sources: ['工商時報', '經濟日報', 'MoneyDJ', '鉅亨網', '財訊', '商業周刊', 'Digitimes', '中央社'],
-    keywords: '台積電鴻海聯發科台股外資法說會半導體AI伺服器',
-    prompt_hint: '涵蓋台股個股動態、法說會、外資動向、產業鏈、IC設計、封測'
-  },
-  crypto: {
-    label: '加密貨幣', emoji: '₿',
-    sources: ['CoinDesk', 'CryptoNews', 'Decrypt', 'Cointelegraph', '動區動趨', 'BlockTempo', 'The Block', 'Binance'],
-    keywords: 'Bitcoin以太幣BTC ETH幣安加密貨幣區塊鏈DeFi NFT',
-    prompt_hint: '涵蓋BTC/ETH價格動態、監管政策、DeFi、機構採用、鏈上數據'
-  },
-};
+function timeAgo(iso) {
+  if (!iso) return '';
+  const diff = (Date.now() - new Date(iso)) / 1000;
+  if (diff < 3600) return Math.floor(diff / 60) + ' 分鐘前';
+  if (diff < 86400) return Math.floor(diff / 3600) + ' 小時前';
+  return Math.floor(diff / 86400) + ' 天前';
+}
 
-async function loadNews(tab, force = false) {
-  // 官方新聞從 Supabase 抓
-  if (tab === 'official') {
-    document.getElementById('news-list').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入官方新聞...</div></div>';
-    document.getElementById('last-update').textContent = '載入中...';
-    const { data, error } = await sb.from('news').select('*').order('published_at', { ascending: false }).limit(20);
-    const now = new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'});
-    document.getElementById('last-update').textContent = '更新於 ' + now;
-    if (error || !data || !data.length) {
-      document.getElementById('news-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">暫無官方新聞</div>';
-      return;
-    }
-    const sentIcon = s => s==='bull'?'📈':s==='bear'?'📉':'➡️';
-    const sentColor = s => s==='bull'?'var(--green)':s==='bear'?'var(--red)':'var(--muted)';
-    const sentLabel = s => s==='bull'?'偏多':s==='bear'?'偏空':'中性';
-    document.getElementById('news-list').innerHTML = data.map(n => {
-      const ago = timeAgo(n.published_at);
-      return "<div class='news-card'>" +
-        "<div class='news-meta'><span class='news-source'>" + (n.source||'交易大師') + "</span>" +
-        "<span class='news-lang'>官方</span>" +
-        "<span class='news-date'>" + ago + "</span></div>" +
-        "<div class='news-title'>" + n.title + "</div>" +
-        (n.summary ? "<div class='ai-summary show'><strong style='color:var(--accent);font-size:11px'>📌 摘要</strong><br>" + n.summary.replace(/\n/g, '<br>') + "</div>" : "") +        
-        "<div class='news-foot'><span style='font-size:11px;color:" + sentColor(n.sentiment) + "'>" + sentIcon(n.sentiment) + " " + sentLabel(n.sentiment) + "</span>" +
-        (n.url ? "<a href='" + n.url + "' target='_blank' style='font-size:11px;color:var(--accent);text-decoration:none'>閱讀全文 →</a>" : "") +
-        "</div></div>";
-    }).join('');
-    return;
-  }
-  if (newsCache[tab] && !force) {
-    renderNews(newsCache[tab], tab);
+async function loadNews(market, force = false) {
+  if (cache[market] && !force) {
+    renderNews(cache[market], market);
     return;
   }
 
-  document.getElementById('news-list').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入市場動態...</div></div>';
-  document.getElementById('last-update').textContent = '載入中...';
+  document.getElementById('news-list').innerHTML =
+    '<div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入' +
+    (market === 'tw' ? '台股' : '美股') + '日報中...</div></div>';
+  document.getElementById('report-header').style.display = 'none';
+  document.getElementById('update-info').textContent = '載入中...';
 
-  // 先查 Supabase 快取（6小時內）
   try {
-    const { data: cached } = await sb.from('news_cache')
-      .select('*')
-      .eq('tab', tab)
-      .single();
+    // 取今天日期
+    const today = new Date().toISOString().slice(0, 10);
+    // 先抓今天，沒有就抓最新一天
+    let url = SUPABASE_URL + '/rest/v1/daily_news?market=eq.' + market +
+      '&report_date=eq.' + today +
+      '&order=published_at.desc&limit=50';
+    let resp = await fetch(url, { headers: SB_HEADERS });
+    let data = await resp.json();
 
-    if (cached && !force) {
-      const updatedAt = new Date(cached.updated_at);
-      const hoursDiff = (Date.now() - updatedAt) / 1000 / 3600;
-      if (hoursDiff < 6) {
-        newsCache[tab] = cached.content;
-        const timeStr = updatedAt.toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'});
-        document.getElementById('last-update').textContent = 'AI 更新於 ' + timeStr;
-        renderNews(cached.content, tab);
-        return;
-      }
+    // 今天沒資料，抓最新一天
+    if (!data || !data.length) {
+      url = SUPABASE_URL + '/rest/v1/daily_news?market=eq.' + market +
+        '&order=report_date.desc,published_at.desc&limit=50';
+      resp = await fetch(url, { headers: SB_HEADERS });
+      data = await resp.json();
     }
-  } catch(e) { console.log('快取查詢失敗', e); }
 
-
-  const cfg = TAB_CONFIG[tab];
-  const today = new Date().toLocaleDateString('zh-TW');
-  const sourceList = cfg.sources.join(', ');
-  const prompt = "你是專業財經新聞編輯。今天是" + today + "。\n\n" +
-    "針對「" + cfg.label + "」主題，" + cfg.prompt_hint + "。\n" +
-    "模擬來自以下媒體的新聞：" + sourceList + "\n\n" +
-    "輸出12則重要新聞，只輸出JSON陣列，不含其他文字：\n" +
-    "[{\"title\":\"具體新聞標題含公司名或數字\",\"source\":\"媒體名稱\",\"lang\":\"中或EN\",\"summary\":\"重點一\\n重點二\\n重點三\",\"sentiment\":\"bull或bear或neutral\",\"searchUrl\":\"https://www.google.com/search?q=關鍵字\"}]\n\n" +
-    "規則：中文來源約6則、英文約6則；標題具體含公司名數字；summary繁體中文3點；sentiment準確；只輸出JSON";
-
-  try {
-    const raw = await callAI(prompt, 1500);
-    const clean = raw.replace(/```json|```/g, '').trim();
-    const items = JSON.parse(clean);
-    newsCache[tab] = items;
-    const now = new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'});
-    document.getElementById('last-update').textContent = `AI 更新於 ${now}`;
-    renderNews(items, tab);
-    // 儲存到 Supabase 快取
-    try {
-      await sb.from('news_cache').upsert(
-        { tab: tab, content: items, updated_at: new Date().toISOString() },
-        { onConflict: 'tab' }
-      );
-    } catch(e) { console.log('快取儲存失敗', e); }
-  } catch(e) {
-    const isRateLimit = e.message.includes('Rate limit');
-    const msg = isRateLimit
-      ? 'AI 每日額度已用完，請稍後再試（約 24 小時後重置）'
-      : '載入失敗：' + e.message;
+    cache[market] = data || [];
+    renderNews(cache[market], market);
+  } catch (e) {
     document.getElementById('news-list').innerHTML =
-      "<div style='text-align:center;padding:40px;font-size:13px;color:" + (isRateLimit ? "var(--warn)" : "var(--red)") + "'>" +
-      (isRateLimit ? "⏳ " : "❌ ") + msg + "</div>";
+      "<div class='empty-state'><div class='icon'>⚠️</div><div class='title'>載入失敗</div>" +
+      "<div class='hint'>請稍後再試</div></div>";
+    document.getElementById('update-info').textContent = '載入失敗';
   }
 }
 
-function renderNews(items, tab) {
-  const el = document.getElementById('news-list');
-  if (!items || !items.length) {
-    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">暫無新聞</div>';
+function renderNews(data, market) {
+  const isZhTW = market === 'tw';
+  const reportTitle = isZhTW ? '🇹🇼 交易大師台股日報' : '🇺🇸 交易大師美股日報';
+  const now = new Date().toLocaleString('zh-TW', { month: 'long', day: 'numeric', weekday: 'long' });
+
+  document.getElementById('update-info').textContent =
+    '每日早上自動更新 · ' + new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+
+  if (!data || !data.length) {
+    document.getElementById('report-header').style.display = 'none';
+    document.getElementById('news-list').innerHTML =
+      "<div class='empty-state'>" +
+      "<div class='icon'>⏳</div>" +
+      "<div class='title'>今日日報準備中</div>" +
+      "<div class='hint'>每日早上 7:30 自動更新<br>請稍後再來查看</div>" +
+      "</div>";
     return;
   }
-  el.innerHTML = items.map((n, idx) => {
-    const sentIcon = n.sentiment === 'bull' ? '📈' : n.sentiment === 'bear' ? '📉' : '➡️';
-    const sentColor = n.sentiment === 'bull' ? 'var(--green)' : n.sentiment === 'bear' ? 'var(--red)' : 'var(--muted)';
-    const sentLabel = n.sentiment === 'bull' ? '偏多' : n.sentiment === 'bear' ? '偏空' : '中性';
-    return `<div class="news-card">
-      <div class="news-meta">
-        <span class="news-source">${n.source || 'AI整理'}</span>
-        <span class="news-lang">${n.lang || '中'}</span>
-      </div>
-      <div class="news-title">${n.title}</div>
-      <div class="ai-summary show">
-        <strong style="color:var(--accent);font-size:11px">🤖 重點摘要</strong><br>
-        ${(n.summary || '').replace(/\n/g, '<br>')}
 
-      </div>
-      <div class="news-foot">
-        <span style="font-size:11px;color:${sentColor}">${sentIcon} ${sentLabel}</span>
-        <a href="https://news.google.com/search?q=${encodeURIComponent(n.title)}&hl=zh-TW" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:none">🔍 搜尋原文 →</a>
-      </div>
-    </div>`;
-  }).join('');
-}
+  // 取報告日期
+  const reportDate = data[0]?.report_date || '';
+  const dateLabel = reportDate
+    ? new Date(reportDate + 'T00:00:00+08:00').toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })
+    : now;
 
-function timeAgo(date) {
-  if (!date) return '—';
-  const d = (Date.now() - new Date(date)) / 1000;
-  if (d < 60) return '剛剛';
-  if (d < 3600) return Math.floor(d/60) + '分鐘前';
-  if (d < 86400) return Math.floor(d/3600) + '小時前';
-  return Math.floor(d/86400) + '天前';
+  document.getElementById('report-header').style.display = 'flex';
+  document.getElementById('report-title').textContent = reportTitle;
+  document.getElementById('report-date').textContent = dateLabel;
+  document.getElementById('report-count').textContent = data.length + ' 則新聞';
+
+  const container = document.getElementById('news-list');
+  container.innerHTML = '';
+
+  data.forEach(n => {
+    const card = document.createElement('div');
+    card.className = 'news-card';
+
+    const ago = timeAgo(n.published_at);
+    card.innerHTML =
+      '<div class="news-meta">' +
+        '<span class="news-source">' + (n.source || '未知來源') + '</span>' +
+        '<span class="news-date">' + ago + '</span>' +
+      '</div>' +
+      '<div class="news-title">' + (n.title || '') + '</div>' +
+      (n.url ? '<a class="news-link" href="' + n.url + '" target="_blank" rel="noopener">閱讀原文 →</a>' : '');
+
+    if (n.url) {
+      card.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'A') {
+          window.open(n.url, '_blank', 'noopener');
+        }
+      });
+    }
+    container.appendChild(card);
+  });
 }
 </script>
 </body>
