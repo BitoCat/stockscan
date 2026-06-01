@@ -1,60 +1,244 @@
-# 交易大師 專案摘要（貼給 Claude 用）
+# 交易大師 ProTrader 專案摘要（貼給 Claude 用）
+> 最後更新：2026年6月1日
+
+---
 
 ## 專案概況
-網站名稱：交易大師
-網站網址：https://bitocat.github.io/stockscan
-GitHub：https://github.com/BitoCat/stockscan
-技術：純靜態 HTML+JS，GitHub Pages 託管，GitHub Actions 自動部署
 
-## 重要服務
-- Supabase URL：https://kldumnxdlgovaxtiszyn.supabase.co
-- Supabase ANON Key：存在 js/supabase.js
-- Groq API Key：存在用戶 localStorage (ai_key)，管理員透過後台發放
-- GitHub Token：本機 git remote，Classic Token 需有 repo+workflow 權限
+| 項目 | 內容 |
+|------|------|
+| 網站名稱 | 交易大師 ProTrader |
+| 前端網址 | https://bitocat.github.io/stockscan |
+| 前端 GitHub | https://github.com/BitoCat/stockscan |
+| 後端 GitHub | https://github.com/BitoCat/trading-bot |
+| 後端服務 | https://splendid-prosperity-production-41ab.up.railway.app（Railway Flask，Hobby方案） |
+| 資料庫 | https://kldumnxdlgovaxtiszyn.supabase.co（Supabase） |
+| Telegram Bot | @Boss1688Bot，Channel ID：-1003990900011 |
+| Supabase anon key | eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI |
+
+---
+
+## 技術架構
+
+### 前端（GitHub Pages）
+純靜態 HTML + JS，無框架。**重要：不使用 supabase-js client**，改用直接 fetch 呼叫 Supabase REST API（因 supabase-js 在此環境下 apikey header 無法正常帶入）。
+
+**Supabase fetch 標準寫法（所有頁面統一）：**
+```javascript
+const SUPABASE_URL = 'https://kldumnxdlgovaxtiszyn.supabase.co';
+const SUPABASE_ANON = 'eyJhbGci...（完整 key）';
+const SB_HEADERS = {
+  'apikey': SUPABASE_ANON,
+  'Authorization': 'Bearer ' + SUPABASE_ANON,
+};
+
+async function sbQuery(table, params = {}) {
+  let url = SUPABASE_URL + '/rest/v1/' + table + '?';
+  const qs = [];
+  if (params.select) qs.push('select=' + encodeURIComponent(params.select));
+  if (params.eq) for (const [col, val] of Object.entries(params.eq)) qs.push(col + '=eq.' + encodeURIComponent(val));
+  if (params.neq) for (const [col, val] of Object.entries(params.neq)) qs.push(col + '=neq.' + encodeURIComponent(val));
+  if (params.gte) for (const [col, val] of Object.entries(params.gte)) qs.push(col + '=gte.' + encodeURIComponent(val));
+  if (params.order) for (const [col, asc] of params.order) qs.push('order=' + col + '.' + (asc ? 'asc' : 'desc'));
+  if (params.limit) qs.push('limit=' + params.limit);
+  if (params.offset) qs.push('offset=' + params.offset);
+  url += qs.join('&');
+  try {
+    const resp = await fetch(url, { headers: SB_HEADERS });
+    if (!resp.ok) return { data: [], error: resp.statusText };
+    const data = await resp.json();
+    return { data: Array.isArray(data) ? data : [], error: null };
+  } catch(e) {
+    return { data: [], error: e.message };
+  }
+}
+```
+
+### 後端（Railway Flask，port 8080）
+
+| 路由 | 功能 |
+|------|------|
+| /webhook | TradingView 快訊接收（目前已停用指標通知） |
+| /quote | 股票報價 API（台股自動判斷 .TW / .TWO） |
+| /test | 健康檢查 |
+| /state | 查看狀態 |
+
+### 自動化（GitHub Actions）
+
+| Workflow | 排程 | 說明 |
+|----------|------|------|
+| taiwan_scanner.yml | 週一到週五 15:10、每月1日09:00 | 台股主力雷達 |
+| whale_scanner.yml | 每週一 09:00 | 美股鯨魚追蹤 |
+| news_scanner.yml | 週一到週五早上 7:30（UTC 23:30） | 新聞日報 |
+
+---
 
 ## 所有頁面
-- index.html：首頁儀表板（公告/新聞/教學/盤面精選標題）
-- diagnosis.html：AI 股票健診（Yahoo Finance即時技術指標+Groq AI分析）
-- daily.html：每日盤面解析（管理員發布，支援Markdown+圖片）
-- news.html：市場新聞（AI生成，4個分類Tab）
-- announcement.html：官方公告（管理員發布，支援置頂）
-- tutorial.html：投資教學（管理員發布，支援Markdown+圖片）
-- watchlist.html：觀察名單
-- contact.html：聯繫管理員（用戶申請Groq Key）
-- profile.html：我的帳號（AI設定/方案/帳號）
-- admin.html：管理後台（訊息回覆/會員管理/發布內容）
-- login.html：登入/註冊
+
+| 檔案 | 功能 |
+|------|------|
+| index.html | 首頁儀表板 |
+| diagnosis.html | AI 股票健診（台股/美股） |
+| watchlist.html | 觀察名單 |
+| whale.html | 美股鯨魚追蹤（13F） |
+| radar.html | 台股主力雷達（三頁籤） |
+| tracker.html | 追蹤中心入口（選美股/台股） |
+| daily.html | 盤面解析 |
+| news.html | 新聞日報（台股/美股） |
+| alerts.html | 即時快訊 |
+| announcement.html | 官方公告 |
+| tutorial.html | 投資教學 |
+| contact.html | 聯繫管理員 |
+| profile.html | 我的帳號 |
+| admin.html | 管理後台 |
+| login.html | 登入/註冊 |
+| css/base.css | 共用樣式 |
+| js/supabase.js | Supabase 初始化（部分頁面仍使用，但主要頁面已改為直接 fetch） |
+
+---
 
 ## Supabase 資料表
-- profiles：用戶資料（plan欄位：free/tw/us/all/admin）
-- points：點數餘額
-- point_logs：點數記錄
-- watchlist：觀察名單
-- messages：用戶訊息（status: pending/replied，可附groq_key）
-- news：市場新聞（show_on_home欄位控制首頁顯示）
-- announcements：官方公告（is_pinned, show_on_home）
-- tutorials：教學文章（show_on_home）
-- daily_analysis：每日盤面解析（show_on_home）
-- storage bucket：images（管理員上傳圖片用）
+
+### 用戶相關
+- `profiles` — 用戶資料（plan: free/tw/us/all/admin）
+- `points` — 點數餘額
+- `point_logs` — 點數記錄
+- `watchlist` — 觀察名單（user_id, symbol, market, name, sector, grade, health_score）
+- `messages` — 用戶訊息（status: pending/replied，可附 groq_key）
+- `alerts` — 快訊記錄
+- `memberships` — 會員方案
+- `api_keys` — API Key 管理
+
+### 內容相關
+- `announcements` — 官方公告（is_pinned, show_on_home）
+- `news` — 官方新聞（show_on_home）
+- `tutorials` — 教學文章（show_on_home）
+- `daily_analysis` — 每日盤面解析（show_on_home）
+- `picks` — 精選標的
+- `news_cache` — 舊版新聞快取（已廢棄）
+- `daily_news` — 新版新聞日報（market: tw/us, report_date, title, source, url, published_at, lang）
+
+### 台股主力雷達
+- `tw_institutional` — 三大法人每日買賣超（TWSE/TPEx）
+- `tw_fund_positions` — 投信前十大持股（SITCA月更，202601-202605）
+- `tw_radar_new_positions` — 新建倉彙整
+
+### 美股鯨魚追蹤
+- `whale_filers` — 追蹤機構清單（17家）
+- `whale_positions` — 各季持股明細
+- `whale_new_positions` — 新建倉彙整
+
+---
+
+## 台股主力雷達（radar.html）
+
+### 三個頁籤
+1. **🆕 主力新建倉** — 本月相較上月新增個股（投信）+ 外資連續買超
+2. **📊 主力持股追蹤** — 三個子頁：多方共識 / 依基金查詢 / 法人清單
+3. **🧩 主力ETF追蹤** — 投信持有 ETF 清單，依月份和類型篩選
+
+### 資料來源
+- 投信持股：SITCA 每月前十大持股（月更）
+- ETF 判斷：`/^0\d{3,5}[A-Za-z]?$/`（0開頭4-6碼）
+- 新建倉定義：本月相較上月新增（`n=1`）
+
+### taiwan_scanner.py 重要邏輯
+- ETF 過濾：`is_etf()` 函式，新建倉和外資訊號都排除 ETF
+- 歷史補抓：`--month YYYYMM` 參數，強制重爬（`if check.data and not target_month`）
+- 比對月份：`get_prev_months(current_month, n=1)`，只比對上個月
+
+### 資料現況（2026年6月）
+| year_month | 筆數 | 說明 |
+|------------|------|------|
+| 202601 | 4680 | fund_name 有誤（顯示兆豐），但 ticker+fund_id 正確 |
+| 202602 | 4680 | 同上 |
+| 202603 | 5004 | 同上 |
+| 202604 | 2798 | 正確資料 |
+| 202605 | 2798 | 正確資料 |
+
+---
+
+## 新聞系統（news.html）
+
+### 架構
+- **兩個頁籤**：🇹🇼 台股日報 / 🇺🇸 美股日報
+- **資料來源**：NewsAPI + GNews API 自動抓取，每天早上 7:30 更新
+- **儲存**：`daily_news` 表，`lang` 欄位標記 zh/en
+- **前端**：英文新聞顯示 `🇺🇸 英文` 標籤
+
+### news_scanner.py 邏輯
+- **台股**：GNews 台灣在地中文優先 → NewsAPI 中文補充 → 英文補充
+- **美股**：GNews 中文優先 → NewsAPI 中文補充 → 英文補充
+- **過濾**：`is_finance_news()` 排除娛樂/非財經新聞
+- **語言判斷**：含中文字元 → `lang=zh`，否則 `lang=en`
+
+### GitHub Secrets 需要
+- `SUPABASE_URL`、`SUPABASE_KEY`
+- `NEWS_API_KEY`（newsapi.org，免費100次/天）
+- `GNEWS_API_KEY`（gnews.io，免費100次/天）
+
+---
 
 ## 用戶方案邏輯
-- free：功能全鎖，只能看首頁，需聯繫管理員開通
-- tw/us/all/admin：功能全開
-- 每日登入自動補100點，AI健診每次扣1點
+- `free`：功能全鎖，只能看首頁
+- `tw/us/all/admin`：功能全開
+- 每日登入自動補 100 點
+- AI 健診每次扣 1 點
 
-## 本機開發
-專案路徑：~/Documents/stockscan
-部署方式：git add . && git commit -m "說明" && git push origin main
-部署完成：約1分鐘，Cmd+Shift+R 清除快取
+---
 
-## 目前已知問題/注意事項
+## 管理員帳號
+Email：bitocat.trader@gmail.com / plan：admin
+
+---
+
+## 開發注意事項
+
+### 關鍵限制
+- **不要用 supabase-js CDN**：在此環境 apikey header 無法正常帶入，一律改用直接 fetch
+- **不要用 `js/supabase.js` 的 `sb` 物件**：同上原因，新頁面不要依賴它
 - JS 字串內禁止用全形字元（會造成 SyntaxError）
-- template literal 內有全形字元不會出錯，但字串外會
-- 每次修改 JS 後用 node 驗證語法：
-  node -e "const fs=require('fs');const html=fs.readFileSync('檔案.html','utf8');const start=html.indexOf('<script>');const end=html.indexOf('</script>',start);const AF=Object.getPrototypeOf(async function(){}).constructor;try{new AF(html.slice(start+8,end));console.log('OK');}catch(e){console.log('ERR:',e.message);}"
-- GitHub Actions 版本要用 v4（v3已棄用）
+- GitHub Actions 版本要用 v4（v3 已棄用）
 - Yahoo Finance 需透過 CORS proxy 抓取
 
+### Supabase RLS 設定
+- `tw_fund_positions`：anon read（SELECT），已設定 policy
+- `daily_news`：anon read + anon insert + anon delete，已設定 policy
+- 新建表後記得設定 RLS policy，否則 anon key 無法讀寫
+
+### 部署方式
+```bash
+git add . && git commit -m "說明" && git push origin main
+```
+部署約 1 分鐘，Cmd+Shift+R 清除快取
+
+### JS 語法驗證
+```bash
+node -e "const fs=require('fs');const html=fs.readFileSync('檔案.html','utf8');const start=html.indexOf('<script>');const end=html.indexOf('</script>',start);const AF=Object.getPrototypeOf(async function(){}).constructor;try{new AF(html.slice(start+8,end));console.log('OK');}catch(e){console.log('ERR:',e.message);}"
+```
+
+### Railway 維運
+- 方案：Hobby（$5/月）
+- 收到 CRASHED email → Railway dashboard → Redeploy
+- 健康檢查路由：/test
+
+---
+
+## 已知問題與待辦
+
+### 待修正
+1. **台股健診公司名稱有時不正確**（8043 蜜望實顯示成合晶）— `diagnosis.html` 的 `renderResult` 用了 AI 回傳的 `stockName` 覆蓋正確名稱
+2. **漲跌幅有時顯示 NaN%** — `previousClose` 有時為 null，需加防護
+3. **202601~202603 的 fund_name 問題** — 所有基金名稱顯示兆豐開頭，需重爬修正（前端已用 company 欄位顯示做臨時修補）
+
+### 待完成
+4. **202606 SITCA 資料** — 等 6 月中旬公告後自動更新
+5. **外資連續買超訊號** — 需累積足夠交易日資料
+6. **持續加碼偵測** — `tw_radar_new_positions` 的 `status=持續加碼` 尚未實作
+
+### 未來計畫
+- 港股北水追蹤（tracker.html 已有「開發中」佔位）
+- 新聞更多台灣在地來源
 ## 管理員帳號
 Email：bitocat.trader@gmail.com
 plan：admin
