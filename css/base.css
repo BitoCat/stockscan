@@ -23,6 +23,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: 'Noto Sans TC', sans-serif;
+  font-size: 16px;
   min-height: 100vh;
   overflow-x: hidden;
 }
@@ -57,7 +58,7 @@ body::before {
   border-radius: 8px;
   color: #fff;
   font-family: 'Noto Sans TC', sans-serif;
-  font-size: 14px;
+  font-size: 16px;
   padding: 11px 14px;
   outline: none;
   transition: all .2s;
@@ -69,7 +70,7 @@ body::before {
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   border: none; border-radius: 8px; cursor: pointer;
-  font-family: 'Noto Sans TC', sans-serif; font-weight: 700; font-size: 14px;
+  font-family: 'Noto Sans TC', sans-serif; font-weight: 700; font-size: 16px;
   padding: 11px 22px; transition: all .2s; white-space: nowrap;
 }
 .btn-primary { background: linear-gradient(135deg, var(--accent), #0099bb); color: #000; }
@@ -81,12 +82,12 @@ body::before {
 .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
 .btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
 .btn-full { width: 100%; }
-.btn-sm { padding: 7px 14px; font-size: 12px; }
+.btn-sm { padding: 7px 14px; font-size: 14px; }
 
 /* ── Badge / grade ── */
 .grade {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 14px; border-radius: 7px; font-size: 12px;
+  padding: 5px 14px; border-radius: 7px; font-size: 14px;
   font-weight: 700; border: 1px solid; letter-spacing: .5px;
 }
 .g-buy     { background: rgba(46,204,113,.1); border-color: var(--green); color: var(--green); }
@@ -97,7 +98,7 @@ body::before {
 
 /* ── Section heading ── */
 .sec-head {
-  font-family: 'Share Tech Mono', monospace; font-size: 14px;
+  font-family: 'Share Tech Mono', monospace; font-size: 16px;
   letter-spacing: 3px; color: var(--accent); text-transform: uppercase;
   margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
 }
@@ -114,14 +115,14 @@ body::before {
   margin: 0 auto 12px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-.spinner-txt { font-family: 'Share Tech Mono',monospace; font-size: 14px; color: var(--accent); letter-spacing: 2px; animation: blink 1s step-end infinite; }
+.spinner-txt { font-family: 'Share Tech Mono',monospace; font-size: 16px; color: var(--accent); letter-spacing: 2px; animation: blink 1s step-end infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 
 /* ── Toast ── */
 #toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(60px);
   background: var(--panel2); border: 1px solid var(--border2);
-  color: var(--text); font-size: 13px; padding: 10px 20px;
+  color: var(--text); font-size: 15px; padding: 10px 20px;
   border-radius: 8px; z-index: 9999; transition: transform .3s, opacity .3s;
   opacity: 0; pointer-events: none; white-space: nowrap;
   box-shadow: 0 8px 24px rgba(0,0,0,.5);
@@ -134,7 +135,7 @@ body::before {
 .chip {
   background: rgba(0,212,255,.08); border: 1px solid rgba(0,212,255,.3);
   border-radius: 20px; color: #00d4ff;
-  font-family: 'Share Tech Mono',monospace; font-size: 14px;
+  font-family: 'Share Tech Mono',monospace; font-size: 15px;
   padding: 6px 16px; cursor: pointer; transition: all .15s; font-weight: 600;
 }
 .chip:hover { background: rgba(0,212,255,.18); border-color: var(--accent); }
@@ -149,7 +150,7 @@ body::before {
 .logo { display: flex; align-items: baseline; gap: 6px; text-decoration: none; }
 .logo-main { font-family: 'Bebas Neue',sans-serif; font-size: 24px; letter-spacing: 3px; color: #fff; }
 .logo-main span { color: var(--accent); }
-.logo-ver { font-family: 'Share Tech Mono',monospace; font-size: 16px; color: var(--muted); letter-spacing: 2px; }
+.logo-ver { font-family: 'Share Tech Mono',monospace; font-size: 17px; color: var(--muted); letter-spacing: 2px; }
 
 /* ── Bottom tab bar ── */
 .tabbar {
@@ -160,12 +161,12 @@ body::before {
 }
 .tb {
   flex: 1; background: transparent; border: none;
-  color: var(--muted); font-size: 14px; font-family: 'Noto Sans TC',sans-serif;
+  color: var(--muted); font-size: 15px; font-family: 'Noto Sans TC',sans-serif;
   padding: 10px 4px 8px; cursor: pointer; transition: all .2s;
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   text-decoration: none;
 }
-.tb .ti { font-size: 20px; }
+.tb .ti { font-size: 22px; }
 .tb.active { color: var(--accent); }
 .tb:hover:not(.active) { color: var(--text); }
 
