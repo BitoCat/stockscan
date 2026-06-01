@@ -97,7 +97,7 @@ body::before {
 
 /* ── Section heading ── */
 .sec-head {
-  font-family: 'Share Tech Mono', monospace; font-size: 10px;
+  font-family: 'Share Tech Mono', monospace; font-size: 14px;
   letter-spacing: 3px; color: var(--accent); text-transform: uppercase;
   margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
 }
@@ -114,7 +114,7 @@ body::before {
   margin: 0 auto 12px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-.spinner-txt { font-family: 'Share Tech Mono',monospace; font-size: 10px; color: var(--accent); letter-spacing: 2px; animation: blink 1s step-end infinite; }
+.spinner-txt { font-family: 'Share Tech Mono',monospace; font-size: 14px; color: var(--accent); letter-spacing: 2px; animation: blink 1s step-end infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 
 /* ── Toast ── */
@@ -160,7 +160,7 @@ body::before {
 }
 .tb {
   flex: 1; background: transparent; border: none;
-  color: var(--muted); font-size: 10px; font-family: 'Noto Sans TC',sans-serif;
+  color: var(--muted); font-size: 14px; font-family: 'Noto Sans TC',sans-serif;
   padding: 10px 4px 8px; cursor: pointer; transition: all .2s;
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   text-decoration: none;
