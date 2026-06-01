@@ -179,6 +179,13 @@ let cu = null, cp = null;
 let currentMarket = 'tw';
 let cache = { tw: null, us: null };
 
+const SUPABASE_URL = 'https://kldumnxdlgovaxtiszyn.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI';
+const SB_HEADERS = {
+  'apikey': SUPABASE_ANON,
+  'Authorization': 'Bearer ' + SUPABASE_ANON,
+};
+
 (async () => {
   cu = await requireAuth();
   if (!cu) return;
@@ -228,21 +235,24 @@ async function loadNews(market, force = false) {
   document.getElementById('update-info').textContent = '載入中...';
 
   try {
-    // 取今天日期
     const today = new Date().toISOString().slice(0, 10);
-    // 先抓今天，沒有就抓最新一天
-    let url = SUPABASE_URL + '/rest/v1/daily_news?market=eq.' + market +
-      '&report_date=eq.' + today +
-      '&order=published_at.desc&limit=50';
-    let resp = await fetch(url, { headers: SB_HEADERS });
-    let data = await resp.json();
+    // 先抓今天
+    let { data } = await sb.from('daily_news')
+      .select('*')
+      .eq('market', market)
+      .eq('report_date', today)
+      .order('published_at', { ascending: false })
+      .limit(50);
 
     // 今天沒資料，抓最新一天
     if (!data || !data.length) {
-      url = SUPABASE_URL + '/rest/v1/daily_news?market=eq.' + market +
-        '&order=report_date.desc,published_at.desc&limit=50';
-      resp = await fetch(url, { headers: SB_HEADERS });
-      data = await resp.json();
+      const res2 = await sb.from('daily_news')
+        .select('*')
+        .eq('market', market)
+        .order('report_date', { ascending: false })
+        .order('published_at', { ascending: false })
+        .limit(50);
+      data = res2.data;
     }
 
     cache[market] = data || [];
