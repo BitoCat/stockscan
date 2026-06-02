@@ -302,6 +302,7 @@ function renderScanResults() {
     const card = document.createElement('div');
     card.className = 'scan-card ' + gradeClass;
     card.innerHTML =
+      '<div class="card-header-area" style="cursor:pointer">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">' +
         '<div>' +
           '<span style="font-size:11px;font-weight:600;color:' + gradeColor + ';background:rgba(255,255,255,.07);border-radius:5px;padding:2px 8px">' + r.grade + '</span>' +
@@ -315,6 +316,7 @@ function renderScanResults() {
         '</div>' +
       '</div>' +
       '<div class="score-bar"><div class="score-fill" style="width:' + scorePct + ';background:' + gradeColor + '"></div></div>' +
+      '</div>' +
       '<div class="score-grid">' +
         scoreItem('📈 技術面', r.tech_score) +
         scoreItem('🏦 分析師', r.analyst_score) +
@@ -342,7 +344,7 @@ function renderScanResults() {
       }
     });
 
-    card.addEventListener('click', () => {
+    card.querySelector('.card-header-area').addEventListener('click', () => {
       window.open('diagnosis.html?ticker=' + r.symbol + '&market=us', '_blank');
     });
 
@@ -390,7 +392,7 @@ function renderScanWatchlist() {
     '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">' +
       '<div><span style="font-weight:600;font-size:14px">' + s.symbol + '</span>' +
         (s.name ? '<span style="font-size:12px;color:var(--muted);margin-left:8px">' + s.name + '</span>' : '') + '</div>' +
-      '<button onclick="removeScanStock(&quot;' + s.symbol + '&quot;)" style="background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer">刪除</button>' +
+      '<button onclick="removeScanStock(&quot;' + s.symbol + '&quot;)" style="background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;white-space:nowrap;flex-shrink:0">✕ 刪除</button>' +
     '</div>'
   ).join('');
 }
