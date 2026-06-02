@@ -212,7 +212,7 @@ async function analyze() {
     if (currentMkt === 'tw') {
       // 台股用 Railway 後端抓，自動判斷上市/上櫃
       try {
-        const r = await fetch('https://splendid-prosperity-production-41ab.up.railway.app/quote?symbol=' + sym, {signal: AbortSignal.timeout(8000)});
+        const r = await fetch('https://splendid-prosperity-production-41ab.up.railway.app/quote?symbol=' + sym);
         const data = await r.json();
         if (data.price) {
           pd = {chart:{result:[{meta:{regularMarketPrice:data.price,symbol:data.symbol,currency:data.currency,shortName:data.name||data.symbol,previousClose:data.previousClose},indicators:{quote:[{close:data.closes,high:data.highs||[],low:data.lows||[]}]}}]}};
@@ -231,7 +231,7 @@ async function analyze() {
         ];
         for (const proxyUrl of proxies) {
           try {
-            const r = await fetch(proxyUrl, {signal: AbortSignal.timeout(5000)});
+            const r = await fetch('https://splendid-prosperity-production-41ab.up.railway.app/quote?symbol=' + sym);
             const raw = await r.json();
             const pd = raw?.contents ? JSON.parse(raw.contents) : raw;
             const result = pd?.chart?.result?.[0];
