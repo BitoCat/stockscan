@@ -27,6 +27,20 @@
 .md-content code { background:rgba(0,212,255,.1); padding:2px 6px; border-radius:4px; font-family:monospace; font-size:12px; }
 .md-content blockquote { border-left:3px solid var(--accent); padding-left:12px; color:var(--muted); margin:10px 0; }
 .md-content hr { border:none; border-top:1px solid var(--border); margin:16px 0; }
+.scan-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; transition:border-color .2s; }
+.scan-card:hover { border-color:var(--accent); }
+.scan-card.grade-strong { border-left:3px solid #00e676; }
+.scan-card.grade-buy { border-left:3px solid var(--accent); }
+.scan-card.grade-watch { border-left:3px solid var(--warn); }
+.score-bar { height:6px; background:var(--border); border-radius:3px; overflow:hidden; margin-top:4px; }
+.score-fill { height:100%; border-radius:3px; transition:width .4s; }
+.score-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:10px; }
+.score-item { background:rgba(255,255,255,.04); border-radius:8px; padding:8px 10px; }
+.score-label { font-size:10px; color:var(--muted); margin-bottom:2px; }
+.score-val { font-size:15px; font-weight:700; }
+.detail-panel { background:rgba(0,0,0,.2); border-radius:8px; padding:10px; margin-top:10px; display:none; }
+.detail-row { font-size:12px; color:var(--muted); padding:4px 0; border-bottom:1px solid rgba(255,255,255,.05); display:flex; justify-content:space-between; gap:8px; }
+.detail-row:last-child { border-bottom:none; }
 </style>
 </head>
 <body>
@@ -38,13 +52,62 @@
   </div>
 </nav>
 <div class="page-wrap">
-  <div class="sec-head">📊 盤面解析</div>
-  <div class="mkt-filter">
-    <button class="mf-btn active" id="mf-all" onclick="setMkt('all')">🌏 全部</button>
-    <button class="mf-btn" id="mf-tw" onclick="setMkt('tw')">🇹🇼 台股</button>
-    <button class="mf-btn" id="mf-us" onclick="setMkt('us')">🇺🇸 美股</button>
+  <div class="sec-head">📊 盤面</div>
+
+  <!-- 主頁籤 -->
+  <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:0;background:var(--panel2)">
+    <div id="main-tab-daily" onclick="switchMainTab('daily')"
+      style="flex:1;text-align:center;padding:11px 8px;font-size:13px;font-weight:600;color:var(--accent);border-bottom:2px solid var(--accent);cursor:pointer">
+      📊 盤面解析
+    </div>
+    <div id="main-tab-scan" onclick="switchMainTab('scan')"
+      style="flex:1;text-align:center;padding:11px 8px;font-size:13px;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer">
+      🎯 強力買入清單
+    </div>
   </div>
-  <div id="daily-list"><div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入解析...</div></div></div>
+
+  <!-- Tab 1: 盤面解析 -->
+  <div id="pane-daily">
+    <div style="padding:12px 0">
+      <div class="mkt-filter">
+        <button class="mf-btn active" id="mf-all" onclick="setMkt('all')">🌏 全部</button>
+        <button class="mf-btn" id="mf-tw" onclick="setMkt('tw')">🇹🇼 台股</button>
+        <button class="mf-btn" id="mf-us" onclick="setMkt('us')">🇺🇸 美股</button>
+      </div>
+    </div>
+    <div id="daily-list"><div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入解析...</div></div></div>
+  </div>
+
+  <!-- Tab 2: 強力買入清單 -->
+  <div id="pane-scan" style="display:none">
+
+    <!-- Admin 管理清單區 -->
+    <div id="admin-watchlist-mgr" style="display:none;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px;margin:12px 0">
+      <div style="font-size:13px;font-weight:600;color:var(--accent);margin-bottom:10px">⚙️ 管理掃描清單（Admin）</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input id="scan-sym-input" placeholder="股票代號，如 AAPL" style="flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:#fff;padding:8px 12px;font-size:14px;outline:none">
+        <input id="scan-name-input" placeholder="名稱（選填）" style="flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:#fff;padding:8px 12px;font-size:14px;outline:none">
+        <button onclick="addScanStock()" style="background:var(--accent);color:#000;border:none;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer">新增</button>
+      </div>
+      <div id="scan-watchlist-list" style="max-height:200px;overflow-y:auto"></div>
+    </div>
+
+    <!-- 今日掃描結果 -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 8px">
+      <div style="font-size:11px;color:var(--muted)" id="scan-update-info">每天早上自動更新</div>
+      <div style="display:flex;gap:6px">
+        <div id="scan-chip-all" onclick="setScanFilter('all')"
+          style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--accent);color:var(--accent);background:rgba(0,212,255,.1);cursor:pointer">全部</div>
+        <div id="scan-chip-strong" onclick="setScanFilter('strong')"
+          style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer">強力買入</div>
+        <div id="scan-chip-buy" onclick="setScanFilter('buy')"
+          style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer">買入</div>
+      </div>
+    </div>
+
+    <div id="scan-stats" style="display:flex;gap:8px;margin-bottom:12px"></div>
+    <div id="scan-results-list"><div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入掃描結果...</div></div></div>
+  </div>
 </div>
 <nav class="tabbar">
   <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
@@ -118,6 +181,244 @@ function timeAgo(iso) {
   if (d < 3600) return Math.floor(d/60) + "分鐘前";
   if (d < 86400) return Math.floor(d/3600) + "小時前";
   return Math.floor(d/86400) + "天前";
+}
+
+/* ══════════════════════════════════════════
+   主頁籤切換
+══════════════════════════════════════════ */
+let scanLoaded = false;
+
+function switchMainTab(tab) {
+  const tabs = ['daily', 'scan'];
+  tabs.forEach(t => {
+    const btn = document.getElementById('main-tab-' + t);
+    const pane = document.getElementById('pane-' + t);
+    if (t === tab) {
+      btn.style.color = 'var(--accent)';
+      btn.style.borderBottom = '2px solid var(--accent)';
+      btn.style.fontWeight = '600';
+      pane.style.display = 'block';
+    } else {
+      btn.style.color = 'var(--muted)';
+      btn.style.borderBottom = '2px solid transparent';
+      btn.style.fontWeight = 'normal';
+      pane.style.display = 'none';
+    }
+  });
+  if (tab === 'scan' && !scanLoaded) {
+    scanLoaded = true;
+    loadScanResults();
+    if (cp?.plan === 'admin') {
+      document.getElementById('admin-watchlist-mgr').style.display = 'block';
+      loadScanWatchlist();
+    }
+  }
+}
+
+/* ══════════════════════════════════════════
+   強力買入掃描
+══════════════════════════════════════════ */
+const SUPABASE_URL2 = 'https://kldumnxdlgovaxtiszyn.supabase.co';
+const SUPABASE_ANON2 = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI';
+const SB_HDR = { 'apikey': SUPABASE_ANON2, 'Authorization': 'Bearer ' + SUPABASE_ANON2, 'Content-Type': 'application/json' };
+
+async function sbFetch2(table, qs) {
+  const url = SUPABASE_URL2 + '/rest/v1/' + table + '?' + qs;
+  const resp = await fetch(url, { headers: SB_HDR });
+  if (!resp.ok) return [];
+  return await resp.json();
+}
+
+let allScanResults = [];
+let scanFilter = 'all';
+
+async function loadScanResults() {
+  document.getElementById('scan-results-list').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入掃描結果...</div></div>';
+  const today = new Date().toISOString().slice(0,10);
+  let data = await sbFetch2('scan_results', 'scan_date=eq.' + today + '&order=score.desc&limit=100');
+  if (!data || !data.length) {
+    data = await sbFetch2('scan_results', 'order=scan_date.desc,score.desc&limit=100');
+  }
+  allScanResults = data || [];
+  if (allScanResults.length) {
+    const d = allScanResults[0].scan_date;
+    document.getElementById('scan-update-info').textContent = '掃描日期：' + d + '　每天早上 8:00 自動更新';
+  }
+  renderScanResults();
+}
+
+function setScanFilter(f) {
+  scanFilter = f;
+  ['all','strong','buy'].forEach(c => {
+    const el = document.getElementById('scan-chip-' + c);
+    if (c === f) {
+      el.style.borderColor = 'var(--accent)';
+      el.style.color = 'var(--accent)';
+      el.style.background = 'rgba(0,212,255,.1)';
+    } else {
+      el.style.borderColor = 'var(--border)';
+      el.style.color = 'var(--muted)';
+      el.style.background = 'transparent';
+    }
+  });
+  renderScanResults();
+}
+
+function renderScanResults() {
+  let list = [...allScanResults];
+  if (scanFilter === 'strong') list = list.filter(r => r.grade === '強力買入');
+  if (scanFilter === 'buy')    list = list.filter(r => r.grade === '買入');
+
+  const strong = allScanResults.filter(r => r.grade === '強力買入').length;
+  const buy    = allScanResults.filter(r => r.grade === '買入').length;
+  document.getElementById('scan-stats').innerHTML =
+    '<div style="flex:1;background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.3);border-radius:8px;padding:8px;text-align:center">' +
+      '<div style="font-size:18px;font-weight:700;color:#00e676">' + strong + '</div>' +
+      '<div style="font-size:11px;color:var(--muted)">強力買入</div></div>' +
+    '<div style="flex:1;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.3);border-radius:8px;padding:8px;text-align:center">' +
+      '<div style="font-size:18px;font-weight:700;color:var(--accent)">' + buy + '</div>' +
+      '<div style="font-size:11px;color:var(--muted)">買入</div></div>' +
+    '<div style="flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">' +
+      '<div style="font-size:18px;font-weight:700;color:var(--text)">' + allScanResults.length + '</div>' +
+      '<div style="font-size:11px;color:var(--muted)">總掃描數</div></div>';
+
+  const container = document.getElementById('scan-results-list');
+  if (!list.length) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:36px;margin-bottom:10px">🔍</div><div>暫無掃描結果</div><div style="font-size:12px;margin-top:8px">請先在 admin 管理頁面新增股票清單</div></div>';
+    return;
+  }
+  container.innerHTML = '';
+
+  list.forEach(r => {
+    const gradeClass = r.grade === '強力買入' ? 'grade-strong' : r.grade === '買入' ? 'grade-buy' : 'grade-watch';
+    const gradeColor = r.grade === '強力買入' ? '#00e676' : r.grade === '買入' ? 'var(--accent)' : 'var(--warn)';
+    const scorePct = Math.min(100, r.score || 0) + '%';
+
+    const techD    = tryParseJson(r.tech_detail);
+    const analystD = tryParseJson(r.analyst_detail);
+    const whaleD   = tryParseJson(r.whale_detail);
+    const fundD    = tryParseJson(r.fundamental_detail);
+
+    const card = document.createElement('div');
+    card.className = 'scan-card ' + gradeClass;
+    card.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">' +
+        '<div>' +
+          '<span style="font-size:11px;font-weight:600;color:' + gradeColor + ';background:rgba(255,255,255,.07);border-radius:5px;padding:2px 8px">' + r.grade + '</span>' +
+          '<div style="font-size:18px;font-weight:700;margin-top:6px">' + r.symbol + '</div>' +
+          '<div style="font-size:12px;color:var(--muted)">' + (r.name || '') + '</div>' +
+        '</div>' +
+        '<div style="text-align:right">' +
+          '<div style="font-size:28px;font-weight:900;color:' + gradeColor + '">' + (r.score || 0) + '</div>' +
+          '<div style="font-size:10px;color:var(--muted)">/ 100分</div>' +
+          (r.price ? '<div style="font-size:12px;color:var(--muted);margin-top:2px">$' + r.price + '</div>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="score-bar"><div class="score-fill" style="width:' + scorePct + ';background:' + gradeColor + '"></div></div>' +
+      '<div class="score-grid">' +
+        scoreItem('📈 技術面', r.tech_score) +
+        scoreItem('🏦 分析師', r.analyst_score) +
+        scoreItem('🐋 法人籌碼', r.whale_score) +
+        scoreItem('📋 基本面', r.fundamental_score) +
+      '</div>' +
+      '<div id="detail-' + r.symbol + '" class="detail-panel">' +
+        detailRows('技術面', techD) +
+        detailRows('分析師', analystD) +
+        detailRows('法人籌碼', whaleD) +
+        detailRows('基本面', fundD) +
+      '</div>' +
+      '<div style="text-align:center;margin-top:8px;font-size:12px;color:var(--muted)" id="toggle-' + r.symbol + '">▼ 展開詳情</div>';
+
+    card.querySelector('[id^="toggle-"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const dp = document.getElementById('detail-' + r.symbol);
+      const tg = document.getElementById('toggle-' + r.symbol);
+      if (dp.style.display === 'none' || !dp.style.display) {
+        dp.style.display = 'block';
+        tg.textContent = '▲ 收起詳情';
+      } else {
+        dp.style.display = 'none';
+        tg.textContent = '▼ 展開詳情';
+      }
+    });
+
+    card.addEventListener('click', () => {
+      window.open('diagnosis.html?ticker=' + r.symbol + '&market=us', '_blank');
+    });
+
+    container.appendChild(card);
+  });
+}
+
+function scoreItem(label, val) {
+  const v = val || 0;
+  const color = v >= 20 ? '#00e676' : v >= 15 ? 'var(--accent)' : v >= 10 ? 'var(--warn)' : 'var(--muted)';
+  return '<div class="score-item"><div class="score-label">' + label + '</div>' +
+    '<div class="score-val" style="color:' + color + '">' + v + '<span style="font-size:10px;color:var(--muted)">/25</span></div></div>';
+}
+
+function detailRows(title, obj) {
+  if (!obj || !Object.keys(obj).length) return '';
+  return '<div style="font-size:11px;font-weight:600;color:var(--accent);margin:8px 0 4px">' + title + '</div>' +
+    Object.entries(obj).map(([k, v]) =>
+      '<div class="detail-row"><span>' + k + '</span><span style="color:var(--text);text-align:right;max-width:60%">' + v + '</span></div>'
+    ).join('');
+}
+
+function tryParseJson(s) {
+  try { return typeof s === 'string' ? JSON.parse(s) : s; } catch(e) { return {}; }
+}
+
+/* ══════════════════════════════════════════
+   Admin 管理掃描清單
+══════════════════════════════════════════ */
+let scanWatchlist = [];
+
+async function loadScanWatchlist() {
+  const data = await sbFetch2('scan_watchlist', 'order=symbol.asc');
+  scanWatchlist = data || [];
+  renderScanWatchlist();
+}
+
+function renderScanWatchlist() {
+  const el = document.getElementById('scan-watchlist-list');
+  if (!scanWatchlist.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0">清單為空，請新增股票</div>';
+    return;
+  }
+  el.innerHTML = scanWatchlist.map(s =>
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">' +
+      '<div><span style="font-weight:600;font-size:14px">' + s.symbol + '</span>' +
+        (s.name ? '<span style="font-size:12px;color:var(--muted);margin-left:8px">' + s.name + '</span>' : '') + '</div>' +
+      '<button onclick="removeScanStock(&quot;' + s.symbol + '&quot;)" style="background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer">刪除</button>' +
+    '</div>'
+  ).join('');
+}
+
+async function addScanStock() {
+  const sym  = document.getElementById('scan-sym-input').value.trim().toUpperCase();
+  const name = document.getElementById('scan-name-input').value.trim();
+  if (!sym) return;
+  const resp = await fetch(SUPABASE_URL2 + '/rest/v1/scan_watchlist', {
+    method: 'POST',
+    headers: { ...SB_HDR, 'Prefer': 'return=representation' },
+    body: JSON.stringify({ symbol: sym, name: name, market: 'us' })
+  });
+  if (resp.ok) {
+    document.getElementById('scan-sym-input').value = '';
+    document.getElementById('scan-name-input').value = '';
+    await loadScanWatchlist();
+  } else {
+    alert('新增失敗（可能已存在）');
+  }
+}
+
+async function removeScanStock(sym) {
+  if (!confirm('確定刪除 ' + sym + '？')) return;
+  await fetch(SUPABASE_URL2 + '/rest/v1/scan_watchlist?symbol=eq.' + sym, {
+    method: 'DELETE', headers: SB_HDR
+  });
+  await loadScanWatchlist();
 }
 </script>
 </body>
