@@ -242,8 +242,7 @@ function getUpsidePct(analText) {
 }
 
 function isUndervalued(r, level) {
-  // level: 'value'(25%) or 'deep_value'(30%)
-  const threshold = level === 'deep_value' ? 30 : 25;
+  // level: 'value'(25-30%) or 'deep_value'(>=30%)
   const fundText = typeof r.fundamental_detail === 'string'
     ? r.fundamental_detail : JSON.stringify(r.fundamental_detail || {});
   const analText = typeof r.analyst_detail === 'string'
@@ -251,7 +250,10 @@ function isUndervalued(r, level) {
   const hasPegLow = fundText.includes('低估');
   const hasPeLow  = fundText.includes('偏低');
   const upside = getUpsidePct(analText);
-  return hasPegLow && hasPeLow && upside >= threshold;
+  if (!hasPegLow || !hasPeLow) return false;
+  if (level === 'deep_value') return upside >= 30;
+  if (level === 'value') return upside >= 25 && upside < 30;
+  return false;
 }
 
 async function loadScanResults() {
