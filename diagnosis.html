@@ -336,18 +336,19 @@ async function analyze() {
     let obj;
     try { obj = JSON.parse(clean); } catch(e) { const m=clean.match(/\{[\s\S]*\}/); obj=JSON.parse(m[0]); }
     if (!livePrice?.price) {
-  showErr('⚠️ 目前無法取得此股票即時資料，分析結果僅供參考，請自行確認股價與公司名稱');
-}
+      showErr('⚠️ 目前無法取得此股票即時資料，分析結果僅供參考，請自行確認股價與公司名稱');
+    }
+
     if (livePrice?.price) {
+      obj.changePct = livePrice.changePct;
       obj.stockName = displayName || livePrice.name;
     } else if (livePrice?.name) {
       obj.stockName = livePrice.name;
-    } 
+    }
 
       
       obj.changePct=livePrice.changePct;
       // 用已查好的中文名（台股）或英文名（美股）覆蓋 AI 的猜測
-      obj.stockName = displayName || livePrice.name;
       obj.support_s=livePrice.support_s; obj.resistance_s=livePrice.resistance_s; obj.support=livePrice.support; obj.resistance=livePrice.resistance; obj.support_l=livePrice.support_l; obj.resistance_l=livePrice.resistance_l;
       obj.forwardEps=livePrice.forwardEps; obj.trailingEps=livePrice.trailingEps; obj.forwardPE=livePrice.forwardPE; obj.trailingPE=livePrice.trailingPE; obj.pegRatio=livePrice.pegRatio; obj.earningsGrowth=livePrice.earningsGrowth; obj.industryPE=livePrice.industryPE; obj.targetMeanPrice=livePrice.targetMeanPrice; obj.targetLowPrice=livePrice.targetLowPrice; obj.targetHighPrice=livePrice.targetHighPrice;
     }
