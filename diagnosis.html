@@ -341,10 +341,7 @@ async function analyze() {
     if (livePrice?.price) {
       obj.changePct = livePrice.changePct;
     }
-      obj.stockName = displayName || livePrice?.name || obj.stockName;
-    } else if (livePrice?.name) {
-      obj.stockName = livePrice.name;
-    }
+    obj.stockName = displayName || livePrice?.name || obj.stockName;
     if (livePrice) {
       obj.support_s=livePrice.support_s; obj.resistance_s=livePrice.resistance_s; obj.support=livePrice.support; obj.resistance=livePrice.resistance; obj.support_l=livePrice.support_l; obj.resistance_l=livePrice.resistance_l;
       obj.forwardEps=livePrice.forwardEps; obj.trailingEps=livePrice.trailingEps; obj.forwardPE=livePrice.forwardPE; obj.trailingPE=livePrice.trailingPE; obj.pegRatio=livePrice.pegRatio; obj.earningsGrowth=livePrice.earningsGrowth; obj.industryPE=livePrice.industryPE; obj.targetMeanPrice=livePrice.targetMeanPrice; obj.targetLowPrice=livePrice.targetLowPrice; obj.targetHighPrice=livePrice.targetHighPrice;
