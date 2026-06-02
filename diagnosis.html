@@ -340,7 +340,8 @@ async function analyze() {
     }
     if (livePrice?.price) {
       obj.changePct = livePrice.changePct;
-      obj.stockName = displayName || livePrice.name;
+    }
+      obj.stockName = displayName || livePrice?.name || obj.stockName;
     } else if (livePrice?.name) {
       obj.stockName = livePrice.name;
     }
