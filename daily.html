@@ -102,6 +102,10 @@
           style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer">強力買入</div>
         <div id="scan-chip-buy" onclick="setScanFilter('buy')"
           style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer">買入</div>
+        <div id="scan-chip-value" onclick="setScanFilter('value')"
+          style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer">💎 低估</div>
+        <div id="scan-chip-deep_value" onclick="setScanFilter('deep_value')"
+          style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer">💎💎 嚴重低估</div>
       </div>
     </div>
 
@@ -232,6 +236,24 @@ async function sbFetch2(table, qs) {
 let allScanResults = [];
 let scanFilter = 'all';
 
+function getUpsidePct(analText) {
+  const m = analText.match(/\+(\d+\.?\d*)%/);
+  return m ? parseFloat(m[1]) : 0;
+}
+
+function isUndervalued(r, level) {
+  // level: 'value'(25%) or 'deep_value'(30%)
+  const threshold = level === 'deep_value' ? 30 : 25;
+  const fundText = typeof r.fundamental_detail === 'string'
+    ? r.fundamental_detail : JSON.stringify(r.fundamental_detail || {});
+  const analText = typeof r.analyst_detail === 'string'
+    ? r.analyst_detail : JSON.stringify(r.analyst_detail || {});
+  const hasPegLow = fundText.includes('低估');
+  const hasPeLow  = fundText.includes('偏低');
+  const upside = getUpsidePct(analText);
+  return hasPegLow && hasPeLow && upside >= threshold;
+}
+
 async function loadScanResults() {
   document.getElementById('scan-results-list').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入掃描結果...</div></div>';
   const today = new Date().toISOString().slice(0,10);
@@ -249,12 +271,14 @@ async function loadScanResults() {
 
 function setScanFilter(f) {
   scanFilter = f;
-  ['all','strong','buy'].forEach(c => {
+  ['all','strong','buy','value','deep_value'].forEach(c => {
     const el = document.getElementById('scan-chip-' + c);
+    if (!el) return;
+    const isVal = c === 'value' || c === 'deep_value';
     if (c === f) {
-      el.style.borderColor = 'var(--accent)';
-      el.style.color = 'var(--accent)';
-      el.style.background = 'rgba(0,212,255,.1)';
+      el.style.borderColor = isVal ? '#a78bfa' : 'var(--accent)';
+      el.style.color = isVal ? '#a78bfa' : 'var(--accent)';
+      el.style.background = isVal ? 'rgba(167,139,250,.1)' : 'rgba(0,212,255,.1)';
     } else {
       el.style.borderColor = 'var(--border)';
       el.style.color = 'var(--muted)';
@@ -268,9 +292,13 @@ function renderScanResults() {
   let list = [...allScanResults];
   if (scanFilter === 'strong') list = list.filter(r => r.grade === '強力買入');
   if (scanFilter === 'buy')    list = list.filter(r => r.grade === '買入');
+  if (scanFilter === 'value')      list = list.filter(r => isUndervalued(r, 'value'));
+  if (scanFilter === 'deep_value') list = list.filter(r => isUndervalued(r, 'deep_value'));
 
   const strong = allScanResults.filter(r => r.grade === '強力買入').length;
   const buy    = allScanResults.filter(r => r.grade === '買入').length;
+  const value     = allScanResults.filter(r => isUndervalued(r, 'value')).length;
+  const deepValue = allScanResults.filter(r => isUndervalued(r, 'deep_value')).length;
   document.getElementById('scan-stats').innerHTML =
     '<div style="flex:1;background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.3);border-radius:8px;padding:8px;text-align:center">' +
       '<div style="font-size:18px;font-weight:700;color:#00e676">' + strong + '</div>' +
@@ -278,6 +306,12 @@ function renderScanResults() {
     '<div style="flex:1;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.3);border-radius:8px;padding:8px;text-align:center">' +
       '<div style="font-size:18px;font-weight:700;color:var(--accent)">' + buy + '</div>' +
       '<div style="font-size:11px;color:var(--muted)">買入</div></div>' +
+    '<div style="flex:1;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.3);border-radius:8px;padding:8px;text-align:center;cursor:pointer" onclick="setScanFilter(&quot;value&quot;)">' +
+      '<div style="font-size:18px;font-weight:700;color:#a78bfa">' + value + '</div>' +
+      '<div style="font-size:11px;color:var(--muted)">💎 低估</div></div>' +
+    '<div style="flex:1;background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.5);border-radius:8px;padding:8px;text-align:center;cursor:pointer" onclick="setScanFilter(&quot;deep_value&quot;)">' +
+      '<div style="font-size:18px;font-weight:700;color:#c4b5fd">' + deepValue + '</div>' +
+      '<div style="font-size:11px;color:var(--muted)">💎💎 嚴重低估</div></div>' +
     '<div style="flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">' +
       '<div style="font-size:18px;font-weight:700;color:var(--text)">' + allScanResults.length + '</div>' +
       '<div style="font-size:11px;color:var(--muted)">總掃描數</div></div>';
