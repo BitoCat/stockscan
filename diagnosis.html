@@ -339,7 +339,12 @@ async function analyze() {
   showErr('⚠️ 目前無法取得此股票即時資料，分析結果僅供參考，請自行確認股價與公司名稱');
 }
     if (livePrice?.price) {
-      obj.currentPrice=livePrice.price; 
+      obj.stockName = displayName || livePrice.name;
+    } else if (livePrice?.name) {
+      obj.stockName = livePrice.name;
+    } 
+
+      
       obj.changePct=livePrice.changePct;
       // 用已查好的中文名（台股）或英文名（美股）覆蓋 AI 的猜測
       obj.stockName = displayName || livePrice.name;
