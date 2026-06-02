@@ -218,7 +218,7 @@ async function analyze() {
           pd = {chart:{result:[{meta:{regularMarketPrice:data.price,symbol:data.symbol,currency:data.currency,shortName:data.name||data.symbol,previousClose:data.previousClose},indicators:{quote:[{close:data.closes,high:data.highs||[],low:data.lows||[]}]}}]}};
           pd._eps = { forwardEps:data.forwardEps, trailingEps:data.trailingEps, forwardPE:data.forwardPE, trailingPE:data.trailingPE, pegRatio:data.pegRatio, earningsGrowth:data.earningsGrowth, industryPE:data.industryPE, targetMeanPrice:data.targetMeanPrice, targetLowPrice:data.targetLowPrice, targetHighPrice:data.targetHighPrice };
         }
-      } catch(e) {}
+      } catch(e) { console.error('台股抓取失敗:', e); }
     } else {
       // 美股用 Yahoo proxy
       async function tryFetchYahoo(symbol) {
