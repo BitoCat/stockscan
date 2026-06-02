@@ -1,5 +1,5 @@
 # 交易大師 ProTrader 專案摘要（貼給 Claude 用）
-> 最後更新：2026年6月1日
+> 最後更新：2026年6月2日
 
 ---
 
@@ -21,12 +21,22 @@
 ## 技術架構
 
 ### 前端（GitHub Pages）
-純靜態 HTML + JS，無框架。**重要：不使用 supabase-js client**，改用直接 fetch 呼叫 Supabase REST API（因 supabase-js 在此環境下 apikey header 無法正常帶入）。
+純靜態 HTML + JS，無框架。
 
-**Supabase fetch 標準寫法（所有頁面統一）：**
+**重要限制：**
+- **不使用 supabase-js CDN**：在此環境 apikey header 無法正常帶入，一律改用直接 fetch
+- 部分舊頁面（profile.html、admin.html、diagnosis.html 等）仍用 sb 物件，但必須在 head 加上 CDN 才能正常運作：
+  ```html
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
+  <script src="js/supabase.js"></script>
+  ```
+- 新頁面（radar.html、news.html）使用直接 fetch，不依賴 sb 物件
+- **Safari 不支援 AbortSignal.timeout()**：所有 fetch 不可加此參數，直接用 fetch(url)
+
+**Supabase 直接 fetch 標準寫法：**
 ```javascript
 const SUPABASE_URL = 'https://kldumnxdlgovaxtiszyn.supabase.co';
-const SUPABASE_ANON = 'eyJhbGci...（完整 key）';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI';
 const SB_HEADERS = {
   'apikey': SUPABASE_ANON,
   'Authorization': 'Bearer ' + SUPABASE_ANON,
@@ -58,49 +68,51 @@ async function sbQuery(table, params = {}) {
 
 | 路由 | 功能 |
 |------|------|
-| /webhook | TradingView 快訊接收（目前已停用指標通知） |
+| /webhook | TradingView 快訊接收（指標通知已停用） |
 | /quote | 股票報價 API（台股自動判斷 .TW / .TWO） |
 | /test | 健康檢查 |
 | /state | 查看狀態 |
 
+注意：public URL 已是 HTTPS 443，不需要加 port。
+
 ### 自動化（GitHub Actions）
 
-| Workflow | 排程 | 說明 |
+| Workflow | 排程（台灣時間） | 說明 |
 |----------|------|------|
 | taiwan_scanner.yml | 週一到週五 15:10、每月1日09:00 | 台股主力雷達 |
 | whale_scanner.yml | 每週一 09:00 | 美股鯨魚追蹤 |
-| news_scanner.yml | 週一到週五早上 7:30（UTC 23:30） | 新聞日報 |
+| news_scanner.yml | 週一到週五早上 7:30 | 新聞日報 |
 
 ---
 
 ## 所有頁面
 
-| 檔案 | 功能 |
-|------|------|
-| index.html | 首頁儀表板 |
-| diagnosis.html | AI 股票健診（台股/美股） |
-| watchlist.html | 觀察名單 |
-| whale.html | 美股鯨魚追蹤（13F） |
-| radar.html | 台股主力雷達（三頁籤） |
-| tracker.html | 追蹤中心入口（選美股/台股） |
-| daily.html | 盤面解析 |
-| news.html | 新聞日報（台股/美股） |
-| alerts.html | 即時快訊 |
-| announcement.html | 官方公告 |
-| tutorial.html | 投資教學 |
-| contact.html | 聯繫管理員 |
-| profile.html | 我的帳號 |
-| admin.html | 管理後台 |
-| login.html | 登入/註冊 |
-| css/base.css | 共用樣式 |
-| js/supabase.js | Supabase 初始化（部分頁面仍使用，但主要頁面已改為直接 fetch） |
+| 檔案 | 功能 | Supabase 方式 |
+|------|------|------|
+| index.html | 首頁儀表板 | sb（需加CDN） |
+| diagnosis.html | AI 股票健診（台股/美股） | sb（需加CDN） |
+| watchlist.html | 觀察名單 | sb（需加CDN） |
+| whale.html | 美股鯨魚追蹤（13F） | sb（需加CDN） |
+| radar.html | 台股主力雷達（三頁籤） | 直接 fetch |
+| tracker.html | 追蹤中心入口 | sb（需加CDN） |
+| daily.html | 盤面解析 | sb（需加CDN） |
+| news.html | 新聞日報（台股/美股） | 直接 fetch |
+| alerts.html | 即時快訊 | sb（需加CDN） |
+| announcement.html | 官方公告 | sb（需加CDN） |
+| tutorial.html | 投資教學 | sb（需加CDN） |
+| contact.html | 聯繫管理員 | sb（需加CDN） |
+| profile.html | 我的帳號 | sb（需加CDN） |
+| admin.html | 管理後台 | sb（需加CDN） |
+| login.html | 登入/註冊 | sb（需加CDN） |
+| css/base.css | 共用樣式（已全站放大字體） | — |
+| js/supabase.js | Supabase 初始化 | — |
 
 ---
 
 ## Supabase 資料表
 
 ### 用戶相關
-- `profiles` — 用戶資料（plan: free/tw/us/all/admin）
+- `profiles` — 用戶資料（plan: free/tw/us/all/admin，**無 email 欄位**，欄位：id/display_name/plan/created_at/groq_key）
 - `points` — 點數餘額
 - `point_logs` — 點數記錄
 - `watchlist` — 觀察名單（user_id, symbol, market, name, sector, grade, health_score）
@@ -115,7 +127,6 @@ async function sbQuery(table, params = {}) {
 - `tutorials` — 教學文章（show_on_home）
 - `daily_analysis` — 每日盤面解析（show_on_home）
 - `picks` — 精選標的
-- `news_cache` — 舊版新聞快取（已廢棄）
 - `daily_news` — 新版新聞日報（market: tw/us, report_date, title, source, url, published_at, lang）
 
 ### 台股主力雷達
@@ -133,24 +144,25 @@ async function sbQuery(table, params = {}) {
 ## 台股主力雷達（radar.html）
 
 ### 三個頁籤
-1. **🆕 主力新建倉** — 本月相較上月新增個股（投信）+ 外資連續買超
-2. **📊 主力持股追蹤** — 三個子頁：多方共識 / 依基金查詢 / 法人清單
-3. **🧩 主力ETF追蹤** — 投信持有 ETF 清單，依月份和類型篩選
+1. **主力新建倉** — 本月相較上月新增個股（投信）+ 外資連續買超
+2. **主力持股追蹤** — 三個子頁：多方共識 / 依基金查詢 / 法人清單
+3. **主力ETF追蹤** — 投信持有 ETF 清單，依月份和類型篩選
 
 ### 資料來源
 - 投信持股：SITCA 每月前十大持股（月更）
-- ETF 判斷：`/^0\d{3,5}[A-Za-z]?$/`（0開頭4-6碼）
-- 新建倉定義：本月相較上月新增（`n=1`）
+- ETF 判斷正規表達式：/^0\d{3,5}[A-Za-z]?$/（0開頭4-6碼）
+- 新建倉定義：本月相較上月新增（n=1）
 
 ### taiwan_scanner.py 重要邏輯
-- ETF 過濾：`is_etf()` 函式，新建倉和外資訊號都排除 ETF
-- 歷史補抓：`--month YYYYMM` 參數，強制重爬（`if check.data and not target_month`）
-- 比對月份：`get_prev_months(current_month, n=1)`，只比對上個月
+- ETF 過濾：is_etf() 函式，新建倉和外資訊號都排除 ETF
+- 歷史補抓：--month YYYYMM 參數，強制重爬（if check.data and not target_month）
+- 比對月份：get_prev_months(current_month, n=1)，只比對上個月
+- 外資過濾：detect_foreign_accumulation 迴圈開頭加 if is_etf(ticker): continue
 
 ### 資料現況（2026年6月）
 | year_month | 筆數 | 說明 |
 |------------|------|------|
-| 202601 | 4680 | fund_name 有誤（顯示兆豐），但 ticker+fund_id 正確 |
+| 202601 | 4680 | fund_name 有誤（顯示兆豐），前端用 company 欄位臨時修補 |
 | 202602 | 4680 | 同上 |
 | 202603 | 5004 | 同上 |
 | 202604 | 2798 | 正確資料 |
@@ -161,84 +173,82 @@ async function sbQuery(table, params = {}) {
 ## 新聞系統（news.html）
 
 ### 架構
-- **兩個頁籤**：🇹🇼 台股日報 / 🇺🇸 美股日報
-- **資料來源**：NewsAPI + GNews API 自動抓取，每天早上 7:30 更新
-- **儲存**：`daily_news` 表，`lang` 欄位標記 zh/en
-- **前端**：英文新聞顯示 `🇺🇸 英文` 標籤
+- 兩個頁籤：台股日報 / 美股日報
+- 資料來源：NewsAPI + GNews API 自動抓取，每天早上 7:30 更新
+- 儲存：daily_news 表，lang 欄位標記 zh/en
+- 前端：英文新聞顯示橘色「英文」標籤
+- 不需要登入，公開內容
 
 ### news_scanner.py 邏輯
-- **台股**：GNews 台灣在地中文優先 → NewsAPI 中文補充 → 英文補充
-- **美股**：GNews 中文優先 → NewsAPI 中文補充 → 英文補充
-- **過濾**：`is_finance_news()` 排除娛樂/非財經新聞
-- **語言判斷**：含中文字元 → `lang=zh`，否則 `lang=en`
+- 台股：GNews 台灣在地中文優先 → NewsAPI 中文補充 → 英文補充
+- 美股：GNews 中文優先 → NewsAPI 中文補充 → 英文補充
+- 過濾：is_finance_news() 排除娛樂/非財經新聞（中英文關鍵字）
+- 語言判斷：含中文字元 → lang=zh，否則 lang=en
 
 ### GitHub Secrets 需要
-- `SUPABASE_URL`、`SUPABASE_KEY`
-- `NEWS_API_KEY`（newsapi.org，免費100次/天）
-- `GNEWS_API_KEY`（gnews.io，免費100次/天）
+- SUPABASE_URL、SUPABASE_KEY
+- NEWS_API_KEY（newsapi.org，免費100次/天）
+- GNEWS_API_KEY（gnews.io，免費100次/天）
 
 ---
 
 ## 用戶方案邏輯
-- `free`：功能全鎖，只能看首頁
-- `tw/us/all/admin`：功能全開
+- free：功能全鎖，只能看首頁，profile 頁有「聯繫管理員」入口
+- tw/us/all/admin：功能全開
 - 每日登入自動補 100 點
 - AI 健診每次扣 1 點
+- 訂閱方案：NT$3,600/年，結帳時輸入專屬優惠碼折抵 NT$1,200
 
 ---
 
 ## 管理員帳號
-Email：bitocat.trader@gmail.com / plan：admin
+- Email：bitocat.trader@gmail.com
+- plan：admin（profiles 表，不是 user_metadata）
+- 管理後台：admin.html（需 plan=admin 才能進入，不是 all）
 
 ---
 
 ## 開發注意事項
 
 ### 關鍵限制
-- **不要用 supabase-js CDN**：在此環境 apikey header 無法正常帶入，一律改用直接 fetch
-- **不要用 `js/supabase.js` 的 `sb` 物件**：同上原因，新頁面不要依賴它
+- Safari 不支援 AbortSignal.timeout()：所有 fetch 不可加此參數
+- supabase-js 在 GitHub Pages 環境 apikey header 帶不進去：新頁面用直接 fetch；舊頁面需在 head 加 CDN script
 - JS 字串內禁止用全形字元（會造成 SyntaxError）
 - GitHub Actions 版本要用 v4（v3 已棄用）
-- Yahoo Finance 需透過 CORS proxy 抓取
+- Yahoo Finance 需透過 CORS proxy 抓取（美股）
+- profiles 表沒有 email 欄位，查用戶要用 id
 
 ### Supabase RLS 設定
-- `tw_fund_positions`：anon read（SELECT），已設定 policy
-- `daily_news`：anon read + anon insert + anon delete，已設定 policy
-- 新建表後記得設定 RLS policy，否則 anon key 無法讀寫
+- tw_fund_positions：anon SELECT，已設定
+- daily_news：anon SELECT + INSERT + DELETE，已設定
+- 新建表後記得設定 RLS policy
 
 ### 部署方式
-```bash
 git add . && git commit -m "說明" && git push origin main
-```
-部署約 1 分鐘，Cmd+Shift+R 清除快取
+部署約 1 分鐘，Cmd+Shift+R 清除快取，或用無痕視窗驗證
 
 ### JS 語法驗證
-```bash
 node -e "const fs=require('fs');const html=fs.readFileSync('檔案.html','utf8');const start=html.indexOf('<script>');const end=html.indexOf('</script>',start);const AF=Object.getPrototypeOf(async function(){}).constructor;try{new AF(html.slice(start+8,end));console.log('OK');}catch(e){console.log('ERR:',e.message);}"
-```
 
 ### Railway 維運
 - 方案：Hobby（$5/月）
 - 收到 CRASHED email → Railway dashboard → Redeploy
 - 健康檢查路由：/test
+- 不需要加 port，public URL 已是 443
 
 ---
 
 ## 已知問題與待辦
 
 ### 待修正
-1. **台股健診公司名稱有時不正確**（8043 蜜望實顯示成合晶）— `diagnosis.html` 的 `renderResult` 用了 AI 回傳的 `stockName` 覆蓋正確名稱
-2. **漲跌幅有時顯示 NaN%** — `previousClose` 有時為 null，需加防護
-3. **202601~202603 的 fund_name 問題** — 所有基金名稱顯示兆豐開頭，需重爬修正（前端已用 company 欄位顯示做臨時修補）
+1. 漲跌幅有時顯示 NaN% — previousClose 有時為 null，需加防護
 
 ### 待完成
-4. **202606 SITCA 資料** — 等 6 月中旬公告後自動更新
-5. **外資連續買超訊號** — 需累積足夠交易日資料
-6. **持續加碼偵測** — `tw_radar_new_positions` 的 `status=持續加碼` 尚未實作
+2. 202601~202603 fund_name 問題 — 重爬修正（前端已臨時用 company 欄位修補）
+3. 202606 SITCA 資料 — 等 6 月中旬公告後自動更新
+4. 外資連續買超訊號 — 需累積足夠交易日資料
+5. 持續加碼偵測 — tw_radar_new_positions 的 status=持續加碼 尚未實作
 
 ### 未來計畫
 - 港股北水追蹤（tracker.html 已有「開發中」佔位）
 - 新聞更多台灣在地來源
-## 管理員帳號
-Email：bitocat.trader@gmail.com
-plan：admin
