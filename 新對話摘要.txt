@@ -1,5 +1,5 @@
 # 交易大師 ProTrader 專案摘要（貼給 Claude 用）
-> 最後更新：2026年6月3日
+> 最後更新：2026年6月7日
 
 ---
 
@@ -15,6 +15,69 @@
 | 資料庫 | https://kldumnxdlgovaxtiszyn.supabase.co（Supabase） |
 | Telegram Bot | @Boss1688Bot，Channel ID：-1003990900011 |
 | Supabase anon key | eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI |
+
+---
+
+## TradingView 快訊中繼 Bot（tw-alert-bot）✅ 2026-06-07 完成
+
+### 目的
+TradingView 快訊只送股票代號（如 `2330`），中繼 Bot 自動補上台股中文名稱後送到 Telegram。美股維持原代號不轉換。
+
+### 架構
+```
+TradingView Webhook → Railway（FastAPI）→ Supabase tw_stocks → Telegram
+```
+
+### 關鍵資訊
+| 項目 | 內容 |
+|------|------|
+| GitHub | https://github.com/BitoCat/tw-alert-bot |
+| Railway Webhook URL | https://tw-alert-bot-production.up.railway.app/webhook |
+| Railway Health Check | https://tw-alert-bot-production.up.railway.app/health |
+| 本機專案位置 | `~/Downloads/home/claude/tw-alert-bot/` |
+
+### Railway 環境變數
+- `SUPABASE_URL`：同交易大師專案
+- `SUPABASE_KEY`：**service_role key**（不是 anon key，因為需要寫入權限）
+- `TELEGRAM_TOKEN`：Telegram Bot Token
+
+### Supabase 資料表
+- 資料表：`tw_stocks`（欄位：`code` PK、`name`、`updated_at`）
+- 資料來源：TWSE Open API（上市）+ TPEX Open API（上櫃）
+- 共 2249 筆
+
+### TradingView 快訊 JSON 格式
+```json
+{
+  "chat_id": "頻道ID",
+  "text": "🚨: {{ticker}} 15m 低點下軌"
+}
+```
+
+### 使用方式
+- **早上**：開兩個台股指標快訊，對應台股清單，Webhook 打到上方 URL
+- **晚上**：關台股，開兩個美股指標快訊，對應美股清單，Webhook 同一個 URL
+- 切換時只在 TradingView 操作，server 完全不用動
+
+### 運作邏輯
+- ticker 是純數字（如 `2330`）→ 查 `tw_stocks`，補中文名稱
+- ticker 有 `TWSE:` 或 `TPEX:` 前綴 → 去掉前綴後查表
+- ticker 是美股（NASDAQ/NYSE/AMEX）→ 直接送出代號，不查表
+
+### Telegram 頻道
+- 台股報報：台股快訊頻道
+- 美股報報：美股快訊頻道
+
+### 日常維護
+```bash
+# 每季更新台股名稱（新股上市時）
+cd ~/Downloads/home/claude/tw-alert-bot
+python3 import_stocks.py
+
+# 修改程式後部署
+git add . && git commit -m "說明" && git push
+# push 後 Railway 自動重新部署
+```
 
 ---
 
@@ -125,6 +188,9 @@ const SB_HEADERS = {
 - scan_watchlist — 掃描股票清單（symbol, name, market，admin 在 daily.html 管理）
 - scan_results — 每日掃描結果（symbol, name, scan_date, score, tech_score, analyst_score, whale_score, fundamental_score, tech_detail, analyst_detail, whale_detail, fundamental_detail, grade, price）
 
+### TradingView 快訊中繼
+- tw_stocks — 台股代號對照表（code PK, name, updated_at），存放在交易大師同一個 Supabase 專案
+
 ---
 
 ## 美股強力買入掃描系統（daily.html）
@@ -219,6 +285,7 @@ const SB_HEADERS = {
 - daily_news：anon SELECT + INSERT + DELETE
 - scan_watchlist：anon 全部權限
 - scan_results：anon SELECT + INSERT + DELETE
+- tw_stocks：anon SELECT（service_role 負責寫入）
 
 ### Railway 維運
 - 方案：Hobby（$5/月）
