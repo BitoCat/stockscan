@@ -329,6 +329,45 @@ function switchSubTab(market, tab) {
   if (market === 'tw') { twSubTab = tab; loadTwSubTab(tab); }
 }
 
+async function loadDailyList(market) {
+  const containerId = market === 'tw' ? 'daily-list-tw' : 'daily-list-us';
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入中...</div></div>';
+
+  try {
+    const url = SUPABASE_URL2 + '/rest/v1/daily_analysis?market=eq.' + market + '&order=published_at.desc&limit=10';
+    const resp = await fetch(url, { headers: SB_HDR });
+    const data = resp.ok ? await resp.json() : [];
+
+    if (!data || !data.length) {
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:36px;margin-bottom:10px">📭</div><div>暫無' + (market === 'tw' ? '台股' : '美股') + '大盤解析</div><div style="font-size:12px;margin-top:8px">每天早上自動生成</div></div>';
+      return;
+    }
+
+    container.innerHTML = '';
+    data.forEach(item => {
+      const div = document.createElement('div');
+      div.style.cssText = 'background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px';
+      const sentColor = item.sentiment === 'bullish' ? '#00e676' : item.sentiment === 'bearish' ? '#e74c3c' : 'var(--warn)';
+      const sentLabel = item.sentiment === 'bullish' ? '🟢 偏多' : item.sentiment === 'bearish' ? '🔴 偏空' : '🟡 中性';
+      const dateStr = item.published_at ? new Date(item.published_at).toLocaleDateString('zh-TW', {year:'numeric',month:'long',day:'numeric'}) : '';
+      div.innerHTML =
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">' +
+          '<div style="font-size:15px;font-weight:700;flex:1">' + (item.title || '') + '</div>' +
+          '<div style="text-align:right;margin-left:12px">' +
+            '<div style="font-size:12px;font-weight:600;color:' + sentColor + '">' + sentLabel + '</div>' +
+            '<div style="font-size:11px;color:var(--muted);margin-top:2px">' + dateStr + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="font-size:13px;line-height:1.8;color:var(--text);white-space:pre-wrap">' + (item.content || '') + '</div>';
+      container.appendChild(div);
+    });
+  } catch(e) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">載入失敗，請稍後再試</div>';
+  }
+}
+
 function loadUsSubTab(tab) {
   if (tab === 'daily' && !usDailyLoaded) {
     usDailyLoaded = true;
