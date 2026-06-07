@@ -54,63 +54,132 @@
 <div class="page-wrap">
   <div class="sec-head">📊 盤面</div>
 
-  <!-- 主頁籤 -->
+  <!-- 主頁籤：市場 -->
   <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:0;background:var(--panel2)">
-    <div id="main-tab-daily" onclick="switchMainTab('daily')"
+    <div id="main-tab-us" onclick="switchMainTab('us')"
       style="flex:1;text-align:center;padding:11px 8px;font-size:13px;font-weight:600;color:var(--accent);border-bottom:2px solid var(--accent);cursor:pointer">
-      📊 盤面解析
+      🇺🇸 美股
     </div>
-    <div id="main-tab-scan" onclick="switchMainTab('scan')"
+    <div id="main-tab-tw" onclick="switchMainTab('tw')"
       style="flex:1;text-align:center;padding:11px 8px;font-size:13px;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer">
-      🎯 強力買入清單
+      🇹🇼 台股
     </div>
   </div>
 
-  <!-- Tab 1: 盤面解析 -->
-  <div id="pane-daily">
-    <div style="padding:12px 0">
-      <div class="mkt-filter">
-        <button class="mf-btn active" id="mf-all" onclick="setMkt('all')">🌏 全部</button>
-        <button class="mf-btn" id="mf-tw" onclick="setMkt('tw')">🇹🇼 台股</button>
-        <button class="mf-btn" id="mf-us" onclick="setMkt('us')">🇺🇸 美股</button>
+  <!-- 美股 -->
+  <div id="pane-us">
+    <!-- 美股子頁籤 -->
+    <div style="display:flex;gap:0;background:var(--bg3);border-radius:10px;padding:3px;margin:10px 0">
+      <div id="us-tab-daily" onclick="switchSubTab('us','daily')"
+        style="flex:1;text-align:center;padding:7px 8px;font-size:12px;color:var(--amber-light);cursor:pointer;border-radius:8px;background:var(--bg2);font-weight:600">
+        📋 大盤解析
+      </div>
+      <div id="us-tab-calendar" onclick="switchSubTab('us','calendar')"
+        style="flex:1;text-align:center;padding:7px 8px;font-size:12px;color:var(--muted);cursor:pointer;border-radius:8px">
+        📅 行事曆
+      </div>
+      <div id="us-tab-scan" onclick="switchSubTab('us','scan')"
+        style="flex:1;text-align:center;padding:7px 8px;font-size:12px;color:var(--muted);cursor:pointer;border-radius:8px">
+        🎯 強力買入
       </div>
     </div>
-    <div id="daily-list"><div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入解析...</div></div></div>
+
+    <!-- 美股大盤解析 -->
+    <div id="us-pane-daily">
+      <div id="daily-list-us"><div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入美股解析...</div></div></div>
+    </div>
+
+    <!-- 美股行事曆 -->
+    <div id="us-pane-calendar" style="display:none">
+      <div style="padding:8px 0 12px;font-size:12px;color:var(--muted)">美國重要經濟事件，時間為美東時間</div>
+      <iframe src="https://sslecal2.investing.com?columns=exc_flags,exc_currency,exc_importance,exc_actual,exc_forecast,exc_previous&category=_employment,_economicActivity,_inflation,_centralBanks,_confidenceIndex,_balance,_Bonds&importance=2,3&features=datepicker,timezone&countries=5&calType=week&timeZone=55&lang=1"
+        width="100%" height="500" frameborder="0" allowtransparency="true" marginwidth="0" marginheight="0"
+        style="border-radius:10px;border:1px solid var(--border)"></iframe>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:right">資料來源：Investing.com</div>
+    </div>
+
+    <!-- 美股強力買入 -->
+    <div id="us-pane-scan" style="display:none">
+      <!-- Admin 管理清單區 -->
+      <div id="admin-watchlist-mgr" style="display:none;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px;margin:12px 0">
+        <div style="font-size:13px;font-weight:600;color:var(--accent);margin-bottom:10px">⚙️ 管理美股掃描清單（Admin）</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input id="scan-sym-input" placeholder="股票代號，如 AAPL" style="flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:#fff;padding:8px 12px;font-size:14px;outline:none">
+          <input id="scan-name-input" placeholder="名稱（選填）" style="flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:#fff;padding:8px 12px;font-size:14px;outline:none">
+          <button onclick="addScanStock()" style="background:var(--accent);color:#000;border:none;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer">新增</button>
+        </div>
+        <div id="scan-watchlist-list" style="max-height:200px;overflow-y:auto"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 8px">
+        <div style="font-size:11px;color:var(--muted)" id="scan-update-info">每天早上自動更新</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <div id="scan-chip-all" onclick="setScanFilter('all')" style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--accent);color:var(--accent);background:rgba(0,212,255,.1);cursor:pointer">全部</div>
+          <div id="scan-chip-strong" onclick="setScanFilter('strong')" style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer">強力買入</div>
+          <div id="scan-chip-buy" onclick="setScanFilter('buy')" style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer">買入</div>
+          <div id="scan-chip-value" onclick="setScanFilter('value')" style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer">💎 低估</div>
+          <div id="scan-chip-deep_value" onclick="setScanFilter('deep_value')" style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer">💎💎 嚴重低估</div>
+        </div>
+      </div>
+      <div id="scan-stats" style="display:flex;gap:8px;margin-bottom:12px"></div>
+      <div id="scan-results-list"><div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入掃描結果...</div></div></div>
+    </div>
   </div>
 
-  <!-- Tab 2: 強力買入清單 -->
-  <div id="pane-scan" style="display:none">
-
-    <!-- Admin 管理清單區 -->
-    <div id="admin-watchlist-mgr" style="display:none;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px;margin:12px 0">
-      <div style="font-size:13px;font-weight:600;color:var(--accent);margin-bottom:10px">⚙️ 管理掃描清單（Admin）</div>
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <input id="scan-sym-input" placeholder="股票代號，如 AAPL" style="flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:#fff;padding:8px 12px;font-size:14px;outline:none">
-        <input id="scan-name-input" placeholder="名稱（選填）" style="flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:#fff;padding:8px 12px;font-size:14px;outline:none">
-        <button onclick="addScanStock()" style="background:var(--accent);color:#000;border:none;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer">新增</button>
+  <!-- 台股 -->
+  <div id="pane-tw" style="display:none">
+    <!-- 台股子頁籤 -->
+    <div style="display:flex;gap:0;background:var(--bg3);border-radius:10px;padding:3px;margin:10px 0">
+      <div id="tw-tab-daily" onclick="switchSubTab('tw','daily')"
+        style="flex:1;text-align:center;padding:7px 8px;font-size:12px;color:var(--amber-light);cursor:pointer;border-radius:8px;background:var(--bg2);font-weight:600">
+        📋 大盤解析
       </div>
-      <div id="scan-watchlist-list" style="max-height:200px;overflow-y:auto"></div>
-    </div>
-
-    <!-- 今日掃描結果 -->
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 8px">
-      <div style="font-size:11px;color:var(--muted)" id="scan-update-info">每天早上自動更新</div>
-      <div style="display:flex;gap:6px">
-        <div id="scan-chip-all" onclick="setScanFilter('all')"
-          style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--accent);color:var(--accent);background:rgba(0,212,255,.1);cursor:pointer">全部</div>
-        <div id="scan-chip-strong" onclick="setScanFilter('strong')"
-          style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer">強力買入</div>
-        <div id="scan-chip-buy" onclick="setScanFilter('buy')"
-          style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer">買入</div>
-        <div id="scan-chip-value" onclick="setScanFilter('value')"
-          style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer">💎 低估</div>
-        <div id="scan-chip-deep_value" onclick="setScanFilter('deep_value')"
-          style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer">💎💎 嚴重低估</div>
+      <div id="tw-tab-calendar" onclick="switchSubTab('tw','calendar')"
+        style="flex:1;text-align:center;padding:7px 8px;font-size:12px;color:var(--muted);cursor:pointer;border-radius:8px">
+        📅 行事曆
+      </div>
+      <div id="tw-tab-scan" onclick="switchSubTab('tw','scan')"
+        style="flex:1;text-align:center;padding:7px 8px;font-size:12px;color:var(--muted);cursor:pointer;border-radius:8px">
+        🎯 強力買入
       </div>
     </div>
 
-    <div id="scan-stats" style="display:flex;gap:8px;margin-bottom:12px"></div>
-    <div id="scan-results-list"><div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入掃描結果...</div></div></div>
+    <!-- 台股大盤解析 -->
+    <div id="tw-pane-daily">
+      <div id="daily-list-tw"><div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入台股解析...</div></div></div>
+    </div>
+
+    <!-- 台股行事曆 -->
+    <div id="tw-pane-calendar" style="display:none">
+      <div style="padding:8px 0 12px;font-size:12px;color:var(--muted)">台灣重要經濟事件與財報日程</div>
+      <iframe src="https://sslecal2.investing.com?columns=exc_flags,exc_currency,exc_importance,exc_actual,exc_forecast,exc_previous&category=_employment,_economicActivity,_inflation,_centralBanks,_confidenceIndex,_balance,_Bonds&importance=2,3&features=datepicker,timezone&countries=40&calType=week&timeZone=31&lang=1"
+        width="100%" height="500" frameborder="0" allowtransparency="true" marginwidth="0" marginheight="0"
+        style="border-radius:10px;border:1px solid var(--border)"></iframe>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:right">資料來源：Investing.com</div>
+    </div>
+
+    <!-- 台股強力買入 -->
+    <div id="tw-pane-scan" style="display:none">
+      <!-- Admin 管理台股清單 -->
+      <div id="admin-watchlist-mgr-tw" style="display:none;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px;margin:12px 0">
+        <div style="font-size:13px;font-weight:600;color:var(--accent);margin-bottom:10px">⚙️ 管理台股掃描清單（Admin）</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input id="scan-sym-tw-input" placeholder="股票代號，如 2330" style="flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:#fff;padding:8px 12px;font-size:14px;outline:none">
+          <input id="scan-name-tw-input" placeholder="名稱（選填）" style="flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:#fff;padding:8px 12px;font-size:14px;outline:none">
+          <button onclick="addScanStockTw()" style="background:var(--accent);color:#000;border:none;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer">新增</button>
+        </div>
+        <div id="scan-watchlist-tw-list" style="max-height:200px;overflow-y:auto"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 8px">
+        <div style="font-size:11px;color:var(--muted)" id="scan-update-info-tw">每天收盤後自動更新</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <div id="tw-chip-all" onclick="setTwFilter('all')" style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--accent);color:var(--accent);background:rgba(0,212,255,.1);cursor:pointer">全部</div>
+          <div id="tw-chip-strong" onclick="setTwFilter('strong')" style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer">強力買入</div>
+          <div id="tw-chip-buy" onclick="setTwFilter('buy')" style="font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer">買入</div>
+        </div>
+      </div>
+      <div id="tw-scan-stats" style="display:flex;gap:8px;margin-bottom:12px"></div>
+      <div id="tw-scan-results-list"><div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入台股掃描結果...</div></div></div>
+    </div>
   </div>
 </div>
 <nav class="tabbar">
@@ -190,14 +259,19 @@ function timeAgo(iso) {
 /* ══════════════════════════════════════════
    主頁籤切換
 ══════════════════════════════════════════ */
+// 狀態追蹤
+let usSubTab = 'daily';
+let twSubTab = 'daily';
 let scanLoaded = false;
+let twScanLoaded = false;
+let usDailyLoaded = false;
+let twDailyLoaded = false;
 
-function switchMainTab(tab) {
-  const tabs = ['daily', 'scan'];
-  tabs.forEach(t => {
-    const btn = document.getElementById('main-tab-' + t);
-    const pane = document.getElementById('pane-' + t);
-    if (t === tab) {
+function switchMainTab(market) {
+  ['us','tw'].forEach(m => {
+    const btn  = document.getElementById('main-tab-' + m);
+    const pane = document.getElementById('pane-' + m);
+    if (m === market) {
       btn.style.color = 'var(--accent)';
       btn.style.borderBottom = '2px solid var(--accent)';
       btn.style.fontWeight = '600';
@@ -209,12 +283,58 @@ function switchMainTab(tab) {
       pane.style.display = 'none';
     }
   });
+  if (market === 'us') loadUsSubTab(usSubTab);
+  if (market === 'tw') loadTwSubTab(twSubTab);
+}
+
+function switchSubTab(market, tab) {
+  const tabs = ['daily','calendar','scan'];
+  tabs.forEach(t => {
+    const btn  = document.getElementById(market + '-tab-' + t);
+    const pane = document.getElementById(market + '-pane-' + t);
+    if (!btn || !pane) return;
+    if (t === tab) {
+      btn.style.background = 'var(--bg2)';
+      btn.style.color = 'var(--amber-light)';
+      btn.style.fontWeight = '600';
+      pane.style.display = 'block';
+    } else {
+      btn.style.background = '';
+      btn.style.color = 'var(--muted)';
+      btn.style.fontWeight = 'normal';
+      pane.style.display = 'none';
+    }
+  });
+  if (market === 'us') { usSubTab = tab; loadUsSubTab(tab); }
+  if (market === 'tw') { twSubTab = tab; loadTwSubTab(tab); }
+}
+
+function loadUsSubTab(tab) {
+  if (tab === 'daily' && !usDailyLoaded) {
+    usDailyLoaded = true;
+    loadDailyList('us');
+  }
   if (tab === 'scan' && !scanLoaded) {
     scanLoaded = true;
     loadScanResults();
     if (cp?.plan === 'admin') {
       document.getElementById('admin-watchlist-mgr').style.display = 'block';
       loadScanWatchlist();
+    }
+  }
+}
+
+function loadTwSubTab(tab) {
+  if (tab === 'daily' && !twDailyLoaded) {
+    twDailyLoaded = true;
+    loadDailyList('tw');
+  }
+  if (tab === 'scan' && !twScanLoaded) {
+    twScanLoaded = true;
+    loadTwScanResults();
+    if (cp?.plan === 'admin') {
+      document.getElementById('admin-watchlist-mgr-tw').style.display = 'block';
+      loadScanWatchlistTw();
     }
   }
 }
@@ -388,11 +508,13 @@ function renderScanResults() {
   });
 }
 
-function scoreItem(label, val) {
+function scoreItem(label, val, max) {
   const v = val || 0;
-  const color = v >= 20 ? '#00e676' : v >= 15 ? 'var(--accent)' : v >= 10 ? 'var(--warn)' : 'var(--muted)';
+  const m = max || 25;
+  const pct = v / m;
+  const color = pct >= 0.8 ? '#00e676' : pct >= 0.6 ? 'var(--accent)' : pct >= 0.4 ? 'var(--warn)' : 'var(--muted)';
   return '<div class="score-item"><div class="score-label">' + label + '</div>' +
-    '<div class="score-val" style="color:' + color + '">' + v + '<span style="font-size:10px;color:var(--muted)">/25</span></div></div>';
+    '<div class="score-val" style="color:' + color + '">' + v + '<span style="font-size:10px;color:var(--muted)">/' + m + '</span></div></div>';
 }
 
 function detailRows(title, obj) {
@@ -457,6 +579,158 @@ async function removeScanStock(sym) {
     method: 'DELETE', headers: SB_HDR
   });
   await loadScanWatchlist();
+}
+
+/* ══════════════════════════════════════════
+   台股掃描
+══════════════════════════════════════════ */
+let allTwScanResults = [];
+let twScanFilter = 'all';
+
+async function loadTwScanResults() {
+  document.getElementById('tw-scan-results-list').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入台股掃描結果...</div></div>';
+  const today = new Date().toISOString().slice(0,10);
+  let data = await sbFetch2('scan_results_tw', 'scan_date=eq.' + today + '&order=score.desc&limit=100');
+  if (!data || !data.length) {
+    data = await sbFetch2('scan_results_tw', 'order=scan_date.desc,score.desc&limit=100');
+  }
+  allTwScanResults = data || [];
+  if (allTwScanResults.length) {
+    const d = allTwScanResults[0].scan_date;
+    document.getElementById('scan-update-info-tw').textContent = '掃描日期：' + d + '　每天收盤後自動更新';
+  }
+  renderTwScanResults();
+}
+
+function setTwFilter(f) {
+  twScanFilter = f;
+  ['all','strong','buy'].forEach(c => {
+    const el = document.getElementById('tw-chip-' + c);
+    if (!el) return;
+    if (c === f) {
+      el.style.borderColor = 'var(--accent)';
+      el.style.color = 'var(--accent)';
+      el.style.background = 'rgba(0,212,255,.1)';
+    } else {
+      el.style.borderColor = 'var(--border)';
+      el.style.color = 'var(--muted)';
+      el.style.background = 'transparent';
+    }
+  });
+  renderTwScanResults();
+}
+
+function renderTwScanResults() {
+  let list = [...allTwScanResults];
+  if (twScanFilter === 'strong') list = list.filter(r => r.grade === '強力買入');
+  if (twScanFilter === 'buy')    list = list.filter(r => r.grade === '買入');
+
+  const strong = allTwScanResults.filter(r => r.grade === '強力買入').length;
+  const buy    = allTwScanResults.filter(r => r.grade === '買入').length;
+  document.getElementById('tw-scan-stats').innerHTML =
+    '<div style="flex:1;background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.3);border-radius:8px;padding:8px;text-align:center">' +
+      '<div style="font-size:18px;font-weight:700;color:#00e676">' + strong + '</div>' +
+      '<div style="font-size:11px;color:var(--muted)">強力買入</div></div>' +
+    '<div style="flex:1;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.3);border-radius:8px;padding:8px;text-align:center">' +
+      '<div style="font-size:18px;font-weight:700;color:var(--accent)">' + buy + '</div>' +
+      '<div style="font-size:11px;color:var(--muted)">買入</div></div>' +
+    '<div style="flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">' +
+      '<div style="font-size:18px;font-weight:700;color:var(--text)">' + allTwScanResults.length + '</div>' +
+      '<div style="font-size:11px;color:var(--muted)">總掃描數</div></div>';
+
+  const container = document.getElementById('tw-scan-results-list');
+  if (!list.length) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:36px;margin-bottom:10px">🔍</div><div>暫無台股掃描結果</div><div style="font-size:12px;margin-top:8px">請先在 admin 管理頁面新增台股清單</div></div>';
+    return;
+  }
+  container.innerHTML = '';
+  list.forEach(r => {
+    const gradeClass = r.grade === '強力買入' ? 'grade-strong' : r.grade === '買入' ? 'grade-buy' : 'grade-watch';
+    const gradeColor = r.grade === '強力買入' ? '#00e676' : r.grade === '買入' ? 'var(--accent)' : 'var(--warn)';
+    const scorePct = Math.min(100, r.score || 0) + '%';
+    const techD  = tryParseJson(r.tech_detail);
+    const fundD  = tryParseJson(r.fundamental_detail);
+    const instD  = tryParseJson(r.institutional_detail);
+    const card = document.createElement('div');
+    card.className = 'scan-card ' + gradeClass;
+    card.innerHTML =
+      '<div class="card-header-area" style="cursor:pointer">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">' +
+        '<div>' +
+          '<span style="font-size:11px;font-weight:600;color:' + gradeColor + ';background:rgba(255,255,255,.07);border-radius:5px;padding:2px 8px">' + r.grade + '</span>' +
+          '<div style="font-size:18px;font-weight:700;margin-top:6px">' + r.symbol + '</div>' +
+          '<div style="font-size:12px;color:var(--muted)">' + (r.name || '') + '</div>' +
+        '</div>' +
+        '<div style="text-align:right">' +
+          '<div style="font-size:28px;font-weight:900;color:' + gradeColor + '">' + (r.score || 0) + '</div>' +
+          '<div style="font-size:10px;color:var(--muted)">/ 100分</div>' +
+          (r.price ? '<div style="font-size:12px;color:var(--muted);margin-top:2px">$' + r.price + '</div>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="score-bar"><div class="score-fill" style="width:' + scorePct + ';background:' + gradeColor + '"></div></div>' +
+      '</div>' +
+      '<div class="score-grid">' +
+        scoreItem('📈 技術面', r.tech_score, 34) +
+        scoreItem('📋 基本面', r.fundamental_score, 33) +
+        scoreItem('🏦 投信持股', r.institutional_score, 33) +
+      '</div>' +
+      '<div id="tw-detail-' + r.symbol + '" class="detail-panel">' +
+        detailRows('技術面', techD) +
+        detailRows('基本面', fundD) +
+        detailRows('投信持股', instD) +
+      '</div>' +
+      '<div style="text-align:center;margin-top:8px;font-size:12px;color:var(--muted)" id="tw-toggle-' + r.symbol + '">▼ 展開詳情</div>';
+
+    card.querySelector('[id^="tw-toggle-"]').addEventListener('click', e => {
+      e.stopPropagation();
+      const dp = document.getElementById('tw-detail-' + r.symbol);
+      const tg = document.getElementById('tw-toggle-' + r.symbol);
+      if (dp.style.display === 'none' || !dp.style.display) { dp.style.display='block'; tg.textContent='▲ 收起詳情'; }
+      else { dp.style.display='none'; tg.textContent='▼ 展開詳情'; }
+    });
+    card.querySelector('.card-header-area').addEventListener('click', () => {
+      window.open('diagnosis.html?ticker=' + r.symbol + '&market=tw', '_blank');
+    });
+    container.appendChild(card);
+  });
+}
+
+// 台股 watchlist 管理
+async function loadScanWatchlistTw() {
+  const data = await sbFetch2('scan_watchlist_tw', 'order=symbol.asc');
+  const el = document.getElementById('scan-watchlist-tw-list');
+  if (!data || !data.length) { el.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0">清單為空</div>'; return; }
+  el.innerHTML = data.map(s =>
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">' +
+      '<div><span style="font-weight:600;font-size:14px">' + s.symbol + '</span>' +
+        (s.name ? '<span style="font-size:12px;color:var(--muted);margin-left:8px">' + s.name + '</span>' : '') + '</div>' +
+      '<button onclick="removeScanStockTw(&quot;' + s.symbol + '&quot;)" style="background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;white-space:nowrap">✕ 刪除</button>' +
+    '</div>'
+  ).join('');
+}
+
+async function addScanStockTw() {
+  const sym  = document.getElementById('scan-sym-tw-input').value.trim().toUpperCase();
+  const name = document.getElementById('scan-name-tw-input').value.trim();
+  if (!sym) return;
+  const resp = await fetch(SUPABASE_URL2 + '/rest/v1/scan_watchlist_tw', {
+    method: 'POST',
+    headers: { ...SB_HDR, 'Prefer': 'return=representation' },
+    body: JSON.stringify({ symbol: sym, name: name })
+  });
+  if (resp.ok) {
+    document.getElementById('scan-sym-tw-input').value = '';
+    document.getElementById('scan-name-tw-input').value = '';
+    await loadScanWatchlistTw();
+  } else { alert('新增失敗（可能已存在）'); }
+}
+
+async function removeScanStockTw(sym) {
+  if (!confirm('確定刪除 ' + sym + '？')) return;
+  await fetch(SUPABASE_URL2 + '/rest/v1/scan_watchlist_tw?symbol=eq.' + sym, {
+    method: 'DELETE', headers: SB_HDR
+  });
+  await loadScanWatchlistTw();
 }
 </script>
 </body>
