@@ -220,7 +220,7 @@ async function loadContent() {
   const isFree = currentProfile?.plan === 'free';
 
   // 公告（所有會員都能看）
-  const annRes = await sb.from('announcements').select('*').eq('show_on_home', true).order('is_pinned', {ascending:false}).order('published_at', {ascending:false}).limit(5);
+  const annRes = await sb.from('announcements').select('*').eq('show_on_home', true).order('is_pinned', {ascending:false}).order('published_at', {ascending:false}).limit(10);
   if (annRes.data?.length) {
     document.getElementById('sec-announce').style.display = 'block';
     document.getElementById('list-announce').innerHTML = annRes.data.map(a =>
