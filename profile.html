@@ -306,6 +306,15 @@ let currentUser = null, currentProfile = null;
   currentProfile = await getProfile(currentUser.id);
   renderProfile();
   loadSavedKey();
+
+  // 控制導覽列：Free 會員鎖住頁籤
+  const isFree = !currentProfile || currentProfile.plan === 'free';
+  if (isFree) {
+    document.querySelectorAll('.tb-locked').forEach(el => {
+      el.style.opacity = '0.35';
+      el.style.pointerEvents = 'none';
+    });
+  }
 })();
 
 function renderProfile() {
