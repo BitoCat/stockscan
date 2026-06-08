@@ -157,11 +157,11 @@ if ("serviceWorker" in navigator) {
 
 <nav class="tabbar">
   <a class="tb active" href="index.html"><span class="ti">🏠</span>首頁</a>
-  <a class="tb" href="watchlist.html"><span class="ti">⭐</span>觀察名單</a>
-  <a class="tb" href="news.html"><span class="ti">📰</span>新聞</a>
-  <a class="tb" href="daily.html"><span class="ti">📊</span>盤面</a>
-  <a class="tb" href="tracker.html"><span class="ti">🔭</span>追蹤</a>
-  <a class="tb" href="alerts.html"><span class="ti">⚡</span>快訊</a>
+  <a class="tb tb-locked" href="watchlist.html"><span class="ti">⭐</span>觀察名單</a>
+  <a class="tb tb-locked" href="news.html"><span class="ti">📰</span>新聞</a>
+  <a class="tb tb-locked" href="daily.html"><span class="ti">📊</span>盤面</a>
+  <a class="tb tb-locked" href="tracker.html"><span class="ti">🔭</span>追蹤</a>
+  <a class="tb tb-locked" href="alerts.html"><span class="ti">⚡</span>快訊</a>
   <a class="tb" href="profile.html"><span class="ti">👤</span>我的</a>
 </nav>
 
@@ -187,6 +187,15 @@ let currentUser = null, currentProfile = null;
   if (bonusGiven) showToast('🎁 每日登入補點 +100 點！', 'success');
   renderHeader();
   loadContent();
+  
+  // 控制導覽列：Free 會員鎖住頁籤
+  const isFree = !currentProfile || currentProfile.plan === 'free';
+  if (isFree) {
+    document.querySelectorAll('.tb-locked').forEach(el => {
+      el.style.opacity = '0.35';
+      el.style.pointerEvents = 'none';
+    });
+  }
 })();
 
 function renderHeader() {
