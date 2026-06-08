@@ -217,9 +217,9 @@ function renderHeader() {
 }
 
 async function loadContent() {
-  if (currentProfile?.plan === 'free') return;
+  const isFree = currentProfile?.plan === 'free';
 
-  // 公告
+  // 公告（所有會員都能看）
   const annRes = await sb.from('announcements').select('*').eq('show_on_home', true).order('is_pinned', {ascending:false}).order('published_at', {ascending:false}).limit(3);
   if (annRes.data?.length) {
     document.getElementById('sec-announce').style.display = 'block';
@@ -231,6 +231,9 @@ async function loadContent() {
       "</a>"
     ).join('');
   }
+
+  // Free 會員只看公告，其他內容不顯示
+  if (isFree) return;
 
   // 盤面解析
   const dailyRes = await sb.from('daily_analysis').select('*').eq('show_on_home', true).order('published_at', {ascending:false}).limit(3);
