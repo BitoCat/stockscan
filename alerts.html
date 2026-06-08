@@ -1,6 +1,23 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-<head>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script>
+(async () => {
+  const user = await requireAuth();
+  if (!user) return;
+  const profile = await getProfile(user.id);
+  const plan = profile?.plan || 'free';
+  if (plan === 'free') {
+    window.location.href = 'index.html';
+    return;
+  }
+  document.querySelectorAll('.tb-locked').forEach(el => {
+    el.style.opacity = '0.35';
+    el.style.pointerEvents = 'none';
+  });
+})();
+</script><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>交易大師 · 即時快訊</title>
