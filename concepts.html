@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>概念股雷達 - 交易大師 ProTrader</title>
+<link rel="stylesheet" href="css/base.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
+<style>
+  .cp-wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  .cp-title { font-size: 1.5em; font-weight: 700; margin: 12px 0 4px; }
+  .cp-sub { color: #888; font-size: 0.9em; margin-bottom: 16px; }
+
+  /* 概念按鈕牆 */
+  .cp-cat { margin: 14px 0 6px; font-weight: 700; color: #f0a500; }
+  .cp-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+  .cp-btn {
+    padding: 8px 14px; border-radius: 20px; border: 1px solid #444;
+    background: #1e1e2a; color: #ddd; cursor: pointer; font-size: 0.95em;
+  }
+  .cp-btn:hover { border-color: #f0a500; color: #f0a500; }
+  .cp-btn.active { background: #f0a500; color: #111; border-color: #f0a500; font-weight: 700; }
+
+  /* 表格 */
+  .cp-table-box { margin-top: 20px; overflow-x: auto; }
+  table.cp-table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
+  .cp-table th, .cp-table td { padding: 9px 8px; border-bottom: 1px solid #333; text-align: right; white-space: nowrap; }
+  .cp-table th { color: #aaa; cursor: pointer; user-select: none; position: sticky; top: 0; background: #15151f; }
+  .cp-table th:hover { color: #f0a500; }
+  .cp-table td:first-child, .cp-table th:first-child { text-align: left; }
+  .cp-stock-link { color: #4da3ff; cursor: pointer; text-decoration: none; }
+  .cp-stock-link:hover { text-decoration: underline; }
+  .up { color: #ff4d4d; }     /* 台股慣例：紅漲 */
+  .down { color: #2ecc71; }   /* 綠跌 */
+  .muted { color: #666; }
+  tr.cp-row { cursor: pointer; }
+  tr.cp-row:hover { background: #1c1c28; }
+
+  /* 估值明細展開列 */
+  .cp-detail td { background: #181822; padding: 14px 12px; white-space: normal; }
+  .cp-methods { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+  .cp-method { border: 1px solid #333; border-radius: 8px; padding: 10px 12px; text-align: left; }
+  .cp-method h4 { margin: 0 0 6px; font-size: 0.95em; color: #f0a500; }
+  .cp-method .line { display: flex; justify-content: space-between; font-size: 0.9em; padding: 2px 0; }
+  .cp-method .none { color: #666; font-size: 0.9em; }
+
+  /* 載入與訊息 */
+  .cp-loading { text-align: center; padding: 30px; color: #aaa; }
+  .cp-spinner { display: inline-block; width: 22px; height: 22px; border: 3px solid #444;
+    border-top-color: #f0a500; border-radius: 50%; animation: cpspin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
+  @keyframes cpspin { to { transform: rotate(360deg); } }
+
+  /* 鎖定畫面 */
+  .cp-locked { text-align: center; padding: 60px 20px; }
+  .cp-locked h2 { color: #f0a500; }
+  .cp-locked a { color: #4da3ff; }
+
+  .cp-note { color: #777; font-size: 0.82em; margin-top: 14px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<div class="cp-wrap">
+  <div class="cp-title">🧩 概念股雷達</div>
+  <div class="cp-sub">點選概念，比較成分股的估值與獲利空間（點股票列可展開四種估值法明細）</div>
+
+  <div id="lockedBox" class="cp-locked" style="display:none">
+    <h2>🔒 此功能為付費會員專屬</h2>
+    <p>請至 <a href="profile.html">我的帳號</a> 聯繫管理員升級方案</p>
+  </div>
+
+  <div id="mainBox" style="display:none">
+    <div id="conceptBtns"></div>
+
+    <div class="cp-table-box">
+      <div id="loadingBox" class="cp-loading" style="display:none">
+        <span class="cp-spinner"></span><span id="loadingText">分析中...</span>
+      </div>
+      <table class="cp-table" id="resultTable" style="display:none">
+        <thead>
+          <tr>
+            <th data-key="name">股票</th>
+            <th data-key="price">現價</th>
+            <th data-key="change_pct">漲跌%</th>
+            <th data-key="fair_value">綜合合理價</th>
+            <th data-key="upside_pct">獲利空間%▼</th>
+            <th data-key="resistance_60d">上方阻力</th>
+            <th data-key="support_60d">下方支撐</th>
+          </tr>
+        </thead>
+        <tbody id="resultBody"></tbody>
+      </table>
+    </div>
+
+    <div class="cp-note">
+      估值方法說明：綜合合理價為下列方法的中位數（金融股以淨值比法為主）——
+      1) 分析師目標價：法人共識目標價；
+      2) 本益比法：近4年歷史本益比區間 x 目前EPS；
+      3) 淨值比法：近4年歷史股價淨值比區間 x 目前每股淨值；
+      4) 股利法：近5年平均現金股利 x 16/20/32倍。
+      上方阻力/下方支撐為近60個交易日高低點。本頁資料僅供研究參考，非投資建議。
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://kldumnxdlgovaxtiszyn.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI';
+const BACKEND = 'https://splendid-prosperity-production-41ab.up.railway.app';
+const BATCH_SIZE = 15;
+
+let conceptsData = null;
+let currentResults = [];
+let sortKey = 'upside_pct';
+let sortAsc = false;
+
+// ── 權限檢查（free 鎖定）──────────────────────────
+async function checkAccess() {
+  try {
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    const sessRes = await sb.auth.getSession();
+    const session = sessRes.data ? sessRes.data.session : null;
+    if (!session) { location.href = 'login.html'; return false; }
+    const res = await fetch(SUPABASE_URL + '/rest/v1/profiles?id=eq.' + session.user.id + '&select=plan', {
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + session.access_token }
+    });
+    const rows = await res.json();
+    const plan = (rows && rows[0]) ? rows[0].plan : 'free';
+    return plan !== 'free';
+  } catch (e) {
+    console.error('auth check failed', e);
+    return false;
+  }
+}
+
+// ── 載入概念清單並渲染按鈕牆 ─────────────────────
+async function loadConcepts() {
+  const res = await fetch('data/concepts.json?t=' + Date.now());
+  conceptsData = await res.json();
+  const box = document.getElementById('conceptBtns');
+  const groups = {};
+  conceptsData.concepts.forEach(c => {
+    if (!groups[c.category]) groups[c.category] = [];
+    groups[c.category].push(c);
+  });
+  let html = '';
+  Object.keys(groups).forEach(cat => {
+    html += '<div class="cp-cat">' + cat + '</div><div class="cp-btns">';
+    groups[cat].forEach(c => {
+      html += '<button class="cp-btn" data-id="' + c.id + '">' + c.name +
+              ' (' + c.stocks.length + ')</button>';
+    });
+    html += '</div>';
+  });
+  box.innerHTML = html;
+  box.querySelectorAll('.cp-btn').forEach(btn => {
+    btn.addEventListener('click', () => selectConcept(btn.dataset.id, btn));
+  });
+}
+
+// ── 點選概念 → 批次呼叫後端 ──────────────────────
+async function selectConcept(id, btn) {
+  document.querySelectorAll('.cp-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const concept = conceptsData.concepts.find(c => c.id === id);
+  if (!concept) return;
+
+  const table = document.getElementById('resultTable');
+  const loading = document.getElementById('loadingBox');
+  table.style.display = 'none';
+  loading.style.display = 'block';
+  document.getElementById('loadingText').textContent =
+    '分析 ' + concept.name + ' 共 ' + concept.stocks.length + ' 檔（第一次載入約 10-20 秒）...';
+
+  try {
+    const all = [];
+    for (let i = 0; i < concept.stocks.length; i += BATCH_SIZE) {
+      const batch = concept.stocks.slice(i, i + BATCH_SIZE);
+      const res = await fetch(BACKEND + '/concept-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stocks: batch, valuation_hint: concept.valuation_hint || null })
+      });
+      const data = await res.json();
+      if (data.results) all.push(...data.results);
+    }
+    currentResults = all;
+    sortKey = 'upside_pct'; sortAsc = false;
+    renderTable();
+  } catch (e) {
+    console.error(e);
+    document.getElementById('loadingText').textContent = '載入失敗，請稍後再試';
+    return;
+  }
+  loading.style.display = 'none';
+  table.style.display = 'table';
+}
+
+// ── 表格渲染 ─────────────────────────────────────
+function fmt(v, suffix) {
+  if (v === null || v === undefined) return '<span class="muted">-</span>';
+  return v + (suffix || '');
+}
+function pctClass(v) {
+  if (v === null || v === undefined) return '';
+  return v > 0 ? 'up' : (v < 0 ? 'down' : '');
+}
+
+function renderTable() {
+  const sorted = [...currentResults].sort((a, b) => {
+    const av = a[sortKey], bv = b[sortKey];
+    if (av === null || av === undefined) return 1;
+    if (bv === null || bv === undefined) return -1;
+    if (typeof av === 'string') return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    return sortAsc ? av - bv : bv - av;
+  });
+
+  let html = '';
+  sorted.forEach((r, idx) => {
+    if (r.error) {
+      html += '<tr class="cp-row"><td>' + r.code + ' ' + (r.name || '') +
+              '</td><td colspan="6" class="muted">' + r.error + '</td></tr>';
+      return;
+    }
+    html += '<tr class="cp-row" data-idx="' + idx + '">' +
+      '<td><a class="cp-stock-link" href="diagnosis.html?symbol=' + r.code +
+        '" onclick="event.stopPropagation()">' + r.code + ' ' + r.name + '</a></td>' +
+      '<td>' + fmt(r.price) + '</td>' +
+      '<td class="' + pctClass(r.change_pct) + '">' + fmt(r.change_pct, '%') + '</td>' +
+      '<td>' + fmt(r.fair_value) + basisTag(r) + '</td>' +
+      '<td class="' + pctClass(r.upside_pct) + '"><b>' + fmt(r.upside_pct, '%') + '</b></td>' +
+      '<td>' + fmt(r.resistance_60d) + '</td>' +
+      '<td>' + fmt(r.support_60d) + '</td>' +
+      '</tr>';
+    html += '<tr class="cp-detail" style="display:none"><td colspan="7">' +
+            renderMethods(r) + '</td></tr>';
+  });
+  document.getElementById('resultBody').innerHTML = html;
+
+  document.querySelectorAll('tr.cp-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const detail = row.nextElementSibling;
+      if (detail && detail.classList.contains('cp-detail')) {
+        detail.style.display = (detail.style.display === 'none') ? 'table-row' : 'none';
+      }
+    });
+  });
+}
+
+function basisTag(r) {
+  const map = { analyst: '法人', pb: '淨值', history: '歷史', dividend: '股利' };
+  let t = '';
+  if (r.fair_basis && map[r.fair_basis]) {
+    t += ' <span class="muted" style="font-size:0.8em">(' + map[r.fair_basis] + ')</span>';
+  }
+  if (r.divergence_pct !== null && r.divergence_pct !== undefined && r.divergence_pct > 80) {
+    t += ' <span title="各估值法分歧大，多為估值重評中的成長股">⚠️</span>';
+  }
+  return t;
+}
+
+function renderMethods(r) {
+  const m = r.methods || {};
+  let html = '<div class="cp-methods">';
+
+  html += '<div class="cp-method"><h4>📊 分析師目標價</h4>';
+  if (m.analyst) {
+    html += '<div class="line"><span>目標價</span><b>' + m.analyst.fair + '</b></div>' +
+            '<div class="line"><span>分析師人數</span><span>' + m.analyst.analysts + '</span></div>';
+  } else { html += '<div class="none">無法人覆蓋資料</div>'; }
+  html += '</div>';
+
+  html += '<div class="cp-method"><h4>📈 本益比法</h4>';
+  if (m.pe) {
+    html += '<div class="line"><span>便宜價</span><span class="down">' + m.pe.cheap + '</span></div>' +
+            '<div class="line"><span>合理價</span><b>' + m.pe.fair + '</b></div>' +
+            '<div class="line"><span>昂貴價</span><span class="up">' + m.pe.expensive + '</span></div>' +
+            '<div class="line"><span>歷史PE區間</span><span>' + m.pe.pe_band.join(' / ') + '</span></div>' +
+            '<div class="line"><span>目前EPS</span><span>' + m.pe.eps + '</span></div>';
+  } else { html += '<div class="none">EPS為負或財報資料不足</div>'; }
+  html += '</div>';
+
+  html += '<div class="cp-method"><h4>🏦 淨值比法</h4>';
+  if (m.pb) {
+    html += '<div class="line"><span>便宜價</span><span class="down">' + m.pb.cheap + '</span></div>' +
+            '<div class="line"><span>合理價</span><b>' + m.pb.fair + '</b></div>' +
+            '<div class="line"><span>昂貴價</span><span class="up">' + m.pb.expensive + '</span></div>' +
+            '<div class="line"><span>歷史PB區間</span><span>' + m.pb.pb_band.join(' / ') + '</span></div>' +
+            '<div class="line"><span>每股淨值</span><span>' + m.pb.bvps + '</span></div>';
+  } else { html += '<div class="none">淨值資料不足</div>'; }
+  html += '</div>';
+
+  html += '<div class="cp-method"><h4>💰 股利法</h4>';
+  if (m.dividend) {
+    html += '<div class="line"><span>便宜價(x16)</span><span class="down">' + m.dividend.cheap + '</span></div>' +
+            '<div class="line"><span>合理價(x20)</span><b>' + m.dividend.fair + '</b></div>' +
+            '<div class="line"><span>昂貴價(x32)</span><span class="up">' + m.dividend.expensive + '</span></div>' +
+            '<div class="line"><span>近5年均股利</span><span>' + m.dividend.avg_dividend + '</span></div>';
+  } else { html += '<div class="none">股利資料不足</div>'; }
+  html += '</div>';
+
+  html += '</div>';
+  return html;
+}
+
+// ── 排序 ─────────────────────────────────────────
+document.querySelectorAll('.cp-table th').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.key;
+    if (sortKey === key) { sortAsc = !sortAsc; }
+    else { sortKey = key; sortAsc = false; }
+    document.querySelectorAll('.cp-table th').forEach(h => {
+      h.textContent = h.textContent.replace(/[▼▲]/g, '');
+    });
+    th.textContent = th.textContent + (sortAsc ? '▲' : '▼');
+    renderTable();
+  });
+});
+
+// ── 初始化 ───────────────────────────────────────
+(async function init() {
+  const ok = await checkAccess();
+  if (!ok) {
+    document.getElementById('lockedBox').style.display = 'block';
+    return;
+  }
+  document.getElementById('mainBox').style.display = 'block';
+  await loadConcepts();
+})();
+</script>
+</body>
+</html>
