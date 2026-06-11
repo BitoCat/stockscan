@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="css/base.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
 <style>
+  body { padding-bottom: 90px; }
   .cp-wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
   .cp-title { font-size: 1.5em; font-weight: 700; margin: 12px 0 4px; }
   .cp-sub { color: #888; font-size: 0.9em; margin-bottom: 16px; }
@@ -114,6 +115,16 @@
     </div>
   </div>
 </div>
+
+<nav class="tabbar">
+  <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
+  <a class="tb" href="watchlist.html"><span class="ti">⭐</span>觀察名單</a>
+  <a class="tb" href="news.html"><span class="ti">📰</span>新聞</a>
+  <a class="tb" href="daily.html"><span class="ti">📊</span>盤面</a>
+  <a class="tb active" href="concepts.html"><span class="ti">🧩</span>概念股</a>
+  <a class="tb" href="alerts.html"><span class="ti">⚡</span>快訊</a>
+  <a class="tb" href="profile.html"><span class="ti">👤</span>我的</a>
+</nav>
 
 <script>
 const SUPABASE_URL = 'https://kldumnxdlgovaxtiszyn.supabase.co';
