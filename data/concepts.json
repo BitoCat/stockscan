@@ -1,0 +1,302 @@
+{
+  "version": "1.0",
+  "updated": "2026-06-11",
+  "note": "概念股清單由 BitoCat 維護。code 只放四碼股號，後端會自動嘗試 .TW 再 fallback .TWO",
+  "concepts": [
+    {
+      "id": "pcb",
+      "name": "PCB概念股",
+      "category": "電子供應鏈",
+      "stocks": [
+        { "code": "3037", "name": "欣興" },
+        { "code": "8046", "name": "南電" },
+        { "code": "3189", "name": "景碩" },
+        { "code": "3044", "name": "健鼎" },
+        { "code": "2368", "name": "金像電" },
+        { "code": "2313", "name": "華通" },
+        { "code": "2367", "name": "燿華" },
+        { "code": "3715", "name": "定穎投控" },
+        { "code": "5439", "name": "高技" },
+        { "code": "8155", "name": "博智" }
+      ]
+    },
+    {
+      "id": "ccl",
+      "name": "銅箔基板概念股",
+      "category": "電子供應鏈",
+      "stocks": [
+        { "code": "2383", "name": "臺光電" },
+        { "code": "6274", "name": "台燿" },
+        { "code": "6213", "name": "聯茂" },
+        { "code": "8358", "name": "金居" },
+        { "code": "1303", "name": "南亞" }
+      ]
+    },
+    {
+      "id": "ai_server",
+      "name": "AI伺服器概念股",
+      "category": "AI與半導體",
+      "stocks": [
+        { "code": "2317", "name": "鴻海" },
+        { "code": "2382", "name": "廣達" },
+        { "code": "3231", "name": "緯創" },
+        { "code": "6669", "name": "緯穎" },
+        { "code": "2356", "name": "英業達" },
+        { "code": "3706", "name": "神達" },
+        { "code": "2376", "name": "技嘉" },
+        { "code": "2377", "name": "微星" },
+        { "code": "8210", "name": "勤誠" },
+        { "code": "2059", "name": "川湖" },
+        { "code": "3533", "name": "嘉澤" },
+        { "code": "3665", "name": "貿聯-KY" }
+      ]
+    },
+    {
+      "id": "cooling",
+      "name": "散熱概念股",
+      "category": "AI與半導體",
+      "stocks": [
+        { "code": "3017", "name": "奇鋐" },
+        { "code": "3324", "name": "雙鴻" },
+        { "code": "2421", "name": "建準" },
+        { "code": "3483", "name": "力致" },
+        { "code": "3338", "name": "泰碩" },
+        { "code": "6230", "name": "尼得科超眾" },
+        { "code": "8996", "name": "高力" },
+        { "code": "3653", "name": "健策" }
+      ]
+    },
+    {
+      "id": "cpo",
+      "name": "CPO矽光子概念股",
+      "category": "AI與半導體",
+      "stocks": [
+        { "code": "3363", "name": "上詮" },
+        { "code": "3163", "name": "波若威" },
+        { "code": "3081", "name": "聯亞" },
+        { "code": "4979", "name": "華星光" },
+        { "code": "4908", "name": "前鼎" },
+        { "code": "4977", "name": "眾達-KY" },
+        { "code": "6442", "name": "光聖" },
+        { "code": "3450", "name": "聯鈞" }
+      ]
+    },
+    {
+      "id": "ic_design",
+      "name": "IC設計概念股",
+      "category": "AI與半導體",
+      "stocks": [
+        { "code": "2454", "name": "聯發科" },
+        { "code": "3034", "name": "聯詠" },
+        { "code": "2379", "name": "瑞昱" },
+        { "code": "5269", "name": "祥碩" },
+        { "code": "5274", "name": "信驊" },
+        { "code": "4966", "name": "譜瑞-KY" },
+        { "code": "3443", "name": "創意" },
+        { "code": "3661", "name": "世芯-KY" },
+        { "code": "3035", "name": "智原" }
+      ]
+    },
+    {
+      "id": "ip",
+      "name": "IP矽智財概念股",
+      "category": "AI與半導體",
+      "stocks": [
+        { "code": "3529", "name": "力旺" },
+        { "code": "3443", "name": "創意" },
+        { "code": "3661", "name": "世芯-KY" },
+        { "code": "3035", "name": "智原" },
+        { "code": "6533", "name": "晶心科" },
+        { "code": "6643", "name": "M31" }
+      ]
+    },
+    {
+      "id": "semi_equip",
+      "name": "半導體設備概念股",
+      "category": "AI與半導體",
+      "stocks": [
+        { "code": "3131", "name": "弘塑" },
+        { "code": "3583", "name": "辛耘" },
+        { "code": "6187", "name": "萬潤" },
+        { "code": "3413", "name": "京鼎" },
+        { "code": "6196", "name": "帆宣" },
+        { "code": "2467", "name": "志聖" },
+        { "code": "5443", "name": "均豪" },
+        { "code": "8091", "name": "翔名" }
+      ]
+    },
+    {
+      "id": "adv_pkg",
+      "name": "先進封裝概念股",
+      "category": "AI與半導體",
+      "stocks": [
+        { "code": "3711", "name": "日月光投控" },
+        { "code": "6239", "name": "力成" },
+        { "code": "2449", "name": "京元電子" },
+        { "code": "3264", "name": "欣銓" },
+        { "code": "6147", "name": "頎邦" },
+        { "code": "8150", "name": "南茂" },
+        { "code": "3131", "name": "弘塑" },
+        { "code": "6187", "name": "萬潤" }
+      ]
+    },
+    {
+      "id": "memory",
+      "name": "記憶體概念股",
+      "category": "AI與半導體",
+      "stocks": [
+        { "code": "2408", "name": "南亞科" },
+        { "code": "2344", "name": "華邦電" },
+        { "code": "2337", "name": "旺宏" },
+        { "code": "8299", "name": "群聯" },
+        { "code": "3260", "name": "威剛" },
+        { "code": "5289", "name": "宜鼎" },
+        { "code": "2451", "name": "創見" },
+        { "code": "4967", "name": "十銓" }
+      ]
+    },
+    {
+      "id": "robot",
+      "name": "機器人概念股",
+      "category": "新興題材",
+      "stocks": [
+        { "code": "2049", "name": "上銀" },
+        { "code": "1597", "name": "直得" },
+        { "code": "4540", "name": "全球傳動" },
+        { "code": "2464", "name": "盟立" },
+        { "code": "6188", "name": "廣明" },
+        { "code": "2359", "name": "所羅門" },
+        { "code": "2308", "name": "台達電" },
+        { "code": "1590", "name": "亞德客-KY" },
+        { "code": "1536", "name": "和大" }
+      ]
+    },
+    {
+      "id": "satellite",
+      "name": "低軌衛星概念股",
+      "category": "新興題材",
+      "stocks": [
+        { "code": "3491", "name": "昇達科" },
+        { "code": "2314", "name": "台揚" },
+        { "code": "6285", "name": "啟碁" },
+        { "code": "6271", "name": "同欣電" },
+        { "code": "2312", "name": "金寶" },
+        { "code": "3105", "name": "穩懋" },
+        { "code": "5388", "name": "中磊" }
+      ]
+    },
+    {
+      "id": "defense",
+      "name": "軍工無人機概念股",
+      "category": "新興題材",
+      "stocks": [
+        { "code": "2634", "name": "漢翔" },
+        { "code": "8033", "name": "雷虎" },
+        { "code": "6753", "name": "龍德造船" },
+        { "code": "2644", "name": "中信造船" },
+        { "code": "8222", "name": "寶一" },
+        { "code": "4541", "name": "晟田" },
+        { "code": "3005", "name": "神基" },
+        { "code": "5222", "name": "全訊" }
+      ]
+    },
+    {
+      "id": "heavy_power",
+      "name": "重電概念股",
+      "category": "傳產題材",
+      "stocks": [
+        { "code": "1519", "name": "華城" },
+        { "code": "1503", "name": "士電" },
+        { "code": "1513", "name": "中興電" },
+        { "code": "1514", "name": "亞力" },
+        { "code": "1504", "name": "東元" },
+        { "code": "2371", "name": "大同" }
+      ]
+    },
+    {
+      "id": "green",
+      "name": "綠能儲能概念股",
+      "category": "傳產題材",
+      "stocks": [
+        { "code": "6869", "name": "雲豹能源" },
+        { "code": "6873", "name": "泓德能源" },
+        { "code": "6806", "name": "森崴能源" },
+        { "code": "9958", "name": "世紀鋼" },
+        { "code": "3708", "name": "上緯投控" },
+        { "code": "1513", "name": "中興電" }
+      ]
+    },
+    {
+      "id": "apple",
+      "name": "蘋概股",
+      "category": "電子供應鏈",
+      "stocks": [
+        { "code": "2330", "name": "台積電" },
+        { "code": "2317", "name": "鴻海" },
+        { "code": "3008", "name": "大立光" },
+        { "code": "3406", "name": "玉晶光" },
+        { "code": "2354", "name": "鴻準" },
+        { "code": "2474", "name": "可成" },
+        { "code": "4938", "name": "和碩" },
+        { "code": "6269", "name": "台郡" },
+        { "code": "2392", "name": "正崴" }
+      ]
+    },
+    {
+      "id": "networking",
+      "name": "網通概念股",
+      "category": "電子供應鏈",
+      "stocks": [
+        { "code": "2345", "name": "智邦" },
+        { "code": "6285", "name": "啟碁" },
+        { "code": "5388", "name": "中磊" },
+        { "code": "4906", "name": "正文" },
+        { "code": "3380", "name": "明泰" },
+        { "code": "3596", "name": "智易" },
+        { "code": "3704", "name": "合勤控" },
+        { "code": "3558", "name": "神準" }
+      ]
+    },
+    {
+      "id": "passive",
+      "name": "被動元件概念股",
+      "category": "電子供應鏈",
+      "stocks": [
+        { "code": "2327", "name": "國巨" },
+        { "code": "2492", "name": "華新科" },
+        { "code": "3026", "name": "禾伸堂" },
+        { "code": "6173", "name": "信昌電" },
+        { "code": "5317", "name": "凱美" }
+      ]
+    },
+    {
+      "id": "shipping",
+      "name": "航運概念股",
+      "category": "傳產題材",
+      "stocks": [
+        { "code": "2603", "name": "長榮" },
+        { "code": "2609", "name": "陽明" },
+        { "code": "2615", "name": "萬海" },
+        { "code": "2637", "name": "慧洋-KY" },
+        { "code": "2606", "name": "裕民" },
+        { "code": "2636", "name": "台驊投控" }
+      ]
+    },
+    {
+      "id": "financial",
+      "name": "金融股",
+      "category": "傳產題材",
+      "valuation_hint": "pb",
+      "stocks": [
+        { "code": "2881", "name": "富邦金" },
+        { "code": "2882", "name": "國泰金" },
+        { "code": "2891", "name": "中信金" },
+        { "code": "2886", "name": "兆豐金" },
+        { "code": "2884", "name": "玉山金" },
+        { "code": "2885", "name": "元大金" },
+        { "code": "2892", "name": "第一金" },
+        { "code": "5880", "name": "合庫金" }
+      ]
+    }
+  ]
+}
