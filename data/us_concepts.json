@@ -1,0 +1,247 @@
+{
+  "version": "1.0",
+  "updated": "2026-06-11",
+  "note": "美股概念股清單由 BitoCat 維護。code 直接放美股代號，後端偵測到英文代號就不加 .TW/.TWO",
+  "concepts": [
+    {
+      "id": "mag7",
+      "name": "七巨頭 Mag 7",
+      "category": "AI與科技",
+      "stocks": [
+        { "code": "AAPL", "name": "蘋果" },
+        { "code": "MSFT", "name": "微軟" },
+        { "code": "GOOGL", "name": "Alphabet" },
+        { "code": "AMZN", "name": "亞馬遜" },
+        { "code": "NVDA", "name": "輝達" },
+        { "code": "META", "name": "Meta" },
+        { "code": "TSLA", "name": "特斯拉" }
+      ]
+    },
+    {
+      "id": "ai_chip",
+      "name": "AI晶片",
+      "category": "AI與科技",
+      "stocks": [
+        { "code": "NVDA", "name": "輝達" },
+        { "code": "AMD", "name": "超微" },
+        { "code": "AVGO", "name": "博通" },
+        { "code": "MRVL", "name": "邁威爾" },
+        { "code": "TSM", "name": "台積電ADR" },
+        { "code": "MU", "name": "美光" },
+        { "code": "QCOM", "name": "高通" },
+        { "code": "ARM", "name": "安謀" }
+      ]
+    },
+    {
+      "id": "ai_software",
+      "name": "AI軟體應用",
+      "category": "AI與科技",
+      "stocks": [
+        { "code": "MSFT", "name": "微軟" },
+        { "code": "GOOGL", "name": "Alphabet" },
+        { "code": "META", "name": "Meta" },
+        { "code": "PLTR", "name": "Palantir" },
+        { "code": "NOW", "name": "ServiceNow" },
+        { "code": "CRM", "name": "Salesforce" },
+        { "code": "SNOW", "name": "Snowflake" },
+        { "code": "ADBE", "name": "Adobe" }
+      ]
+    },
+    {
+      "id": "ai_infra",
+      "name": "AI伺服器基建",
+      "category": "AI與科技",
+      "stocks": [
+        { "code": "SMCI", "name": "美超微" },
+        { "code": "DELL", "name": "戴爾" },
+        { "code": "HPE", "name": "慧與" },
+        { "code": "VRT", "name": "Vertiv" },
+        { "code": "ANET", "name": "Arista" },
+        { "code": "CIEN", "name": "Ciena" },
+        { "code": "COHR", "name": "Coherent" }
+      ]
+    },
+    {
+      "id": "semi_equip_us",
+      "name": "半導體設備",
+      "category": "AI與科技",
+      "stocks": [
+        { "code": "ASML", "name": "艾司摩爾" },
+        { "code": "AMAT", "name": "應用材料" },
+        { "code": "LRCX", "name": "科林研發" },
+        { "code": "KLAC", "name": "科磊" },
+        { "code": "TER", "name": "泰瑞達" }
+      ]
+    },
+    {
+      "id": "memory_us",
+      "name": "記憶體儲存",
+      "category": "AI與科技",
+      "stocks": [
+        { "code": "MU", "name": "美光" },
+        { "code": "WDC", "name": "威騰" },
+        { "code": "STX", "name": "希捷" },
+        { "code": "SNDK", "name": "SanDisk" }
+      ]
+    },
+    {
+      "id": "cybersecurity",
+      "name": "資安",
+      "category": "AI與科技",
+      "stocks": [
+        { "code": "CRWD", "name": "CrowdStrike" },
+        { "code": "PANW", "name": "Palo Alto" },
+        { "code": "ZS", "name": "Zscaler" },
+        { "code": "FTNT", "name": "Fortinet" },
+        { "code": "S", "name": "SentinelOne" },
+        { "code": "OKTA", "name": "Okta" },
+        { "code": "CYBR", "name": "CyberArk" }
+      ]
+    },
+    {
+      "id": "cloud_saas",
+      "name": "雲端SaaS",
+      "category": "AI與科技",
+      "stocks": [
+        { "code": "CRM", "name": "Salesforce" },
+        { "code": "NOW", "name": "ServiceNow" },
+        { "code": "DDOG", "name": "Datadog" },
+        { "code": "NET", "name": "Cloudflare" },
+        { "code": "MDB", "name": "MongoDB" },
+        { "code": "TEAM", "name": "Atlassian" }
+      ]
+    },
+    {
+      "id": "quantum",
+      "name": "量子運算",
+      "category": "新興題材",
+      "stocks": [
+        { "code": "IONQ", "name": "IonQ" },
+        { "code": "RGTI", "name": "Rigetti" },
+        { "code": "QBTS", "name": "D-Wave" },
+        { "code": "IBM", "name": "IBM" },
+        { "code": "GOOGL", "name": "Alphabet" }
+      ]
+    },
+    {
+      "id": "nuclear",
+      "name": "核能SMR",
+      "category": "新興題材",
+      "stocks": [
+        { "code": "CEG", "name": "Constellation" },
+        { "code": "VST", "name": "Vistra" },
+        { "code": "OKLO", "name": "Oklo" },
+        { "code": "SMR", "name": "NuScale" },
+        { "code": "CCJ", "name": "Cameco" },
+        { "code": "LEU", "name": "Centrus" },
+        { "code": "TLN", "name": "Talen" }
+      ]
+    },
+    {
+      "id": "space",
+      "name": "太空衛星",
+      "category": "新興題材",
+      "stocks": [
+        { "code": "RKLB", "name": "Rocket Lab" },
+        { "code": "ASTS", "name": "AST SpaceMobile" },
+        { "code": "LUNR", "name": "Intuitive Machines" },
+        { "code": "RDW", "name": "Redwire" },
+        { "code": "PL", "name": "Planet Labs" }
+      ]
+    },
+    {
+      "id": "crypto",
+      "name": "加密貨幣概念",
+      "category": "新興題材",
+      "stocks": [
+        { "code": "COIN", "name": "Coinbase" },
+        { "code": "MSTR", "name": "Strategy" },
+        { "code": "MARA", "name": "MARA" },
+        { "code": "RIOT", "name": "Riot" },
+        { "code": "HOOD", "name": "Robinhood" },
+        { "code": "CLSK", "name": "CleanSpark" }
+      ]
+    },
+    {
+      "id": "defense_us",
+      "name": "軍工無人機",
+      "category": "新興題材",
+      "stocks": [
+        { "code": "LMT", "name": "洛克希德馬丁" },
+        { "code": "RTX", "name": "RTX" },
+        { "code": "NOC", "name": "諾斯洛普" },
+        { "code": "GD", "name": "通用動力" },
+        { "code": "LHX", "name": "L3Harris" },
+        { "code": "PLTR", "name": "Palantir" },
+        { "code": "AVAV", "name": "AeroVironment" },
+        { "code": "KTOS", "name": "Kratos" }
+      ]
+    },
+    {
+      "id": "robotics_us",
+      "name": "機器人自動化",
+      "category": "新興題材",
+      "stocks": [
+        { "code": "TSLA", "name": "特斯拉" },
+        { "code": "ISRG", "name": "直覺手術" },
+        { "code": "ROK", "name": "洛克威爾" },
+        { "code": "TER", "name": "泰瑞達" },
+        { "code": "SYM", "name": "Symbotic" },
+        { "code": "ZBRA", "name": "Zebra" }
+      ]
+    },
+    {
+      "id": "glp1",
+      "name": "減肥藥GLP-1",
+      "category": "醫療與消費",
+      "stocks": [
+        { "code": "LLY", "name": "禮來" },
+        { "code": "NVO", "name": "諾和諾德" },
+        { "code": "VKTX", "name": "Viking" },
+        { "code": "AMGN", "name": "安進" },
+        { "code": "HIMS", "name": "Hims & Hers" }
+      ]
+    },
+    {
+      "id": "dividend_classic",
+      "name": "高股息經典",
+      "category": "金融與配息",
+      "stocks": [
+        { "code": "KO", "name": "可口可樂" },
+        { "code": "PG", "name": "寶僑" },
+        { "code": "JNJ", "name": "嬌生" },
+        { "code": "PEP", "name": "百事" },
+        { "code": "MCD", "name": "麥當勞" },
+        { "code": "O", "name": "Realty Income" },
+        { "code": "VZ", "name": "威瑞森" }
+      ]
+    },
+    {
+      "id": "us_banks",
+      "name": "美國銀行股",
+      "category": "金融與配息",
+      "valuation_hint": "pb",
+      "stocks": [
+        { "code": "JPM", "name": "摩根大通" },
+        { "code": "BAC", "name": "美國銀行" },
+        { "code": "WFC", "name": "富國銀行" },
+        { "code": "C", "name": "花旗" },
+        { "code": "GS", "name": "高盛" },
+        { "code": "MS", "name": "摩根士丹利" }
+      ]
+    },
+    {
+      "id": "payment",
+      "name": "支付金融科技",
+      "category": "金融與配息",
+      "stocks": [
+        { "code": "V", "name": "Visa" },
+        { "code": "MA", "name": "萬事達" },
+        { "code": "PYPL", "name": "PayPal" },
+        { "code": "XYZ", "name": "Block" },
+        { "code": "AXP", "name": "美國運通" },
+        { "code": "SOFI", "name": "SoFi" }
+      ]
+    }
+  ]
+}
