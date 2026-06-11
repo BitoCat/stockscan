@@ -240,6 +240,32 @@ const SB_HEADERS = {
 
 ---
 
+### 概念清單維護
+- 檔案：stockscan repo `data/concepts.json`（20個概念、約150檔）
+- 只放四碼股號，後端自動試 .TW 再 fallback .TWO
+- 金融股有 `"valuation_hint": "pb"` 標記
+- 直接改 JSON 即生效（前端帶時間戳防快取）
+
+### 後端（trading-bot/concept_analysis.py，Flask Blueprint）
+- POST /concept-analysis：一次最多15檔，5線程並行，記憶體快取10分鐘
+- GET /concept-analysis/test?code=XXXX：瀏覽器單檔測試
+- 四種估值法：analyst（分析師目標價）、pe（近4年歷史PE區間×目前EPS）、
+  pb（近4年歷史PB區間×目前每股淨值）、dividend（近5年均股利×16/20/32）
+- 綜合合理價 fair_basis 優先序：金融股hint=pb → 分析師≥3位 → pe/pb中位數 → 股利法
+- divergence_pct：各方法合理價分歧度，>80% 前端顯示 ⚠️（估值重評中的成長股）
+
+### 前端（concepts.html）
+- 直接 fetch + supabase CDN（auth用），free 鎖定
+- 概念按鈕牆依 category 分組，表格預設按 upside_pct 排序，欄位可點擊排序
+- 點列展開四種估值法明細卡片；股票代號連到 diagnosis.html?symbol=代號
+- 上方阻力/下方支撐 = 近60交易日高低點
+
+### 待觀察
+- diagnosis.html 的網址參數是否吃 ?symbol=（待確認）
+- 概念成分股需隨題材輪動人工維護 concepts.json
+
+---
+
 ## 新聞系統（news.html）
 
 ### 架構
