@@ -11,6 +11,14 @@
   .cp-title { font-size: 1.5em; font-weight: 700; margin: 12px 0 4px; }
   .cp-sub { color: #888; font-size: 0.9em; margin-bottom: 16px; }
 
+  /* 市場切換頁籤 */
+  .cp-tabs { display: flex; gap: 8px; margin: 4px 0 10px; }
+  .cp-tab {
+    padding: 8px 20px; border-radius: 8px; border: 1px solid #444;
+    background: #1e1e2a; color: #ddd; cursor: pointer; font-size: 1em; font-weight: 700;
+  }
+  .cp-tab.active { background: #2a2a3a; border-color: #f0a500; color: #f0a500; }
+
   /* 概念按鈕牆 */
   .cp-cat { margin: 14px 0 6px; font-weight: 700; color: #f0a500; }
   .cp-btns { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -70,6 +78,10 @@
   </div>
 
   <div id="mainBox" style="display:none">
+    <div class="cp-tabs">
+      <button class="cp-tab active" data-market="tw">🇹🇼 台股</button>
+      <button class="cp-tab" data-market="us">🇺🇸 美股</button>
+    </div>
     <div id="conceptBtns"></div>
 
     <div class="cp-table-box">
@@ -109,6 +121,8 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const BACKEND = 'https://splendid-prosperity-production-41ab.up.railway.app';
 const BATCH_SIZE = 15;
 
+const DATA_FILES = { tw: 'data/concepts.json', us: 'data/us_concepts.json' };
+let currentMarket = 'tw';
 let conceptsData = null;
 let currentResults = [];
 let sortKey = 'upside_pct';
@@ -135,7 +149,7 @@ async function checkAccess() {
 
 // ── 載入概念清單並渲染按鈕牆 ─────────────────────
 async function loadConcepts() {
-  const res = await fetch('data/concepts.json?t=' + Date.now());
+  const res = await fetch(DATA_FILES[currentMarket] + '?t=' + Date.now());
   conceptsData = await res.json();
   const box = document.getElementById('conceptBtns');
   const groups = {};
@@ -315,6 +329,20 @@ document.querySelectorAll('.cp-table th').forEach(th => {
     });
     th.textContent = th.textContent + (sortAsc ? '▲' : '▼');
     renderTable();
+  });
+});
+
+// ── 市場切換 ─────────────────────────────────────
+document.querySelectorAll('.cp-tab').forEach(tab => {
+  tab.addEventListener('click', async () => {
+    if (tab.dataset.market === currentMarket) return;
+    currentMarket = tab.dataset.market;
+    document.querySelectorAll('.cp-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentResults = [];
+    document.getElementById('resultTable').style.display = 'none';
+    document.getElementById('loadingBox').style.display = 'none';
+    await loadConcepts();
   });
 });
 
