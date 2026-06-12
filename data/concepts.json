@@ -4,6 +4,26 @@
   "note": "概念股清單由 BitoCat 維護。code 只放四碼股號，後端會自動嘗試 .TW 再 fallback .TWO",
   "concepts": [
     {
+      "id": "ofc",
+      "name": "光通訊概念股",
+      "category": "電子供應鏈",
+      "stocks": [
+        { "code": "2455", "name": "全新" },
+        { "code": "4979", "name": "華星光" },
+        { "code": "4977", "name": "眾達-KY" },
+        { "code": "4908", "name": "前鼎" },
+        { "code": "2345", "name": "智邦" },
+        { "code": "3234", "name": "光環" },
+        { "code": "3163", "name": "波若威" },
+        { "code": "8011", "name": "台通" },
+        { "code": "6442", "name": "光聖" },
+        { "code": "3450", "name": "聯鈞" },
+        { "code": "3081", "name": "聯亞" },
+        { "code": "3363", "name": "上詮" },
+        { "code": "6451", "name": "訊芯-KY" }
+      ]
+    },
+    {
       "id": "pcb",
       "name": "PCB概念股",
       "category": "電子供應鏈",
@@ -37,6 +57,11 @@
         { "code": "6274", "name": "台燿" },
         { "code": "6213", "name": "聯茂" },
         { "code": "8358", "name": "金居" },
+        { "code": "8039", "name": "台虹" },
+        { "code": "5340", "name": "建榮" },
+        { "code": "5481", "name": "新華" },
+        { "code": "5475", "name": "德宏" },
+        { "code": "5381", "name": "光譜" },
         { "code": "1303", "name": "南亞" }
       ]
     },
