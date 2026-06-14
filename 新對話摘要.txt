@@ -1,5 +1,5 @@
 # 交易大師 ProTrader 專案摘要（貼給 Claude 用）
-> 最後更新：2026年6月7日
+> 最後更新：2026年6月14日
 
 ---
 
@@ -15,6 +15,127 @@
 | 資料庫 | https://kldumnxdlgovaxtiszyn.supabase.co（Supabase） |
 | Telegram Bot | @Boss1688Bot，Channel ID：-1003990900011 |
 | Supabase anon key | eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI |
+
+---
+
+## 會員系統（tg-member-bot）✅ 2026-06-14 完成
+
+### 目的
+綠界金流收款 → 自動開通交易大師網站帳號 + 三個 Telegram 頻道邀請連結，到期自動踢出。
+
+### 架構
+```
+用戶付款（checkout.html）
+    ↓
+Railway tg-member-bot 接收綠界通知
+    ↓
+Supabase memberships 表寫入
+    ↓
+交易大師網站帳號升級為 all
+    ↓
+管理員 Telegram 通知
+    ↓
+用戶找 @Boss1688Bot → /start → 輸入 Email → 自動發三個頻道邀請連結
+    ↓
+到期前7天提醒 → 到期自動踢出 + 網站降級
+```
+
+### 關鍵資訊
+
+| 項目 | 內容 |
+|------|------|
+| GitHub | https://github.com/BitoCat/tg-member-bot |
+| Railway 服務 | https://web-production-9ba5b.up.railway.app |
+| Railway Project | honest-vibrancy |
+| 付款頁面 | https://web-production-9ba5b.up.railway.app/checkout |
+| 綠界回傳網址 | https://web-production-9ba5b.up.railway.app/ecpay/notify |
+| 管理員 Telegram ID | 6499571217 |
+
+### Telegram 頻道
+
+| 頻道 | ID | 用途 |
+|------|-----|------|
+| 交易大師頻道 | -1003983491999 | 每日盤面解析（付費會員） |
+| 台股報報 | -1003883576984 | 台股指標快訊 |
+| 美股報報 | -1003990900011 | 美股指標快訊 |
+
+### 付款方式
+- 信用卡、ATM 轉帳、超商代碼、超商條碼（全透過綠界）
+- PayPal、支付寶：後台手動新增外國會員
+
+### 優惠碼
+- `MG571H` → 折抵 NT$1,200（NT$3,600 → NT$2,400）
+- 優惠碼邏輯在前端 checkout.html 處理，後端只驗證金額合法性
+
+### 年費與期限
+- 定價：NT$3,600/年（優惠碼後 NT$2,400）
+- 有效期限：380天（含15天緩衝）
+
+### Railway 環境變數
+- ECPAY_MERCHANT_ID、ECPAY_HASH_KEY、ECPAY_HASH_IV
+- BOT_TOKEN（Boss1688Bot）
+- TW_CHANNEL_ID、US_CHANNEL_ID、MEMBER_CHANNEL_ID
+- SUPABASE_URL、SUPABASE_KEY
+- SECRET_KEY
+- ADMIN_TELEGRAM_ID（6499571217）
+- RAILWAY_DOMAIN（web-production-9ba5b.up.railway.app）
+
+### Supabase 資料表：memberships
+| 欄位 | 說明 |
+|------|------|
+| id | UUID |
+| name | 姓名 |
+| email | 付款 Email |
+| phone | 電話 |
+| merchant_trade_no | 訂單編號（綠界）|
+| trade_amt | 金額 |
+| payment_type | 付款方式 |
+| plan | all |
+| paid_at | 付款時間 |
+| expires_at | 到期時間 |
+| is_active | 是否有效 |
+| telegram_user_id | 綁定的 Telegram ID |
+| telegram_username | Telegram 帳號 |
+| invited_at | 發送邀請連結時間 |
+| kicked_at | 踢出時間 |
+| note | 備註 |
+
+### Supabase Function
+- `get_profile_by_email(user_email TEXT)`：透過 auth.users 查詢 profiles（因 profiles 表無 email 欄位）
+
+### 三種會員管理方式
+
+| 類型 | 操作 | 到期管理 |
+|------|------|---------|
+| 台灣付費用戶 | 綠界付款全自動 | 系統自動 |
+| 外國用戶（PayPal/支付寶） | 後台手動新增外國會員表單 | 系統自動 |
+| 贈送會員 | 後台改 plan + 手動加頻道 | 手動 |
+
+### 注意事項
+- 綠界傳送的 BuyerName 和 BuyerEmail 參數不傳給綠界（格式限制），Email 只用於我們自己系統
+- profiles 表無 email 欄位，需透過 `get_profile_by_email` RPC 查詢 auth.users 對應
+- checkout.html 放在 Railway 上（不在 GitHub Pages），避免 CSP 問題
+
+### 管理文件
+- 系統備忘錄：https://github.com/BitoCat/tg-member-bot（README.md）
+- 會員說明（給用戶）：https://github.com/BitoCat/tg-member-bot/blob/main/MEMBER_GUIDE.md
+
+---
+
+## 網站權限管理 ✅ 2026-06-14 完成
+
+### 免費會員（free plan）限制
+- 首頁：顯示公告 + 顯示「帳號尚未開通」提示
+- 底部導覽列：除「首頁」和「我的」外，其他頁籤變灰無法點擊
+- 直接輸入網址：自動跳回首頁（news、daily、watchlist、tracker、alerts 都有保護）
+
+### 付費會員（all/admin plan）
+- 全功能開放
+- profile.html 顯示「✅ 已訂閱全市場方案」+ 到期日
+
+### 付費入口
+- profile.html：Free 會員顯示「🚀 立即加入」按鈕 → 連到付款頁面
+- 首頁公告：置頂顯示會員說明和付款連結
 
 ---
 
@@ -94,6 +215,7 @@ git add . && git commit -m "說明" && git push
   <script src="js/supabase.js"></script>
   ```
 - 新頁面（radar.html、news.html、daily.html 強力買入區）使用直接 fetch
+- GitHub Pages 有 CSP 限制，內嵌 script 可能被擋 → 付款頁面放在 Railway 上
 
 **Supabase 直接 fetch 標準寫法：**
 ```javascript
@@ -163,7 +285,7 @@ const SB_HEADERS = {
 - watchlist — 觀察名單
 - messages — 用戶訊息
 - alerts — 快訊記錄
-- memberships — 會員方案
+- memberships — 會員方案（詳見上方會員系統章節）
 - api_keys — API Key 管理
 
 ### 內容相關
@@ -282,10 +404,6 @@ concepts.html（🇹🇼/🇺🇸 切換頁籤）
 - 驗證部署版本的技巧：在 /test 路由回傳加 "ver" 版本標記，一看就知道跑的是哪版
 - Railway 的 Redeploy 是重部「該筆 deployment 的 commit」，不是 GitHub 最新版
 
-### 待觀察
-- 概念成分股需隨題材輪動人工維護 JSON
-- divergence ⚠️ 門檻 80% 用一陣子後可依實際感受調整
-
 ---
 
 ## 新聞系統（news.html）
@@ -304,10 +422,10 @@ concepts.html（🇹🇼/🇺🇸 切換頁籤）
 ---
 
 ## 用戶方案邏輯
-- free：功能全鎖，profile 頁有「聯繫管理員」入口
+- free：功能全鎖，首頁顯示公告 + 「帳號尚未開通」提示，底部頁籤除首頁和我的外全部鎖定
 - tw/us/all/admin：功能全開
 - 每日登入自動補 100 點，AI 健診每次扣 1 點
-- 訂閱方案：NT$3,600/年，結帳時輸入專屬優惠碼折抵 NT$1,200
+- 訂閱方案：NT$3,600/年，結帳時輸入優惠碼 MG571H 折抵 NT$1,200
 
 ---
 
@@ -315,6 +433,12 @@ concepts.html（🇹🇼/🇺🇸 切換頁籤）
 - Email：bitocat.trader@gmail.com
 - plan：admin（profiles 表，不是 user_metadata）
 - admin.html 需 plan=admin 才能進入
+
+### admin.html 功能
+- 用戶訊息管理
+- 會員管理（含 plan 修改、新增外國會員表單）
+- 發布公告、新聞、盤面解析、教學
+- Key 管理
 
 ---
 
@@ -325,8 +449,9 @@ concepts.html（🇹🇼/🇺🇸 切換頁籤）
 - supabase-js apikey header 問題：新頁面用直接 fetch
 - JS 字串內禁止用全形字元
 - GitHub Actions 版本要用 v4
-- profiles 表沒有 email 欄位
+- profiles 表沒有 email 欄位（需用 get_profile_by_email RPC）
 - Yahoo Finance / EDGAR 需從 Railway 後端抓，不能從 GitHub Actions 直接抓
+- GitHub Pages 有 CSP 限制，含內嵌 script 的互動頁面放在 Railway 上
 
 ### Supabase RLS
 - tw_fund_positions：anon SELECT
@@ -334,11 +459,14 @@ concepts.html（🇹🇼/🇺🇸 切換頁籤）
 - scan_watchlist：anon 全部權限
 - scan_results：anon SELECT + INSERT + DELETE
 - tw_stocks：anon SELECT（service_role 負責寫入）
+- memberships：service_all policy（Railway 後端可讀寫）
 
 ### Railway 維運
 - 方案：Hobby（$5/月）
 - 健康檢查：/test
 - 不需要加 port，public URL 已是 443
+- tg-member-bot 在 honest-vibrancy project
+- trading-bot 在 trading-bot project（含 tarot-app、mailbox-mgmt、splendid-prosperity）
 
 ---
 
@@ -346,12 +474,14 @@ concepts.html（🇹🇼/🇺🇸 切換頁籤）
 
 ### 待修正
 1. 漲跌幅有時顯示 NaN% — previousClose 有時為 null
+2. Safari 快取問題 — checkout 頁面在 Safari 偶有舊快取
 
 ### 待完成
-2. 202601~202603 fund_name 問題 — 重爬修正（前端已用 company 欄位臨時修補）
-3. 202606 SITCA 資料 — 等 6 月中旬公告
-4. 外資連續買超訊號 — 需累積足夠交易日資料
-5. 持續加碼偵測 — status=持續加碼 尚未實作
+3. 202601~202603 fund_name 問題 — 重爬修正（前端已用 company 欄位臨時修補）
+4. 202606 SITCA 資料 — 等 6 月中旬公告
+5. 外資連續買超訊號 — 需累積足夠交易日資料
+6. 持續加碼偵測 — status=持續加碼 尚未實作
+7. 台股主力雷達 ETF 頁籤 — tw_radar_new_positions 只有 ETF，個股未顯示（待修正 taiwan_scanner.py）
 
 ### 未來計畫
 - 港股北水追蹤
