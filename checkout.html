@@ -2,141 +2,122 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<meta name="theme-color" content="#060912">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>交易大師 · 加入會員</title>
-<link rel="stylesheet" href="css/base.css">
 <style>
-.checkout-wrap { max-width: 480px; margin: 0 auto; padding: 24px 16px; }
-.checkout-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin-bottom: 16px; }
-.checkout-title { font-size: 20px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
-.checkout-price { font-size: 32px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-.checkout-price span { font-size: 14px; color: var(--muted); font-weight: 400; }
-.checkout-features { margin-top: 16px; }
-.checkout-feature { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--border); }
-.checkout-feature:last-child { border-bottom: none; }
-.form-group { margin-bottom: 16px; }
-.form-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; display: block; }
-.form-input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; color: var(--text); font-size: 14px; box-sizing: border-box; }
-.form-input:focus { outline: none; border-color: var(--accent); }
-.payment-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-.payment-opt { border: 2px solid var(--border); border-radius: 10px; padding: 12px; cursor: pointer; text-align: center; transition: all .2s; }
-.payment-opt:hover { border-color: var(--border2); }
-.payment-opt.selected { border-color: var(--accent); background: rgba(0,212,255,.05); }
-.payment-opt-icon { font-size: 24px; margin-bottom: 4px; }
-.payment-opt-name { font-size: 12px; color: var(--text); font-weight: 600; }
-.payment-opt-desc { font-size: 10px; color: var(--muted); margin-top: 2px; }
-.promo-wrap { display: flex; gap: 8px; margin-bottom: 16px; }
-.promo-input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; color: var(--text); font-size: 14px; }
-.promo-btn { background: var(--border); color: var(--text); border: none; border-radius: 10px; padding: 12px 16px; cursor: pointer; font-size: 13px; white-space: nowrap; }
-.promo-success { font-size: 12px; color: #00c853; margin-top: 4px; display: none; }
-.order-summary { background: var(--bg); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
-.order-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
-.order-row.discount { color: #00c853; }
-.order-row.total { font-weight: 700; font-size: 16px; border-top: 1px solid var(--border); margin-top: 8px; padding-top: 8px; }
-.submit-btn { width: 100%; background: var(--accent); color: #000; font-weight: 700; padding: 16px; border-radius: 12px; border: none; cursor: pointer; font-size: 16px; }
-.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.notice { font-size: 11px; color: var(--muted); text-align: center; margin-top: 12px; line-height: 1.6; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#060912;color:#e0e0e0;font-family:-apple-system,sans-serif;min-height:100vh}
+.wrap{max-width:480px;margin:0 auto;padding:24px 16px}
+.card{background:#0d1117;border:1px solid #1e2a3a;border-radius:16px;padding:20px;margin-bottom:16px}
+.accent{color:#00d4ff}
+.muted{color:#6b7a8d}
+h1{font-size:20px;font-weight:700;color:#00d4ff;margin-bottom:8px}
+.price{font-size:32px;font-weight:700;margin-bottom:4px}
+.discount-note{font-size:12px;color:#00c853;margin-top:4px}
+.feature{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;color:#6b7a8d;border-bottom:1px solid #1e2a3a}
+.feature:last-child{border-bottom:none}
+.section-title{font-size:14px;font-weight:700;margin-bottom:14px}
+.form-label{font-size:12px;color:#6b7a8d;margin-bottom:5px;display:block}
+.form-input{width:100%;background:#060912;border:1px solid #1e2a3a;border-radius:10px;padding:11px 13px;color:#e0e0e0;font-size:14px;margin-bottom:14px}
+.form-input:focus{outline:none;border-color:#00d4ff}
+.pay-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+.pay-opt{border:2px solid #1e2a3a;border-radius:10px;padding:12px;cursor:pointer;text-align:center;transition:all .2s;background:transparent}
+.pay-opt:hover{border-color:#2e3a4a}
+.pay-opt.selected{border-color:#00d4ff;background:rgba(0,212,255,.05)}
+.pay-icon{font-size:22px;margin-bottom:4px}
+.pay-name{font-size:12px;font-weight:600;color:#e0e0e0}
+.pay-desc{font-size:10px;color:#6b7a8d;margin-top:2px}
+.promo-wrap{display:flex;gap:8px;margin-bottom:8px}
+.promo-input{flex:1;background:#060912;border:1px solid #1e2a3a;border-radius:10px;padding:11px 13px;color:#e0e0e0;font-size:14px}
+.promo-btn{background:#1e2a3a;color:#e0e0e0;border:none;border-radius:10px;padding:11px 16px;cursor:pointer;font-size:13px;white-space:nowrap}
+.promo-msg{font-size:12px;margin-top:4px;display:none}
+.summary{background:#060912;border-radius:10px;padding:14px;margin-bottom:14px}
+.sum-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0}
+.sum-discount{color:#00c853}
+.sum-total{font-weight:700;font-size:16px;border-top:1px solid #1e2a3a;margin-top:8px;padding-top:8px}
+.submit-btn{width:100%;background:#00d4ff;color:#000;font-weight:700;padding:16px;border-radius:12px;border:none;cursor:pointer;font-size:16px;margin-bottom:12px}
+.submit-btn:disabled{opacity:.5;cursor:not-allowed}
+.notice{font-size:11px;color:#6b7a8d;text-align:center;line-height:1.7}
 </style>
 </head>
 <body>
-<div class="checkout-wrap">
+<div class="wrap">
 
-  <!-- 方案說明 -->
-  <div class="checkout-card">
-    <div class="checkout-title">💎 交易大師會員</div>
-    <div class="checkout-price">NT$3,600 <span>/ 年</span></div>
-    <div style="font-size:12px;color:#00c853;margin-top:4px">🎁 輸入優惠碼最低 NT$2,400</div>
-    <div class="checkout-features">
-      <div class="checkout-feature">📊 每日盤面解析</div>
-      <div class="checkout-feature">🔍 AI 股票健診（台股／美股）</div>
-      <div class="checkout-feature">📰 即時市場新聞</div>
-      <div class="checkout-feature">🎯 主力雷達</div>
-      <div class="checkout-feature">⚡ 即時快訊</div>
-      <div class="checkout-feature">📩 交易大師頻道 + 台股報報 + 美股報報</div>
-      <div class="checkout-feature">📅 有效期限 380 天</div>
+<div class="card">
+  <h1>💎 交易大師會員</h1>
+  <div class="price">NT$3,600 <span style="font-size:14px;color:#6b7a8d">/ 年</span></div>
+  <div class="discount-note">🎁 輸入優惠碼最低 NT$2,400</div>
+  <div style="margin-top:16px">
+    <div class="feature">📊 每日盤面解析</div>
+    <div class="feature">🔍 AI 股票健診（台股／美股）</div>
+    <div class="feature">📰 即時市場新聞</div>
+    <div class="feature">🎯 主力雷達</div>
+    <div class="feature">⚡ 即時快訊</div>
+    <div class="feature">📩 交易大師頻道 + 台股報報 + 美股報報</div>
+    <div class="feature">📅 有效期限 380 天</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-title">📝 填寫資料</div>
+  <label class="form-label">姓名 *</label>
+  <input id="buyer-name" class="form-input" type="text" placeholder="請輸入姓名">
+  <label class="form-label">Email * （請與本站註冊 Email 相同）</label>
+  <input id="buyer-email" class="form-input" type="email" placeholder="請輸入 Email">
+  <label class="form-label">手機號碼（選填）</label>
+  <input id="buyer-phone" class="form-input" type="tel" placeholder="選填">
+</div>
+
+<div class="card">
+  <div class="section-title">💳 選擇付款方式</div>
+  <div class="pay-grid">
+    <div class="pay-opt selected" onclick="selectPayment('Credit')" id="pay-Credit">
+      <div class="pay-icon">💳</div>
+      <div class="pay-name">信用卡</div>
+      <div class="pay-desc">即時付款</div>
+    </div>
+    <div class="pay-opt" onclick="selectPayment('ATM')" id="pay-ATM">
+      <div class="pay-icon">🏧</div>
+      <div class="pay-name">ATM 轉帳</div>
+      <div class="pay-desc">虛擬帳號轉帳</div>
+    </div>
+    <div class="pay-opt" onclick="selectPayment('CVS')" id="pay-CVS">
+      <div class="pay-icon">🏪</div>
+      <div class="pay-name">超商代碼</div>
+      <div class="pay-desc">7-11、全家等</div>
+    </div>
+    <div class="pay-opt" onclick="selectPayment('BARCODE')" id="pay-BARCODE">
+      <div class="pay-icon">📊</div>
+      <div class="pay-name">超商條碼</div>
+      <div class="pay-desc">三段式條碼</div>
     </div>
   </div>
+</div>
 
-  <!-- 填寫資料 -->
-  <div class="checkout-card">
-    <div style="font-size:14px;font-weight:700;margin-bottom:16px">📝 填寫資料</div>
-    <div class="form-group">
-      <label class="form-label">姓名 *</label>
-      <input id="buyer-name" class="form-input" type="text" placeholder="請輸入姓名">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Email * （請與本站註冊 Email 相同）</label>
-      <input id="buyer-email" class="form-input" type="email" placeholder="請輸入 Email">
-    </div>
-    <div class="form-group">
-      <label class="form-label">手機號碼</label>
-      <input id="buyer-phone" class="form-input" type="tel" placeholder="選填">
-    </div>
+<div class="card">
+  <div class="section-title">🎁 優惠碼</div>
+  <div style="font-size:12px;color:#6b7a8d;margin-bottom:8px">請先套用優惠碼再進行付款</div>
+  <div class="promo-wrap">
+    <input id="promo-code" class="promo-input" type="text" placeholder="輸入優惠碼（選填）">
+    <button class="promo-btn" onclick="applyPromo()">套用</button>
   </div>
+  <div id="promo-msg" class="promo-msg"></div>
+</div>
 
-  <!-- 付款方式 -->
-  <div class="checkout-card">
-    <div style="font-size:14px;font-weight:700;margin-bottom:16px">💳 選擇付款方式</div>
-    <div class="payment-methods">
-      <div class="payment-opt selected" onclick="selectPayment('Credit')" id="pay-Credit">
-        <div class="payment-opt-icon">💳</div>
-        <div class="payment-opt-name">信用卡</div>
-        <div class="payment-opt-desc">即時付款</div>
-      </div>
-      <div class="payment-opt" onclick="selectPayment('ATM')" id="pay-ATM">
-        <div class="payment-opt-icon">🏧</div>
-        <div class="payment-opt-name">ATM 轉帳</div>
-        <div class="payment-opt-desc">虛擬帳號轉帳</div>
-      </div>
-      <div class="payment-opt" onclick="selectPayment('CVS')" id="pay-CVS">
-        <div class="payment-opt-icon">🏪</div>
-        <div class="payment-opt-name">超商代碼</div>
-        <div class="payment-opt-desc">7-11、全家等</div>
-      </div>
-      <div class="payment-opt" onclick="selectPayment('BARCODE')" id="pay-BARCODE">
-        <div class="payment-opt-icon">📊</div>
-        <div class="payment-opt-name">超商條碼</div>
-        <div class="payment-opt-desc">三段式條碼</div>
-      </div>
-    </div>
+<div class="summary">
+  <div class="sum-row"><span>交易大師會員年費</span><span>NT$3,600</span></div>
+  <div class="sum-row sum-discount" id="discount-row" style="display:none">
+    <span>優惠碼折扣</span><span id="discount-amt">-NT$0</span>
   </div>
+  <div class="sum-row sum-total"><span>應付金額</span><span id="total-amt">NT$3,600</span></div>
+</div>
 
-  <!-- 優惠碼 -->
-  <div class="checkout-card">
-    <div style="font-size:14px;font-weight:700;margin-bottom:12px">🎁 優惠碼</div>
-    <div class="promo-wrap">
-      <input id="promo-code" class="promo-input" type="text" placeholder="輸入優惠碼（選填）">
-      <button class="promo-btn" onclick="applyPromo()">套用</button>
-    </div>
-    <div id="promo-msg" class="promo-success"></div>
-  </div>
-
-  <!-- 訂單摘要 -->
-  <div class="order-summary">
-    <div class="order-row">
-      <span>交易大師會員年費</span>
-      <span>NT$3,600</span>
-    </div>
-    <div class="order-row discount" id="discount-row" style="display:none">
-      <span>優惠碼折扣</span>
-      <span id="discount-amt">-NT$0</span>
-    </div>
-    <div class="order-row total">
-      <span>應付金額</span>
-      <span id="total-amt">NT$3,600</span>
-    </div>
-  </div>
-
-  <!-- 送出 -->
-  <button class="submit-btn" onclick="submitOrder()" id="submit-btn">
-    前往付款 →
-  </button>
-  <div class="notice">
-    付款完成後，請至 Telegram 搜尋 @Boss1688Bot<br>
-    輸入 /start 後輸入付款 Email 即可取得頻道邀請連結<br><br>
-    ⚠️ 請確認 Email 與本站註冊帳號相同
-  </div>
+<button class="submit-btn" onclick="submitOrder()" id="submit-btn">前往付款 →</button>
+<div class="notice">
+  付款完成後，請至 Telegram 搜尋 @Boss1688Bot<br>
+  輸入 /start 後輸入付款 Email 即可取得頻道邀請連結<br><br>
+  ⚠️ 請確認 Email 與本站註冊帳號相同
+</div>
 
 </div>
 
