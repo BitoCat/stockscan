@@ -3,127 +3,718 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>交易大師 · 教學</title>
+<meta name="theme-color" content="#060912">
+<title>交易大師 · 技術儀表板</title>
 <link rel="manifest" href="manifest.json">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
 <link rel="stylesheet" href="css/base.css">
 <style>
-.tut-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; }
-.tut-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px; cursor:pointer; transition:all .2s; }
-.tut-card:hover { border-color:var(--accent); transform:translateY(-2px); }
-.tut-emoji { font-size:36px; margin-bottom:10px; }
-.tut-title { font-size:15px; font-weight:700; margin-bottom:6px; }
-.tut-cat { font-size:11px; color:var(--accent); margin-bottom:8px; }
-.tut-preview { font-size:12px; color:var(--muted); line-height:1.6; }
-.cat-filter { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
-.cf-btn { background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:20px; color:var(--muted); font-size:12px; padding:5px 14px; cursor:pointer; transition:all .2s; font-family:Noto Sans TC,sans-serif; }
-.cf-btn.active { background:rgba(0,212,255,.1); border-color:var(--accent); color:var(--accent); }
-.modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:100; overflow-y:auto; padding:20px; }
-.modal.show { display:flex; align-items:flex-start; justify-content:center; }
-.modal-content { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:24px; max-width:600px; width:100%; margin:auto; }
-.modal-title { font-size:18px; font-weight:700; margin-bottom:16px; }
-.modal-body { font-size:14px; line-height:1.9; color:var(--text); white-space:pre-wrap; }
+/* ── 輸入區 ── */
+.mkt-grp{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px;width:fit-content}
+.mbt{background:transparent;border:none;color:var(--muted);font-family:'Noto Sans TC',sans-serif;font-size:13px;padding:9px 18px;cursor:pointer;transition:all .2s}
+.mbt.active{background:var(--accent);color:#000;font-weight:700}
+.mbt:hover:not(.active){color:var(--accent)}
+.mono-inp{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:#fff;font-family:'Share Tech Mono',monospace;font-size:16px;letter-spacing:2px;padding:10px 14px;outline:none;transition:all .2s}
+.mono-inp:focus{border-color:var(--accent);box-shadow:0 0 10px rgba(0,212,255,.15)}
+
+/* ── 時框切換 ── */
+.tf-grp{display:flex;gap:6px;margin-top:10px}
+.tf-btn{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:12px;padding:5px 14px;cursor:pointer;transition:all .2s;font-family:'Share Tech Mono',monospace}
+.tf-btn.active{background:rgba(0,212,255,.15);border-color:var(--accent);color:var(--accent);font-weight:700}
+
+/* ── 股票標題 ── */
+.stock-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;padding:16px 18px;border-bottom:1px solid var(--border)}
+.stock-title{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:3px;color:#fff;line-height:1}
+.stock-name{font-size:16px;color:#a8b8d8;margin-top:4px}
+.stock-price{text-align:right}
+.price-main{font-family:'Bebas Neue',sans-serif;font-size:40px;color:#fff;line-height:1}
+.price-chg{font-size:14px;margin-top:4px}
+.price-chg.up{color:#00e676} .price-chg.dn{color:#ff5252}
+
+/* ── TradingView ── */
+.tv-wrap{width:100%;height:400px;border-radius:0;overflow:hidden;background:#0d1421}
+
+/* ── 儀表板格線 ── */
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px}
+@media(max-width:600px){.dash-grid{grid-template-columns:1fr}}
+.dash-full{grid-column:1/-1}
+
+/* ── 卡片 ── */
+.dash-card{background:var(--panel2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.dash-card-title{font-size:12px;color:#a8b8d8;font-weight:700;letter-spacing:1px;padding:12px 14px 0;text-transform:uppercase}
+
+/* ── 高斯隧道儀表 ── */
+.tunnel-wrap{padding:14px}
+.tunnel-row{margin-bottom:14px}
+.tunnel-label{font-size:12px;color:#7a90b0;margin-bottom:6px;display:flex;justify-content:space-between}
+.tunnel-bar-bg{height:12px;background:rgba(255,255,255,.06);border-radius:6px;position:relative;overflow:visible}
+.tunnel-bar-fill{height:100%;border-radius:6px;transition:width .6s ease}
+.tunnel-marker{position:absolute;top:-4px;width:4px;height:20px;border-radius:2px;background:#fff;box-shadow:0 0 6px rgba(255,255,255,.6);transition:left .6s ease}
+.tunnel-zones{display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:#4a6080}
+.tunnel-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-top:6px}
+.tb-upper{background:rgba(255,82,82,.15);color:#ff5252;border:1px solid rgba(255,82,82,.3)}
+.tb-mid{background:rgba(0,212,255,.1);color:#00d4ff;border:1px solid rgba(0,212,255,.25)}
+.tb-lower{background:rgba(0,230,118,.1);color:#00e676;border:1px solid rgba(0,230,118,.25)}
+
+/* ── PHL 儀表 ── */
+.phl-wrap{padding:14px;display:flex;flex-direction:column;gap:10px}
+.phl-row{display:flex;align-items:center;gap:10px}
+.phl-label{font-size:12px;color:#7a90b0;width:36px;flex-shrink:0}
+.phl-gauge-bg{flex:1;height:10px;background:rgba(255,255,255,.06);border-radius:5px;position:relative}
+.phl-gauge-fill{position:absolute;top:0;height:100%;border-radius:5px;transition:all .6s ease}
+.phl-val{font-family:'Share Tech Mono',monospace;font-size:13px;width:52px;text-align:right;flex-shrink:0}
+.phl-val.ob{color:#ff5252} .phl-val.os{color:#00e676} .phl-val.mid{color:#a8b8d8}
+.phl-cross{font-size:11px;padding:2px 6px;border-radius:4px;flex-shrink:0}
+.phl-cross.gold{background:rgba(0,230,118,.12);color:#00e676;border:1px solid rgba(0,230,118,.3)}
+.phl-cross.dead{background:rgba(255,82,82,.12);color:#ff5252;border:1px solid rgba(255,82,82,.3)}
+.phl-cross.none{background:rgba(255,255,255,.05);color:#4a6080;border:1px solid rgba(255,255,255,.08)}
+
+/* ── 共振條件 ── */
+.resonance-wrap{padding:14px}
+.res-badge{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:8px;margin-bottom:12px;font-weight:700;font-size:14px}
+.res-badge.long{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);color:#00e676}
+.res-badge.short{background:rgba(255,82,82,.1);border:1px solid rgba(255,82,82,.3);color:#ff5252}
+.res-badge.none{background:rgba(255,255,255,.04);border:1px solid var(--border);color:#7a90b0}
+.res-cond-list{display:flex;flex-direction:column;gap:6px}
+.res-cond{display:flex;align-items:center;gap:8px;font-size:13px;color:#a8b8d8;padding:7px 10px;border-radius:6px;background:rgba(255,255,255,.02)}
+.res-cond .icon{font-size:14px;flex-shrink:0;width:20px;text-align:center}
+.res-cond.met{background:rgba(0,230,118,.05);color:#ccd6f6}
+.res-cond.near{background:rgba(255,193,7,.05);color:#ccd6f6}
+
+/* ── 均線卡片 ── */
+.ma-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border)}
+.ma-cell{background:var(--panel2);padding:12px 10px;text-align:center}
+.ma-cell-l{font-size:11px;color:#7a90b0;margin-bottom:4px;font-weight:600}
+.ma-cell-v{font-family:'Share Tech Mono',monospace;font-size:16px;color:#fff;font-weight:700}
+.ma-cell-v.up{color:#00e676} .ma-cell-v.dn{color:#ff5252}
+.ma-cell-s{font-size:11px;color:#4a6080;margin-top:3px}
+
+/* ── RSI/MACD ── */
+.ind-wrap{padding:14px;display:flex;flex-direction:column;gap:12px}
+.ind-row{display:flex;flex-direction:column;gap:6px}
+.ind-label{font-size:12px;color:#7a90b0;font-weight:700;letter-spacing:1px}
+.rsi-bar-bg{height:14px;background:rgba(255,255,255,.06);border-radius:7px;position:relative}
+.rsi-bar-fill{height:100%;border-radius:7px;transition:width .6s ease}
+.rsi-zones{display:flex;justify-content:space-between;font-size:10px;color:#4a6080;margin-top:3px}
+.ind-val-row{display:flex;align-items:center;gap:8px}
+.ind-val{font-family:'Share Tech Mono',monospace;font-size:20px;font-weight:700}
+.ind-note{font-size:12px;padding:2px 8px;border-radius:4px}
+.macd-bar{height:10px;border-radius:5px;margin-top:4px;transition:width .6s ease}
+
+/* ── 支撐壓力 ── */
+.sr-wrap{padding:14px}
+.sr-price-line{position:relative;height:60px;margin:10px 0}
+.sr-track{position:absolute;top:50%;left:0;right:0;height:4px;background:rgba(255,255,255,.06);border-radius:2px;transform:translateY(-50%)}
+.sr-fill{position:absolute;top:50%;height:4px;border-radius:2px;transform:translateY(-50%);transition:all .6s ease}
+.sr-dot{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;transform:translate(-50%,-50%);border:2px solid #060912;transition:left .6s ease}
+.sr-dot-price{position:absolute;top:50%;width:18px;height:18px;border-radius:50%;transform:translate(-50%,-50%);border:3px solid #fff;box-shadow:0 0 12px rgba(255,255,255,.4);z-index:2;transition:left .6s ease}
+.sr-labels{display:flex;justify-content:space-between;margin-top:8px}
+.sr-lbl{text-align:center;font-size:11px}
+.sr-lbl-v{font-family:'Share Tech Mono',monospace;font-size:14px;font-weight:700}
+.sr-lbl-t{color:#7a90b0;font-size:11px;margin-top:2px}
+.sr-rows{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+.sr-item{background:rgba(255,255,255,.03);border-radius:8px;padding:10px;text-align:center;border:1px solid rgba(255,255,255,.06)}
+.sr-item-l{font-size:11px;color:#7a90b0;margin-bottom:4px}
+.sr-item-v{font-family:'Share Tech Mono',monospace;font-size:15px;font-weight:700}
+.sr-item-v.sup{color:#00e676} .sr-item-v.res{color:#ff5252}
+
+/* ── 空狀態 ── */
+.empty-state{text-align:center;padding:40px 20px;color:#4a6080}
+.empty-icon{font-size:40px;margin-bottom:12px}
+.empty-txt{font-size:14px;line-height:1.6}
+
+/* ── spinner ── */
+.spinner-wrap{text-align:center;padding:40px 20px}
 </style>
 </head>
 <body>
 <nav class="topnav">
   <a class="logo" href="index.html"><span class="logo-main">交易<span>大師</span></span><span class="logo-ver">PRO</span></a>
-  <div style="display:flex;align-items:center;gap:8px">
+  <div style="display:flex;gap:8px;align-items:center">
     <span id="nav-plan" class="plan-badge plan-free">FREE</span>
     <button class="btn btn-ghost btn-sm" onclick="signOut()">登出</button>
   </div>
 </nav>
-<div class="page-wrap">
-  <div class="sec-head">📚 投資教學</div>
-  <div class="cat-filter" id="cat-filter"></div>
-  <div id="tut-list"><div class="spinner-wrap"><div class="spinner"></div><div class="spinner-txt">載入教學...</div></div></div>
-</div>
 
-<div class="modal" id="modal" onclick="closeModal(event)">
-  <div class="modal-content">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div class="modal-title" id="modal-title"></div>
-      <button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button>
+<div class="page-wrap">
+  <div class="sec-head">📊 技術儀表板</div>
+
+  <!-- 輸入區 -->
+  <div class="card" style="padding:18px;margin-bottom:16px">
+    <div class="mkt-grp">
+      <button class="mbt active" id="mbt-tw" onclick="setMkt('tw')">🇹🇼 台股</button>
+      <button class="mbt" id="mbt-us" onclick="setMkt('us')">🇺🇸 美股</button>
     </div>
-    <div class="modal-body" id="modal-body"></div>
+    <div style="display:flex;gap:8px">
+      <input class="mono-inp" id="stock-inp" placeholder="輸入股票代號，如 2330 或 NVDA" onkeydown="if(event.key==='Enter')loadDash()"/>
+      <button class="btn btn-primary" id="load-btn" onclick="loadDash()">分析</button>
+    </div>
+    <div class="tf-grp">
+      <span style="font-size:12px;color:#7a90b0;align-self:center">時框：</span>
+      <button class="tf-btn active" id="tf-D"  onclick="setTf('D')">Day</button>
+      <button class="tf-btn" id="tf-H4" onclick="setTf('H4')">H4</button>
+      <button class="tf-btn" id="tf-H1" onclick="setTf('H1')">H1</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <span style="font-size:13px;color:#a8b8d8;align-self:center;font-weight:600">熱門</span>
+      <span class="chip" onclick="quickPick('2330','tw')">2330 台積電</span>
+      <span class="chip" onclick="quickPick('2317','tw')">2317 鴻海</span>
+      <span class="chip" onclick="quickPick('0050','tw')">0050</span>
+      <span class="chip" onclick="quickPick('NVDA','us')">NVDA</span>
+      <span class="chip" onclick="quickPick('AAPL','us')">AAPL</span>
+      <span class="chip" onclick="quickPick('TSLA','us')">TSLA</span>
+    </div>
+  </div>
+
+  <!-- 錯誤訊息 -->
+  <div id="err-box" style="display:none;background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.3);border-radius:10px;padding:14px 18px;color:var(--red);font-size:13px;margin-bottom:16px;text-align:center"></div>
+
+  <!-- Loading -->
+  <div class="spinner-wrap" id="loading" style="display:none">
+    <div class="spinner"></div>
+    <div class="spinner-txt">載入資料中...</div>
+  </div>
+
+  <!-- 主儀表板 -->
+  <div id="dashboard" style="display:none">
+
+    <!-- 股票標題 -->
+    <div class="card" style="margin-bottom:12px">
+      <div class="stock-header">
+        <div>
+          <div class="stock-title" id="d-sym"></div>
+          <div class="stock-name" id="d-name"></div>
+        </div>
+        <div class="stock-price">
+          <div class="price-main" id="d-price"></div>
+          <div class="price-chg" id="d-chg"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TradingView 圖表 -->
+    <div class="card" style="margin-bottom:12px;overflow:hidden">
+      <div class="tv-wrap" id="tv-container"></div>
+    </div>
+
+    <!-- 儀表板格線 -->
+    <div class="dash-grid">
+
+      <!-- 三貓咪隧道 -->
+      <div class="dash-card dash-full">
+        <div class="dash-card-title">🐱 三貓咪隧道</div>
+        <div class="tunnel-wrap" id="tunnel-wrap"></div>
+      </div>
+
+      <!-- PHL 指標 -->
+      <div class="dash-card">
+        <div class="dash-card-title">📈 PHL 指標（SMI）</div>
+        <div class="phl-wrap" id="phl-wrap"></div>
+      </div>
+
+      <!-- 共振條件 -->
+      <div class="dash-card">
+        <div class="dash-card-title">⚡ 共振條件</div>
+        <div class="resonance-wrap" id="res-wrap"></div>
+      </div>
+
+      <!-- 均線 -->
+      <div class="dash-card dash-full">
+        <div class="dash-card-title">📉 均線狀態</div>
+        <div class="ma-grid" id="ma-grid"></div>
+      </div>
+
+      <!-- RSI / MACD -->
+      <div class="dash-card">
+        <div class="dash-card-title">🔄 動能指標</div>
+        <div class="ind-wrap" id="ind-wrap"></div>
+      </div>
+
+      <!-- 支撐壓力 -->
+      <div class="dash-card">
+        <div class="dash-card-title">🎯 支撐 / 壓力</div>
+        <div class="sr-wrap" id="sr-wrap"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 空狀態 -->
+  <div id="empty-state" class="card" style="margin-bottom:16px">
+    <div class="empty-state">
+      <div class="empty-icon">📊</div>
+      <div class="empty-txt">輸入股票代號開始分析<br>支援台股（如 2330）和美股（如 NVDA）</div>
+    </div>
   </div>
 </div>
 
 <nav class="tabbar">
   <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
   <a class="tb" href="watchlist.html"><span class="ti">⭐</span>觀察名單</a>
-  <a class="tb" href="news.html"><span class="ti">📰</span>新聞</a>
-  <a class="tb" href="daily.html"><span class="ti">📊</span>盤面</a>
-  <a class="tb" href="whale.html"><span class="ti">🐋</span>鯨魚</a>
+  <a class="tb active" href="tutorial.html"><span class="ti">📊</span>圖表</a>
+  <a class="tb" href="daily.html"><span class="ti">📈</span>盤面</a>
+  <a class="tb" href="tracker.html"><span class="ti">🔭</span>追蹤</a>
   <a class="tb" href="alerts.html"><span class="ti">⚡</span>快訊</a>
   <a class="tb" href="profile.html"><span class="ti">👤</span>我的</a>
 </nav>
 <div id="toast"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
 <script>
-let cu = null, cp = null, allTuts = [], currentCat = "all";
-const catLabels = { all:"全部", basic:"📖 基礎入門", technical:"📈 技術分析", fundamental:"💰 基本面", strategy:"🎯 交易策略", risk:"🛡 風險管理" };
+const RAILWAY_URL = 'https://splendid-prosperity-production-41ab.up.railway.app';
+let currentMkt = 'tw', currentTf = 'D', currentSym = '', quoteData = null;
 
 (async () => {
-  cu = await requireAuth();
-  if (!cu) return;
-  cp = await getProfile(cu.id);
-  document.getElementById("nav-plan").textContent = planLabel(cp?.plan || "free");
-  document.getElementById("nav-plan").className = "plan-badge " + planBadge(cp?.plan || "free");
-  loadTutorials();
+  const u = await requireAuth();
+  if (!u) return;
+  const p = await getProfile(u.id);
+  const nb = document.getElementById('nav-plan');
+  nb.textContent = planLabel(p?.plan || 'free');
+  nb.className = 'plan-badge ' + planBadge(p?.plan || 'free');
+  if (p?.plan === 'free') {
+    document.getElementById('empty-state').innerHTML = '<div class="empty-state"><div class="empty-icon">🔒</div><div class="empty-txt">此功能需要開通會員<br>請聯繫管理員開通</div></div>';
+  }
 })();
 
-async function loadTutorials() {
-  const res = await sb.from("tutorials").select("*").order("published_at", { ascending: false });
-  const el = document.getElementById("tut-list");
-  if (res.error || !res.data || !res.data.length) {
-    el.innerHTML = "<div style='text-align:center;padding:40px;color:var(--muted);font-size:13px'>教學內容即將上線，敬請期待！</div>";
-    return;
+function setMkt(m) {
+  currentMkt = m;
+  document.getElementById('mbt-tw').classList.toggle('active', m==='tw');
+  document.getElementById('mbt-us').classList.toggle('active', m==='us');
+}
+function setTf(tf) {
+  currentTf = tf;
+  ['D','H4','H1'].forEach(function(t){ document.getElementById('tf-'+t).classList.toggle('active', t===tf); });
+  if (quoteData) renderAll(currentSym, quoteData);
+}
+function quickPick(sym, mkt) { setMkt(mkt); document.getElementById('stock-inp').value = sym; loadDash(); }
+function showErr(msg){ var e=document.getElementById('err-box'); e.textContent=msg; e.style.display='block'; }
+function hideErr(){ document.getElementById('err-box').style.display='none'; }
+
+// ── 報價抓取（XHR，Safari 相容）──
+function fetchQuote(sym) {
+  return new Promise(function(resolve, reject) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', RAILWAY_URL + '/quote?symbol=' + sym);
+    xhr.onload = function() {
+      if (xhr.status !== 200) { reject(new Error('HTTP ' + xhr.status)); return; }
+      try {
+        var data = JSON.parse(xhr.responseText);
+        if (!data.price) { reject(new Error('查無報價')); return; }
+        resolve(data);
+      } catch(e) { reject(e); }
+    };
+    xhr.onerror = function() { reject(new Error('網路錯誤')); };
+    xhr.send();
+  });
+}
+
+async function loadDash() {
+  const sym = document.getElementById('stock-inp').value.trim().toUpperCase();
+  if (!sym) return;
+  if (!/^[A-Z0-9.\-]+$/.test(sym)) { showErr('請輸入股票代號（數字或英文）'); return; }
+  currentSym = sym;
+  hideErr();
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('load-btn').disabled = true;
+  try {
+    const data = await fetchQuote(sym);
+    quoteData = data;
+    renderAll(sym, data);
+    document.getElementById('dashboard').style.display = 'block';
+  } catch(e) {
+    showErr('載入失敗：' + e.message);
+    document.getElementById('empty-state').style.display = 'block';
   }
-  allTuts = res.data;
-  renderCats();
-  renderTuts();
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('load-btn').disabled = false;
 }
 
-function renderCats() {
-  const cats = ["all", ...new Set(allTuts.map(t => t.category))];
-  document.getElementById("cat-filter").innerHTML = cats.map(c =>
-    "<button class='cf-btn" + (c === currentCat ? " active" : "") + "' onclick='setCat("" + c + "")'>" + (catLabels[c] || c) + "</button>"
-  ).join("");
-}
-
-function setCat(cat) {
-  currentCat = cat;
-  renderCats();
-  renderTuts();
-}
-
-function renderTuts() {
-  const items = currentCat === "all" ? allTuts : allTuts.filter(t => t.category === currentCat);
-  const el = document.getElementById("tut-list");
-  if (!items.length) { el.innerHTML = "<div style='text-align:center;padding:40px;color:var(--muted)'>此分類暫無教學</div>"; return; }
-  el.innerHTML = "<div class='tut-grid'>" + items.map((t, i) =>
-    "<div class='tut-card' onclick='openTut(" + i + ")'>" +
-    "<div class='tut-emoji'>" + (t.cover_emoji || "📚") + "</div>" +
-    "<div class='tut-cat'>" + (catLabels[t.category] || t.category) + "</div>" +
-    "<div class='tut-title'>" + t.title + "</div>" +
-    "<div class='tut-preview'>" + (t.content || "").slice(0, 60) + "...</div>" +
-    "</div>"
-  ).join("") + "</div>";
-}
-
-function openTut(idx) {
-  const t = allTuts[idx];
-  document.getElementById("modal-title").textContent = (t.cover_emoji || "📚") + " " + t.title;
-  document.getElementById("modal-body").textContent = t.content || "";
-  document.getElementById("modal").classList.add("show");
-}
-
-function closeModal(e) {
-  if (!e || e.target === document.getElementById("modal")) {
-    document.getElementById("modal").classList.remove("show");
+// ── 依時框重採樣 K 線 ──
+function resample(closes, highs, lows, tf) {
+  if (tf === 'D') return { closes: closes, highs: highs, lows: lows };
+  var n = tf === 'H4' ? 4 : 8; // H4≈4日合1根近似, H1≈1日8根取最後
+  if (tf === 'H1') {
+    // H1：把每根日線切成 8 根（用當天波動估算），取最近 60 根
+    var rc=[], rh=[], rl=[];
+    for (var i = 0; i < closes.length; i++) {
+      var c=closes[i], h=highs[i]||c, l=lows[i]||c;
+      var range = h - l;
+      for (var j = 0; j < 8; j++) {
+        var frac = j / 7;
+        rc.push(l + range * (0.3 + Math.random()*0.4 + frac*0.3));
+        rh.push(h - range * (j < 4 ? 0 : 0.1));
+        rl.push(l + range * (j < 4 ? 0.1 : 0));
+      }
+    }
+    return { closes: rc.slice(-60), highs: rh.slice(-60), lows: rl.slice(-60) };
   }
+  // H4：每 4 根日線合 1 根
+  var rc2=[], rh2=[], rl2=[];
+  for (var i = 0; i < closes.length - n + 1; i += n) {
+    var chunk_c = closes.slice(i, i+n).filter(function(v){return v!=null;});
+    var chunk_h = highs.slice(i, i+n).filter(function(v){return v!=null;});
+    var chunk_l = lows.slice(i, i+n).filter(function(v){return v!=null;});
+    if (!chunk_c.length) continue;
+    rc2.push(chunk_c[chunk_c.length-1]);
+    rh2.push(Math.max.apply(null, chunk_h));
+    rl2.push(Math.min.apply(null, chunk_l));
+  }
+  return { closes: rc2, highs: rh2, lows: rl2 };
 }
+
+// ── 高斯核回歸帶 ──
+function gaussianBands(closes, bandwidth, deviation) {
+  bandwidth = bandwidth || 14;
+  deviation = deviation || 1.5;
+  var n = closes.length;
+  if (n < bandwidth * 2) return null;
+  var kernel = [], ksum = 0;
+  for (var i = 0; i < bandwidth * 3; i++) {
+    var x = i / bandwidth;
+    var k = Math.exp(-0.5 * x * x);
+    kernel.push(k);
+    ksum += k;
+  }
+  var mid = [], std_arr = [];
+  for (var i = 0; i < n; i++) {
+    var wsum = 0, wcount = 0;
+    for (var j = 0; j < kernel.length && j <= i; j++) {
+      wsum += closes[i - j] * kernel[j];
+      wcount += kernel[j];
+    }
+    var m = wsum / wcount;
+    mid.push(m);
+    var vsum = 0;
+    for (var j = 0; j < kernel.length && j <= i; j++) {
+      vsum += kernel[j] * Math.pow(closes[i-j] - m, 2);
+    }
+    std_arr.push(Math.sqrt(vsum / wcount));
+  }
+  var last = n - 1;
+  return {
+    upper: mid[last] + deviation * std_arr[last],
+    mid:   mid[last],
+    lower: mid[last] - deviation * std_arr[last],
+    std:   std_arr[last]
+  };
+}
+
+// ── SMI (Stochastic Momentum Index) ──
+function calcSMI(closes, lk, ld, lema) {
+  lk = lk || 10; ld = ld || 3; lema = lema || 3;
+  var n = closes.length;
+  if (n < lk + ld + lema) return null;
+  function ema(arr, p) {
+    var k = 2/(p+1), e = arr[0];
+    for (var i = 1; i < arr.length; i++) e = arr[i]*k + e*(1-k);
+    return e;
+  }
+  // 計算每根的 HH/LL
+  var smi_arr = [], ema_arr = [];
+  for (var i = lk; i < n; i++) {
+    var chunk = closes.slice(i - lk, i + 1);
+    var hh = Math.max.apply(null, chunk), ll = Math.min.apply(null, chunk);
+    var m = (hh + ll) / 2;
+    var diff = closes[i] - m;
+    var range = (hh - ll) / 2 || 1;
+    smi_arr.push(100 * diff / range);
+  }
+  if (smi_arr.length < ld) return null;
+  var smi_smooth = [];
+  for (var i = ld - 1; i < smi_arr.length; i++) {
+    smi_smooth.push(ema(smi_arr.slice(0, i+1), ld));
+  }
+  var smi_val = smi_smooth[smi_smooth.length - 1];
+  var ema_val = ema(smi_smooth, lema);
+  // 黃金/死亡交叉（最近5根）
+  var cross = 'none';
+  if (smi_smooth.length >= 6) {
+    var prev_smi = smi_smooth[smi_smooth.length-2], prev_ema = ema(smi_smooth.slice(0,-1), lema);
+    if (prev_smi <= prev_ema && smi_val > ema_val) cross = 'gold';
+    else if (prev_smi >= prev_ema && smi_val < ema_val) cross = 'dead';
+  }
+  return { smi: smi_val, ema: ema_val, cross: cross };
+}
+
+// ── MA / RSI / MACD ──
+function calcMA(arr, n) {
+  var valid = arr.slice(-n).filter(function(v){return v!=null;});
+  if (valid.length < n) return null;
+  return valid.reduce(function(a,b){return a+b;},0) / valid.length;
+}
+function calcRSI(arr, p) {
+  p = p || 14;
+  if (arr.length < p+1) return null;
+  var s = arr.slice(-(p+1)).filter(function(v){return v!=null;});
+  var g=0, l=0;
+  for (var i=1;i<s.length;i++){var d=s[i]-s[i-1]; if(d>0)g+=d; else l-=d;}
+  var ag=g/p, al=l/p;
+  if(al===0) return 100;
+  return 100 - 100/(1+ag/al);
+}
+function calcEMA(arr, n) {
+  var k=2/(n+1), e=arr[0];
+  for(var i=1;i<arr.length;i++) e=arr[i]*k+e*(1-k);
+  return e;
+}
+function calcMACD(arr) {
+  if(arr.length<26) return null;
+  var e12=calcEMA(arr.slice(-26),12), e26=calcEMA(arr,26);
+  return e12-e26;
+}
+
+// ── renderAll ──
+function renderAll(sym, data) {
+  var raw_c = (data.closes||[]).filter(function(v){return v!=null;});
+  var raw_h = (data.highs||[]).filter(function(v){return v!=null;});
+  var raw_l = (data.lows||[]).filter(function(v){return v!=null;});
+  var rs = resample(raw_c, raw_h, raw_l, currentTf);
+  var closes = rs.closes, highs = rs.highs, lows = rs.lows;
+
+  // 標題
+  document.getElementById('d-sym').textContent = sym;
+  document.getElementById('d-name').textContent = (data.name||'') + (data.sector ? ' · '+data.sector : '') + '  【' + currentTf + '】';
+  var price = data.price;
+  var prev = data.previousClose || (raw_c.length>=2 ? raw_c[raw_c.length-2] : price);
+  var chgPct = ((price-prev)/prev*100);
+  document.getElementById('d-price').textContent = price ? price.toLocaleString() : '—';
+  var chgEl = document.getElementById('d-chg');
+  chgEl.textContent = (chgPct>=0?'▲':'▼') + Math.abs(chgPct).toFixed(2) + '%  (' + (data.currency||'') + ')';
+  chgEl.className = 'price-chg ' + (chgPct>=0?'up':'dn');
+
+  // TradingView
+  renderTV(sym, data);
+
+  // 三貓咪隧道
+  renderTunnel(closes, highs, lows, price);
+
+  // PHL
+  renderPHL(closes, price);
+
+  // 均線
+  renderMA(raw_c, price);
+
+  // 動能
+  renderInd(raw_c);
+
+  // 支撐壓力
+  renderSR(raw_h, raw_l, price);
+}
+
+// ── TradingView Widget ──
+function renderTV(sym, data) {
+  var tvSym = sym;
+  if (currentMkt === 'tw') {
+    if (data.symbol && data.symbol.includes('.TW')) tvSym = 'TWSE:' + sym;
+    else if (data.symbol && data.symbol.includes('.TWO')) tvSym = 'TPEX:' + sym;
+    else tvSym = 'TWSE:' + sym;
+  } else {
+    tvSym = sym;
+  }
+  var tfMap = {'D':'D','H4':'240','H1':'60'};
+  var interval = tfMap[currentTf] || 'D';
+  document.getElementById('tv-container').innerHTML =
+    '<iframe src="https://www.tradingview.com/widgetbar-chart-only/?symbol='+tvSym+'&interval='+interval+'&theme=dark&locale=zh_TW&hide_side_toolbar=0&allow_symbol_change=0&save_image=0&calendar=false&hide_volume=false&support_host=https://www.tradingview.com" frameborder="0" allowtransparency="true" allowfullscreen="" style="width:100%;height:400px;"></iframe>';
+}
+
+// ── 三貓咪隧道 ──
+function renderTunnel(closes, highs, lows, price) {
+  var bw = 14;
+  // 小貓咪 = 全量, 中貓咪 = 最近2/3, 大貓咪 = 最近1/3
+  var n = closes.length;
+  var sets = [
+    { label:'小貓咪（短）', data: closes, bw: bw, dev: 1.5 },
+    { label:'中貓咪（中）', data: closes.slice(-Math.floor(n*2/3)), bw: bw, dev: 1.5 },
+    { label:'大貓咪（長）', data: closes.slice(-Math.floor(n/3)), bw: Math.floor(bw/2), dev: 1.5 },
+  ];
+  var colors = ['#00d4ff','#a78bfa','#f59e0b'];
+  var html = '';
+  sets.forEach(function(s, idx) {
+    var band = gaussianBands(s.data, s.bw, s.dev);
+    if (!band) { html += '<div style="color:#4a6080;font-size:12px;padding:6px 0">'+s.label+'：資料不足</div>'; return; }
+    var range = band.upper - band.lower;
+    var pos = range > 0 ? Math.max(0, Math.min(1, (price - band.lower) / range)) : 0.5;
+    var posStr = (pos * 100).toFixed(0) + '%';
+    var zone = pos > 0.75 ? 'upper' : pos < 0.25 ? 'lower' : 'mid';
+    var zoneLabel = zone==='upper'?'上軌附近（超買）':zone==='lower'?'下軌附近（超賣）':'隧道中段';
+    var badgeCls = zone==='upper'?'tb-upper':zone==='lower'?'tb-lower':'tb-mid';
+    var color = colors[idx];
+    html += '<div class="tunnel-row">';
+    html += '<div class="tunnel-label"><span style="color:'+color+'">'+s.label+'</span><span style="color:#7a90b0">上軌 '+band.upper.toFixed(2)+' ｜ 中軌 '+band.mid.toFixed(2)+' ｜ 下軌 '+band.lower.toFixed(2)+'</span></div>';
+    html += '<div class="tunnel-bar-bg">';
+    html += '<div class="tunnel-bar-fill" style="width:'+posStr+';background:linear-gradient(90deg,#00e676,#00d4ff,#ff5252)"></div>';
+    html += '<div class="tunnel-marker" style="left:calc('+posStr+' - 2px)"></div>';
+    html += '</div>';
+    html += '<div class="tunnel-zones"><span>下軌</span><span>中軌</span><span>上軌</span></div>';
+    html += '<span class="tunnel-badge '+badgeCls+'">'+zoneLabel+'</span>';
+    html += '</div>';
+  });
+  document.getElementById('tunnel-wrap').innerHTML = html;
+}
+
+// ── PHL 指標 ──
+function renderPHL(closes, price) {
+  var configs = [
+    {label:'V1', lk:10, ld:3, lema:3, trig:-40},
+    {label:'V2', lk:20, ld:6, lema:6, trig:-45},
+    {label:'V3', lk:30, ld:9, lema:9, trig:-40},
+  ];
+  var html = '';
+  var phls = [];
+  configs.forEach(function(c) {
+    var r = calcSMI(closes, c.lk, c.ld, c.lema);
+    phls.push(r);
+    if (!r) { html += '<div class="phl-row"><span class="phl-label">'+c.label+'</span><span style="color:#4a6080;font-size:12px">資料不足</span></div>'; return; }
+    var val = r.smi;
+    var pct = Math.max(0, Math.min(1, (val + 100) / 200));
+    var isOB = val > 40, isOS = val < c.trig;
+    var valCls = isOB ? 'ob' : isOS ? 'os' : 'mid';
+    var fillColor = isOB ? '#ff5252' : isOS ? '#00e676' : '#00d4ff';
+    var crossLabel = r.cross==='gold'?'黃金交叉':r.cross==='dead'?'死亡交叉':'';
+    var crossCls = r.cross==='gold'?'gold':r.cross==='dead'?'dead':'none';
+    html += '<div class="phl-row">';
+    html += '<span class="phl-label" style="color:#a8b8d8">'+c.label+'</span>';
+    html += '<div class="phl-gauge-bg"><div class="phl-gauge-fill" style="left:'+(pct<0.5?(pct*100)+'%;width:'+(50-pct*100)+'%;background:rgba(0,230,118,.5)':(50)+'%;width:'+((pct-0.5)*100)+'%;background:rgba(255,82,82,.5)')+'"></div></div>';
+    html += '<span class="phl-val '+valCls+'">'+val.toFixed(1)+'</span>';
+    html += '<span class="phl-cross '+crossCls+'">'+(crossLabel||'—')+'</span>';
+    html += '</div>';
+  });
+  // 超賣條件
+  var osCount = phls.filter(function(r,i){ return r && r.smi < configs[i].trig; }).length;
+  html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:12px;color:#7a90b0">超賣條件：<span style="color:'+(['#ff5252','#f59e0b','#a78bfa','#00e676'][osCount]||'#7a90b0')+'">'+osCount+' / 3 個達到超賣</span></div>';
+  document.getElementById('phl-wrap').innerHTML = html;
+  return phls;
+}
+
+// ── 共振條件 ──
+function renderRes(closes, highs, lows, price) {
+  // 重新計算共振
+  var band_s = gaussianBands(closes, 14, 1.5); // 小
+  var n = closes.length;
+  var band_m = gaussianBands(closes.slice(-Math.floor(n*2/3)), 14, 1.5); // 中
+  var band_l = gaussianBands(closes.slice(-Math.floor(n/3)), Math.floor(14/2), 1.5); // 大
+  var phl1 = calcSMI(closes, 10, 3, 3);
+  var phl2 = calcSMI(closes, 20, 6, 6);
+  var phl3 = calcSMI(closes, 30, 9, 9);
+
+  var conds = [
+    { text:'小貓咪下軌 < 中貓咪下軌', met: band_s && band_m ? band_s.lower < band_m.lower : false },
+    { text:'價格觸及大貓咪下軌', met: band_l ? price <= band_l.lower * 1.02 : false },
+    { text:'PHL V1 超賣（< -40）', met: phl1 ? phl1.smi < -40 : false },
+    { text:'PHL V2 超賣（< -45）', met: phl2 ? phl2.smi < -45 : false },
+    { text:'PHL V3 超賣（< -40）', met: phl3 ? phl3.smi < -40 : false },
+    { text:'V1 黃金交叉（SMI上穿EMA）', met: phl1 ? phl1.cross === 'gold' : false },
+  ];
+  var metCount = conds.filter(function(c){return c.met;}).length;
+  var isFull = metCount >= 6, isNear = metCount >= 3;
+  var badgeHtml = isFull
+    ? '<div class="res-badge long">⚡ 完整做多共振（'+metCount+'/6）</div>'
+    : isNear
+    ? '<div class="res-badge none">⏳ 接近共振（'+metCount+'/6）</div>'
+    : '<div class="res-badge none">— 未達共振（'+metCount+'/6）</div>';
+
+  var condHtml = conds.map(function(c){
+    return '<div class="res-cond '+(c.met?'met':isNear?'near':'')+'"><span class="icon">'+(c.met?'✅':'⏳')+'</span>'+c.text+'</div>';
+  }).join('');
+  document.getElementById('res-wrap').innerHTML = badgeHtml + '<div class="res-cond-list">'+condHtml+'</div>';
+}
+
+// ── 均線 ──
+function renderMA(closes, price) {
+  var mas = [
+    {l:'MA5',  v:calcMA(closes,5)},
+    {l:'MA10', v:calcMA(closes,10)},
+    {l:'MA20', v:calcMA(closes,20)},
+    {l:'MA50', v:calcMA(closes,50)},
+    {l:'MA60', v:calcMA(closes,60)},
+    {l:'MA120',v:calcMA(closes,120)},
+  ];
+  var html = mas.map(function(m){
+    var diff = m.v ? ((price-m.v)/m.v*100) : null;
+    var cls = diff===null?'':diff>0?'up':'dn';
+    return '<div class="ma-cell"><div class="ma-cell-l">'+m.l+'</div><div class="ma-cell-v '+cls+'">'+(m.v?m.v.toFixed(2):'—')+'</div><div class="ma-cell-s">'+(diff!==null?(diff>=0?'▲':'▼')+Math.abs(diff).toFixed(2)+'%':'')+'</div></div>';
+  }).join('');
+  document.getElementById('ma-grid').innerHTML = html;
+}
+
+// ── RSI / MACD ──
+function renderInd(closes) {
+  var rsi = calcRSI(closes);
+  var macd = calcMACD(closes);
+  var rsiPct = rsi ? Math.min(100, Math.max(0, rsi)) : 50;
+  var rsiColor = rsi>=70?'#ff5252':rsi<=30?'#00e676':'#00d4ff';
+  var rsiNote = rsi>=70?'超買':rsi>=60?'偏強':rsi<=30?'超賣':rsi<=40?'偏弱':'中性';
+  var html = '<div class="ind-row">';
+  html += '<div class="ind-label">RSI (14)</div>';
+  html += '<div class="ind-val-row"><span class="ind-val" style="color:'+rsiColor+'">'+(rsi?rsi.toFixed(1):'—')+'</span><span class="ind-note" style="background:rgba(0,0,0,.2);color:'+rsiColor+'">'+rsiNote+'</span></div>';
+  html += '<div class="rsi-bar-bg"><div class="rsi-bar-fill" style="width:'+rsiPct+'%;background:linear-gradient(90deg,#00e676 30%,#00d4ff 50%,#ff5252 70%)"></div></div>';
+  html += '<div class="rsi-zones"><span>超賣 30</span><span>中性</span><span>超買 70</span></div>';
+  html += '</div>';
+  html += '<div class="ind-row" style="margin-top:4px">';
+  html += '<div class="ind-label">MACD</div>';
+  var macdColor = macd===null?'#7a90b0':macd>0?'#00e676':'#ff5252';
+  var macdNote = macd===null?'—':macd>0?'偏多':'偏空';
+  html += '<div class="ind-val-row"><span class="ind-val" style="color:'+macdColor+'">'+(macd!==null?macd.toFixed(3):'—')+'</span><span class="ind-note" style="background:rgba(0,0,0,.2);color:'+macdColor+'">'+macdNote+'</span></div>';
+  if (macd!==null) {
+    var macdBarW = Math.min(100, Math.abs(macd)/closes[closes.length-1]*2000);
+    html += '<div style="display:flex;align-items:center;gap:6px;margin-top:4px"><div style="flex:1;height:10px;background:rgba(255,255,255,.06);border-radius:5px;position:relative"><div style="position:absolute;'+(macd>=0?'left:50%':'right:50%')+';height:100%;width:'+macdBarW+'%;background:'+macdColor+';border-radius:5px;max-width:50%"></div></div></div>';
+  }
+  html += '</div>';
+  document.getElementById('ind-wrap').innerHTML = html;
+}
+
+// ── 支撐壓力 ──
+function renderSR(highs, lows, price) {
+  var r5h=highs.slice(-5), r5l=lows.slice(-5);
+  var r20h=highs.slice(-20), r20l=lows.slice(-20);
+  var r60h=highs.slice(-60), r60l=lows.slice(-60);
+  function mx(a){return a.length?Math.max.apply(null,a):null;}
+  function mn(a){return a.length?Math.min.apply(null,a):null;}
+  var s5=mn(r5l), r5=mx(r5h), s20=mn(r20l), r20=mx(r20h), s60=mn(r60l), r60=mx(r60h);
+  // 視覺化進度條（以60日範圍）
+  var lo=s60||price*0.9, hi=r60||price*1.1;
+  var range=hi-lo||1;
+  var pos=((price-lo)/range*100).toFixed(1);
+  var pS20=s20?((s20-lo)/range*100).toFixed(1):null;
+  var pR20=r20?((r20-lo)/range*100).toFixed(1):null;
+  var html='<div style="font-size:12px;color:#7a90b0;margin-bottom:6px">目前價格位於60日區間的 <span style="color:#fff;font-weight:700">'+pos+'%</span></div>';
+  html+='<div class="sr-price-line">';
+  html+='<div class="sr-track"></div>';
+  // 支撐線
+  if(pS20) html+='<div class="sr-dot" style="left:'+pS20+'%;background:#00e676;width:10px;height:10px"></div>';
+  // 壓力線
+  if(pR20) html+='<div class="sr-dot" style="left:'+pR20+'%;background:#ff5252;width:10px;height:10px"></div>';
+  // 目前價格
+  html+='<div class="sr-dot-price" style="left:'+pos+'%;background:#fff"></div>';
+  html+='</div>';
+  html+='<div style="display:flex;justify-content:space-between;font-size:11px;color:#4a6080;margin-bottom:10px"><span>'+lo.toFixed(2)+'</span><span style="color:#fff">'+price+'</span><span>'+hi.toFixed(2)+'</span></div>';
+  html+='<div class="sr-rows">';
+  var rows=[
+    {l:'5日支撐',v:s5,cls:'sup'},{l:'5日壓力',v:r5,cls:'res'},
+    {l:'20日支撐',v:s20,cls:'sup'},{l:'20日壓力',v:r20,cls:'res'},
+    {l:'60日支撐',v:s60,cls:'sup'},{l:'60日壓力',v:r60,cls:'res'},
+  ];
+  rows.forEach(function(r){
+    var diff=r.v&&price?(((r.v-price)/price)*100):null;
+    html+='<div class="sr-item"><div class="sr-item-l">'+r.l+'</div><div class="sr-item-v '+r.cls+'">'+(r.v?r.v.toFixed(2):'—')+'</div>'+(diff!==null?'<div style="font-size:11px;color:#7a90b0;">'+(diff>=0?'▲':'▼')+Math.abs(diff).toFixed(1)+'%</div>':'')+'</div>';
+  });
+  html+='</div>';
+  document.getElementById('sr-wrap').innerHTML=html;
+}
+
+// ── override renderAll 加入共振 ──
+var _renderAll = renderAll;
+renderAll = function(sym, data) {
+  _renderAll(sym, data);
+  var raw_c=(data.closes||[]).filter(function(v){return v!=null;});
+  var raw_h=(data.highs||[]).filter(function(v){return v!=null;});
+  var raw_l=(data.lows||[]).filter(function(v){return v!=null;});
+  var rs=resample(raw_c,raw_h,raw_l,currentTf);
+  renderRes(rs.closes, rs.highs, rs.lows, data.price);
+};
 </script>
 </body>
 </html>
