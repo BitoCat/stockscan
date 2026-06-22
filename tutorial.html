@@ -9,121 +9,136 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
 <link rel="stylesheet" href="css/base.css">
 <style>
-/* ── 輸入區 ── */
 .mkt-grp{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px;width:fit-content}
 .mbt{background:transparent;border:none;color:var(--muted);font-family:'Noto Sans TC',sans-serif;font-size:13px;padding:9px 18px;cursor:pointer;transition:all .2s}
 .mbt.active{background:var(--accent);color:#000;font-weight:700}
 .mbt:hover:not(.active){color:var(--accent)}
 .mono-inp{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:#fff;font-family:'Share Tech Mono',monospace;font-size:16px;letter-spacing:2px;padding:10px 14px;outline:none;transition:all .2s}
 .mono-inp:focus{border-color:var(--accent);box-shadow:0 0 10px rgba(0,212,255,.15)}
-
-/* ── 時框切換 ── */
 .tf-grp{display:flex;gap:6px;margin-top:10px}
 .tf-btn{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:12px;padding:5px 14px;cursor:pointer;transition:all .2s;font-family:'Share Tech Mono',monospace}
 .tf-btn.active{background:rgba(0,212,255,.15);border-color:var(--accent);color:var(--accent);font-weight:700}
-
-/* ── 股票標題 ── */
 .stock-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;padding:16px 18px;border-bottom:1px solid var(--border)}
 .stock-title{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:3px;color:#fff;line-height:1}
-.stock-name{font-size:16px;color:#a8b8d8;margin-top:4px}
+.stock-name{font-size:15px;color:#a8b8d8;margin-top:4px}
 .stock-price{text-align:right}
 .price-main{font-family:'Bebas Neue',sans-serif;font-size:40px;color:#fff;line-height:1}
 .price-chg{font-size:14px;margin-top:4px}
-.price-chg.up{color:#00e676} .price-chg.dn{color:#ff5252}
-
-/* ── TradingView ── */
-.tv-wrap{width:100%;height:400px;border-radius:0;overflow:hidden;background:#0d1421}
-
-/* ── 儀表板格線 ── */
+.price-chg.up{color:#00e676}.price-chg.dn{color:#ff5252}
+.tv-wrap{width:100%;height:380px;background:#0d1421}
 .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px}
 @media(max-width:600px){.dash-grid{grid-template-columns:1fr}}
 .dash-full{grid-column:1/-1}
-
-/* ── 卡片 ── */
 .dash-card{background:var(--panel2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-.dash-card-title{font-size:12px;color:#a8b8d8;font-weight:700;letter-spacing:1px;padding:12px 14px 0;text-transform:uppercase}
+.dash-card-title{font-size:11px;color:#a8b8d8;font-weight:700;letter-spacing:1px;padding:12px 14px 0;text-transform:uppercase}
 
-/* ── 高斯隧道儀表 ── */
-.tunnel-wrap{padding:14px}
-.tunnel-row{margin-bottom:14px}
-.tunnel-label{font-size:12px;color:#7a90b0;margin-bottom:6px;display:flex;justify-content:space-between}
-.tunnel-bar-bg{height:12px;background:rgba(255,255,255,.06);border-radius:6px;position:relative;overflow:visible}
-.tunnel-bar-fill{height:100%;border-radius:6px;transition:width .6s ease}
-.tunnel-marker{position:absolute;top:-4px;width:4px;height:20px;border-radius:2px;background:#fff;box-shadow:0 0 6px rgba(255,255,255,.6);transition:left .6s ease}
-.tunnel-zones{display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:#4a6080}
-.tunnel-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-top:6px}
+/* 多時框評分卡 */
+.tf-score-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border)}
+.tf-score-cell{background:var(--panel2);padding:12px 8px;text-align:center}
+.tf-score-lbl{font-size:11px;color:#7a90b0;margin-bottom:8px;font-weight:700}
+.tf-score-val{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;margin-bottom:4px}
+.tf-score-val.bull{color:#00e676}.tf-score-val.bear{color:#ff5252}.tf-score-val.neu{color:#f59e0b}
+.tf-score-tag{font-size:10px;padding:2px 6px;border-radius:3px;font-weight:700}
+.tag-bull{background:rgba(0,230,118,.15);color:#00e676}.tag-bear{background:rgba(255,82,82,.15);color:#ff5252}.tag-neu{background:rgba(245,158,11,.15);color:#f59e0b}
+
+/* 隧道 */
+.tunnel-row{margin-bottom:14px;padding:0 14px}
+.tunnel-label{font-size:11px;color:#7a90b0;margin-bottom:5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px}
+.tunnel-bar-bg{height:12px;background:rgba(255,255,255,.06);border-radius:6px;position:relative}
+.tunnel-marker{position:absolute;top:-4px;width:4px;height:20px;border-radius:2px;background:#fff;box-shadow:0 0 6px rgba(255,255,255,.6)}
+.tunnel-zones{display:flex;justify-content:space-between;margin-top:3px;font-size:10px;color:#4a6080}
+.tunnel-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;margin-top:4px}
 .tb-upper{background:rgba(255,82,82,.15);color:#ff5252;border:1px solid rgba(255,82,82,.3)}
 .tb-mid{background:rgba(0,212,255,.1);color:#00d4ff;border:1px solid rgba(0,212,255,.25)}
 .tb-lower{background:rgba(0,230,118,.1);color:#00e676;border:1px solid rgba(0,230,118,.25)}
 
-/* ── PHL 儀表 ── */
+/* PHL */
 .phl-wrap{padding:14px;display:flex;flex-direction:column;gap:10px}
-.phl-row{display:flex;align-items:center;gap:10px}
-.phl-label{font-size:12px;color:#7a90b0;width:36px;flex-shrink:0}
-.phl-gauge-bg{flex:1;height:10px;background:rgba(255,255,255,.06);border-radius:5px;position:relative}
-.phl-gauge-fill{position:absolute;top:0;height:100%;border-radius:5px;transition:all .6s ease}
-.phl-val{font-family:'Share Tech Mono',monospace;font-size:13px;width:52px;text-align:right;flex-shrink:0}
-.phl-val.ob{color:#ff5252} .phl-val.os{color:#00e676} .phl-val.mid{color:#a8b8d8}
-.phl-cross{font-size:11px;padding:2px 6px;border-radius:4px;flex-shrink:0}
+.phl-row{display:flex;align-items:center;gap:8px}
+.phl-label{font-size:11px;color:#7a90b0;width:28px;flex-shrink:0;font-weight:700}
+.phl-gauge-bg{flex:1;height:10px;background:rgba(255,255,255,.06);border-radius:5px;position:relative;overflow:hidden}
+.phl-gauge-fill{position:absolute;top:0;height:100%;border-radius:5px}
+.phl-val{font-family:'Share Tech Mono',monospace;font-size:12px;width:48px;text-align:right;flex-shrink:0}
+.phl-val.ob{color:#ff5252}.phl-val.os{color:#00e676}.phl-val.mid{color:#a8b8d8}
+.phl-cross{font-size:10px;padding:1px 5px;border-radius:3px;flex-shrink:0;min-width:44px;text-align:center}
 .phl-cross.gold{background:rgba(0,230,118,.12);color:#00e676;border:1px solid rgba(0,230,118,.3)}
 .phl-cross.dead{background:rgba(255,82,82,.12);color:#ff5252;border:1px solid rgba(255,82,82,.3)}
-.phl-cross.none{background:rgba(255,255,255,.05);color:#4a6080;border:1px solid rgba(255,255,255,.08)}
+.phl-cross.none{background:rgba(255,255,255,.04);color:#4a6080;border:1px solid rgba(255,255,255,.08)}
 
-/* ── 共振條件 ── */
-.resonance-wrap{padding:14px}
-.res-badge{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:8px;margin-bottom:12px;font-weight:700;font-size:14px}
+/* 共振 */
+.res-badge{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:8px;margin:12px 14px 8px;font-weight:700;font-size:13px}
 .res-badge.long{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);color:#00e676}
-.res-badge.short{background:rgba(255,82,82,.1);border:1px solid rgba(255,82,82,.3);color:#ff5252}
+.res-badge.near{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:#f59e0b}
 .res-badge.none{background:rgba(255,255,255,.04);border:1px solid var(--border);color:#7a90b0}
-.res-cond-list{display:flex;flex-direction:column;gap:6px}
-.res-cond{display:flex;align-items:center;gap:8px;font-size:13px;color:#a8b8d8;padding:7px 10px;border-radius:6px;background:rgba(255,255,255,.02)}
-.res-cond .icon{font-size:14px;flex-shrink:0;width:20px;text-align:center}
-.res-cond.met{background:rgba(0,230,118,.05);color:#ccd6f6}
-.res-cond.near{background:rgba(255,193,7,.05);color:#ccd6f6}
+.res-cond-list{padding:0 14px 14px;display:flex;flex-direction:column;gap:5px}
+.res-cond{display:flex;align-items:center;gap:7px;font-size:12px;color:#a8b8d8;padding:6px 10px;border-radius:6px;background:rgba(255,255,255,.02)}
+.res-cond.met{background:rgba(0,230,118,.05)}
+.res-cond .icon{font-size:12px;flex-shrink:0;width:16px}
 
-/* ── 均線卡片 ── */
+/* 均線 */
 .ma-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border)}
-.ma-cell{background:var(--panel2);padding:12px 10px;text-align:center}
-.ma-cell-l{font-size:11px;color:#7a90b0;margin-bottom:4px;font-weight:600}
-.ma-cell-v{font-family:'Share Tech Mono',monospace;font-size:16px;color:#fff;font-weight:700}
-.ma-cell-v.up{color:#00e676} .ma-cell-v.dn{color:#ff5252}
-.ma-cell-s{font-size:11px;color:#4a6080;margin-top:3px}
+.ma-cell{background:var(--panel2);padding:11px 8px;text-align:center}
+.ma-cell-l{font-size:10px;color:#7a90b0;margin-bottom:3px;font-weight:700}
+.ma-cell-v{font-family:'Share Tech Mono',monospace;font-size:14px;color:#fff;font-weight:700}
+.ma-cell-v.up{color:#00e676}.ma-cell-v.dn{color:#ff5252}
+.ma-cell-s{font-size:10px;color:#4a6080;margin-top:2px}
 
-/* ── RSI/MACD ── */
+/* 動能 */
 .ind-wrap{padding:14px;display:flex;flex-direction:column;gap:12px}
-.ind-row{display:flex;flex-direction:column;gap:6px}
-.ind-label{font-size:12px;color:#7a90b0;font-weight:700;letter-spacing:1px}
-.rsi-bar-bg{height:14px;background:rgba(255,255,255,.06);border-radius:7px;position:relative}
-.rsi-bar-fill{height:100%;border-radius:7px;transition:width .6s ease}
+.ind-label{font-size:11px;color:#7a90b0;font-weight:700;letter-spacing:1px;margin-bottom:4px}
+.rsi-bar-bg{height:12px;background:rgba(255,255,255,.06);border-radius:6px;position:relative;overflow:hidden}
 .rsi-zones{display:flex;justify-content:space-between;font-size:10px;color:#4a6080;margin-top:3px}
-.ind-val-row{display:flex;align-items:center;gap:8px}
 .ind-val{font-family:'Share Tech Mono',monospace;font-size:20px;font-weight:700}
-.ind-note{font-size:12px;padding:2px 8px;border-radius:4px}
-.macd-bar{height:10px;border-radius:5px;margin-top:4px;transition:width .6s ease}
+.ind-note{font-size:11px;padding:2px 7px;border-radius:4px;background:rgba(0,0,0,.2)}
 
-/* ── 支撐壓力 ── */
+/* 支撐壓力 */
 .sr-wrap{padding:14px}
-.sr-price-line{position:relative;height:60px;margin:10px 0}
+.sr-price-line{position:relative;height:50px;margin:8px 0 4px}
 .sr-track{position:absolute;top:50%;left:0;right:0;height:4px;background:rgba(255,255,255,.06);border-radius:2px;transform:translateY(-50%)}
-.sr-fill{position:absolute;top:50%;height:4px;border-radius:2px;transform:translateY(-50%);transition:all .6s ease}
-.sr-dot{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;transform:translate(-50%,-50%);border:2px solid #060912;transition:left .6s ease}
-.sr-dot-price{position:absolute;top:50%;width:18px;height:18px;border-radius:50%;transform:translate(-50%,-50%);border:3px solid #fff;box-shadow:0 0 12px rgba(255,255,255,.4);z-index:2;transition:left .6s ease}
-.sr-labels{display:flex;justify-content:space-between;margin-top:8px}
-.sr-lbl{text-align:center;font-size:11px}
-.sr-lbl-v{font-family:'Share Tech Mono',monospace;font-size:14px;font-weight:700}
-.sr-lbl-t{color:#7a90b0;font-size:11px;margin-top:2px}
-.sr-rows{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
-.sr-item{background:rgba(255,255,255,.03);border-radius:8px;padding:10px;text-align:center;border:1px solid rgba(255,255,255,.06)}
-.sr-item-l{font-size:11px;color:#7a90b0;margin-bottom:4px}
-.sr-item-v{font-family:'Share Tech Mono',monospace;font-size:15px;font-weight:700}
-.sr-item-v.sup{color:#00e676} .sr-item-v.res{color:#ff5252}
+.sr-dot{position:absolute;top:50%;width:10px;height:10px;border-radius:50%;transform:translate(-50%,-50%)}
+.sr-dot-price{position:absolute;top:50%;width:16px;height:16px;border-radius:50%;transform:translate(-50%,-50%);border:3px solid #fff;box-shadow:0 0 10px rgba(255,255,255,.4);z-index:2}
+.sr-rows{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px}
+.sr-item{background:rgba(255,255,255,.03);border-radius:8px;padding:8px 6px;text-align:center;border:1px solid rgba(255,255,255,.06)}
+.sr-item-l{font-size:10px;color:#7a90b0;margin-bottom:3px}
+.sr-item-v{font-family:'Share Tech Mono',monospace;font-size:13px;font-weight:700}
+.sr-item-v.sup{color:#00e676}.sr-item-v.res{color:#ff5252}
 
-/* ── 空狀態 ── */
+/* 分析師 */
+.analyst-wrap{padding:14px}
+.analyst-bar-bg{height:14px;background:rgba(255,255,255,.06);border-radius:7px;position:relative;margin:8px 0 4px;overflow:visible}
+.analyst-marker{position:absolute;top:-5px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center}
+.analyst-marker-line{width:3px;height:24px;border-radius:2px}
+.analyst-labels{display:flex;justify-content:space-between;font-size:10px;color:#4a6080}
+.rec-badge{display:inline-block;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:700;margin-bottom:10px}
+.rec-strong-buy{background:rgba(0,230,118,.15);color:#00e676;border:1px solid rgba(0,230,118,.3)}
+.rec-buy{background:rgba(0,212,255,.1);color:#00d4ff;border:1px solid rgba(0,212,255,.25)}
+.rec-hold{background:rgba(245,158,11,.1);color:#f59e0b;border:1px solid rgba(245,158,11,.3)}
+.rec-sell{background:rgba(255,82,82,.1);color:#ff5252;border:1px solid rgba(255,82,82,.3)}
+
+/* 估值 */
+.val-wrap{padding:14px}
+.val-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.val-item{flex:1;min-width:80px;background:rgba(255,255,255,.03);border-radius:8px;padding:10px 8px;text-align:center;border:1px solid rgba(255,255,255,.06)}
+.val-item.highlight{background:rgba(0,212,255,.07);border-color:rgba(0,212,255,.2)}
+.val-item-l{font-size:10px;color:#7a90b0;margin-bottom:4px}
+.val-item-v{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#fff;letter-spacing:1px}
+.val-item-s{font-size:10px;color:#4a6080;margin-top:2px}
+.pe-row{display:flex;gap:6px;flex-wrap:wrap}
+.pe-item{flex:1;min-width:70px;background:rgba(255,255,255,.03);border-radius:8px;padding:8px 6px;text-align:center;border:1px solid rgba(255,255,255,.06)}
+.pe-item-l{font-size:10px;color:#7a90b0;margin-bottom:3px}
+.pe-item-v{font-family:'Share Tech Mono',monospace;font-size:14px;font-weight:700;color:#fff}
+
+/* EPS趨勢 */
+.eps-wrap{padding:14px}
+.eps-compare{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.eps-arrow{font-size:20px}
+.eps-block{flex:1;text-align:center;background:rgba(255,255,255,.03);border-radius:8px;padding:10px 8px;border:1px solid rgba(255,255,255,.06)}
+.eps-block-l{font-size:10px;color:#7a90b0;margin-bottom:4px}
+.eps-block-v{font-family:'Bebas Neue',sans-serif;font-size:24px;color:#fff;letter-spacing:1px}
+.eps-growth{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.06)}
+
 .empty-state{text-align:center;padding:40px 20px;color:#4a6080}
 .empty-icon{font-size:40px;margin-bottom:12px}
-.empty-txt{font-size:14px;line-height:1.6}
-
-/* ── spinner ── */
 .spinner-wrap{text-align:center;padding:40px 20px}
 </style>
 </head>
@@ -139,7 +154,6 @@
 <div class="page-wrap">
   <div class="sec-head">📊 技術儀表板</div>
 
-  <!-- 輸入區 -->
   <div class="card" style="padding:18px;margin-bottom:16px">
     <div class="mkt-grp">
       <button class="mbt active" id="mbt-tw" onclick="setMkt('tw')">🇹🇼 台股</button>
@@ -166,19 +180,12 @@
     </div>
   </div>
 
-  <!-- 錯誤訊息 -->
   <div id="err-box" style="display:none;background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.3);border-radius:10px;padding:14px 18px;color:var(--red);font-size:13px;margin-bottom:16px;text-align:center"></div>
+  <div class="spinner-wrap" id="loading" style="display:none"><div class="spinner"></div><div class="spinner-txt">載入資料中...</div></div>
 
-  <!-- Loading -->
-  <div class="spinner-wrap" id="loading" style="display:none">
-    <div class="spinner"></div>
-    <div class="spinner-txt">載入資料中...</div>
-  </div>
-
-  <!-- 主儀表板 -->
   <div id="dashboard" style="display:none">
 
-    <!-- 股票標題 -->
+    <!-- 標題 -->
     <div class="card" style="margin-bottom:12px">
       <div class="stock-header">
         <div>
@@ -192,41 +199,47 @@
       </div>
     </div>
 
-    <!-- TradingView 圖表 -->
+    <!-- TradingView -->
     <div class="card" style="margin-bottom:12px;overflow:hidden">
       <div class="tv-wrap" id="tv-container"></div>
     </div>
 
-    <!-- 儀表板格線 -->
+    <!-- 多時框評分 -->
+    <div class="card dash-card" style="margin-bottom:12px">
+      <div class="dash-card-title" style="padding:12px 14px 10px">📡 多時框技術評分</div>
+      <div class="tf-score-grid" id="tf-score-grid"></div>
+    </div>
+
     <div class="dash-grid">
 
       <!-- 三貓咪隧道 -->
       <div class="dash-card dash-full">
-        <div class="dash-card-title">🐱 三貓咪隧道</div>
-        <div class="tunnel-wrap" id="tunnel-wrap"></div>
+        <div class="dash-card-title" style="padding:12px 14px 10px">🐱 三貓咪隧道（高斯核回歸）</div>
+        <div id="tunnel-wrap" style="padding-top:10px"></div>
       </div>
 
-      <!-- PHL 指標 -->
+      <!-- PHL -->
       <div class="dash-card">
         <div class="dash-card-title">📈 PHL 指標（SMI）</div>
         <div class="phl-wrap" id="phl-wrap"></div>
       </div>
 
-      <!-- 共振條件 -->
+      <!-- 共振 -->
       <div class="dash-card">
         <div class="dash-card-title">⚡ 共振條件</div>
-        <div class="resonance-wrap" id="res-wrap"></div>
+        <div id="res-badge-wrap"></div>
+        <div class="res-cond-list" id="res-cond-list"></div>
       </div>
 
       <!-- 均線 -->
       <div class="dash-card dash-full">
-        <div class="dash-card-title">📉 均線狀態</div>
+        <div class="dash-card-title" style="padding:12px 14px 0">📉 均線狀態</div>
         <div class="ma-grid" id="ma-grid"></div>
       </div>
 
-      <!-- RSI / MACD -->
+      <!-- 動能 -->
       <div class="dash-card">
-        <div class="dash-card-title">🔄 動能指標</div>
+        <div class="dash-card-title">🔄 動能指標（RSI / MACD）</div>
         <div class="ind-wrap" id="ind-wrap"></div>
       </div>
 
@@ -236,10 +249,27 @@
         <div class="sr-wrap" id="sr-wrap"></div>
       </div>
 
+      <!-- 分析師評級 -->
+      <div class="dash-card">
+        <div class="dash-card-title">👨‍💼 分析師評級</div>
+        <div class="analyst-wrap" id="analyst-wrap"></div>
+      </div>
+
+      <!-- 估值 -->
+      <div class="dash-card">
+        <div class="dash-card-title">📐 估值參考</div>
+        <div class="val-wrap" id="val-wrap"></div>
+      </div>
+
+      <!-- EPS趨勢 -->
+      <div class="dash-card dash-full">
+        <div class="dash-card-title">💰 EPS 趨勢 &amp; 本益比</div>
+        <div class="eps-wrap" id="eps-wrap"></div>
+      </div>
+
     </div>
   </div>
 
-  <!-- 空狀態 -->
   <div id="empty-state" class="card" style="margin-bottom:16px">
     <div class="empty-state">
       <div class="empty-icon">📊</div>
@@ -274,10 +304,10 @@ let currentUser = null, currentProfile = null, currentMkt = 'tw', currentTf = 'D
       id: currentUser.id,
       display_name: currentUser.user_metadata?.display_name || currentUser.email.split('@')[0],
       plan: 'free', daily_count: 0, last_date: new Date().toDateString()
-    }).then(() => {}).catch(() => {});
+    }).then(function(){}).catch(function(){});
     currentProfile = await getProfile(currentUser.id);
   }
-  const nb = document.getElementById('nav-plan');
+  var nb = document.getElementById('nav-plan');
   nb.textContent = planLabel(currentProfile?.plan || 'free');
   nb.className = 'plan-badge ' + planBadge(currentProfile?.plan || 'free');
   if ((currentProfile?.plan || 'free') === 'free') {
@@ -285,459 +315,424 @@ let currentUser = null, currentProfile = null, currentMkt = 'tw', currentTf = 'D
   }
 })();
 
-function setMkt(m) {
-  currentMkt = m;
-  document.getElementById('mbt-tw').classList.toggle('active', m==='tw');
-  document.getElementById('mbt-us').classList.toggle('active', m==='us');
-}
-function setTf(tf) {
-  currentTf = tf;
-  ['D','H4','H1'].forEach(function(t){ document.getElementById('tf-'+t).classList.toggle('active', t===tf); });
-  if (quoteData) renderAll(currentSym, quoteData);
-}
-function quickPick(sym, mkt) { setMkt(mkt); document.getElementById('stock-inp').value = sym; loadDash(); }
+function setMkt(m){ currentMkt=m; document.getElementById('mbt-tw').classList.toggle('active',m==='tw'); document.getElementById('mbt-us').classList.toggle('active',m==='us'); }
+function setTf(tf){ currentTf=tf; ['D','H4','H1'].forEach(function(t){document.getElementById('tf-'+t).classList.toggle('active',t===tf);}); if(quoteData) renderAll(currentSym,quoteData); }
+function quickPick(sym,mkt){ setMkt(mkt); document.getElementById('stock-inp').value=sym; loadDash(); }
 function showErr(msg){ var e=document.getElementById('err-box'); e.textContent=msg; e.style.display='block'; }
 function hideErr(){ document.getElementById('err-box').style.display='none'; }
 
-// ── 報價抓取（XHR，Safari 相容）──
-function fetchQuote(sym) {
-  return new Promise(function(resolve, reject) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', RAILWAY_URL + '/quote?symbol=' + sym);
-    xhr.onload = function() {
-      if (xhr.status !== 200) { reject(new Error('HTTP ' + xhr.status)); return; }
-      try {
-        var data = JSON.parse(xhr.responseText);
-        if (!data.price) { reject(new Error('查無報價')); return; }
-        resolve(data);
-      } catch(e) { reject(e); }
+function fetchQuote(sym){
+  return new Promise(function(resolve,reject){
+    var xhr=new XMLHttpRequest();
+    xhr.open('GET',RAILWAY_URL+'/quote?symbol='+sym);
+    xhr.onload=function(){
+      if(xhr.status!==200){reject(new Error('HTTP '+xhr.status));return;}
+      try{ var d=JSON.parse(xhr.responseText); if(!d.price){reject(new Error('查無報價'));return;} resolve(d); }
+      catch(e){reject(e);}
     };
-    xhr.onerror = function() { reject(new Error('網路錯誤')); };
+    xhr.onerror=function(){reject(new Error('網路錯誤'));};
     xhr.send();
   });
 }
 
-async function loadDash() {
-  const sym = document.getElementById('stock-inp').value.trim().toUpperCase();
-  if (!sym) return;
-  if (!/^[A-Z0-9.\-]+$/.test(sym)) { showErr('請輸入股票代號（數字或英文）'); return; }
-  currentSym = sym;
-  hideErr();
-  document.getElementById('loading').style.display = 'block';
-  document.getElementById('dashboard').style.display = 'none';
-  document.getElementById('empty-state').style.display = 'none';
-  document.getElementById('load-btn').disabled = true;
-  try {
-    const data = await fetchQuote(sym);
-    quoteData = data;
-    renderAll(sym, data);
-    document.getElementById('dashboard').style.display = 'block';
-  } catch(e) {
-    showErr('載入失敗：' + e.message);
-    document.getElementById('empty-state').style.display = 'block';
-  }
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('load-btn').disabled = false;
+async function loadDash(){
+  var sym=document.getElementById('stock-inp').value.trim().toUpperCase();
+  if(!sym||!/^[A-Z0-9.\-]+$/.test(sym)){showErr('請輸入股票代號（數字或英文）');return;}
+  currentSym=sym; hideErr();
+  document.getElementById('loading').style.display='block';
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('empty-state').style.display='none';
+  document.getElementById('load-btn').disabled=true;
+  try{
+    var data=await fetchQuote(sym);
+    quoteData=data;
+    renderAll(sym,data);
+    document.getElementById('dashboard').style.display='block';
+  }catch(e){ showErr('載入失敗：'+e.message); document.getElementById('empty-state').style.display='block'; }
+  document.getElementById('loading').style.display='none';
+  document.getElementById('load-btn').disabled=false;
 }
 
-// ── 依時框重採樣 K 線 ──
-function resample(closes, highs, lows, tf) {
-  if (tf === 'D') return { closes: closes, highs: highs, lows: lows };
-  var n = tf === 'H4' ? 4 : 8; // H4≈4日合1根近似, H1≈1日8根取最後
-  if (tf === 'H1') {
-    // H1：把每根日線切成 8 根（用當天波動估算），取最近 60 根
-    var rc=[], rh=[], rl=[];
-    for (var i = 0; i < closes.length; i++) {
-      var c=closes[i], h=highs[i]||c, l=lows[i]||c;
-      var range = h - l;
-      for (var j = 0; j < 8; j++) {
-        var frac = j / 7;
-        rc.push(l + range * (0.3 + Math.random()*0.4 + frac*0.3));
-        rh.push(h - range * (j < 4 ? 0 : 0.1));
-        rl.push(l + range * (j < 4 ? 0.1 : 0));
+// ── 時框重採樣 ──
+function resample(closes,highs,lows,tf){
+  if(tf==='D') return {closes:closes,highs:highs,lows:lows};
+  var n=closes.length, rc=[],rh=[],rl=[];
+  if(tf==='H1'){
+    for(var i=0;i<n;i++){
+      var c=closes[i],h=highs[i]||c,l=lows[i]||c,range=h-l;
+      for(var j=0;j<8;j++){
+        rc.push(l+range*(0.3+j/14));
+        rh.push(h-range*(j<4?0:0.05));
+        rl.push(l+range*(j<4?0.05:0));
       }
     }
-    return { closes: rc.slice(-60), highs: rh.slice(-60), lows: rl.slice(-60) };
+    return {closes:rc.slice(-80),highs:rh.slice(-80),lows:rl.slice(-80)};
   }
-  // H4：每 4 根日線合 1 根
-  var rc2=[], rh2=[], rl2=[];
-  for (var i = 0; i < closes.length - n + 1; i += n) {
-    var chunk_c = closes.slice(i, i+n).filter(function(v){return v!=null;});
-    var chunk_h = highs.slice(i, i+n).filter(function(v){return v!=null;});
-    var chunk_l = lows.slice(i, i+n).filter(function(v){return v!=null;});
-    if (!chunk_c.length) continue;
-    rc2.push(chunk_c[chunk_c.length-1]);
-    rh2.push(Math.max.apply(null, chunk_h));
-    rl2.push(Math.min.apply(null, chunk_l));
+  for(var i=0;i<n-3;i+=4){
+    var cc=closes.slice(i,i+4).filter(function(v){return v!=null;});
+    var hh=highs.slice(i,i+4).filter(function(v){return v!=null;});
+    var ll=lows.slice(i,i+4).filter(function(v){return v!=null;});
+    if(!cc.length) continue;
+    rc.push(cc[cc.length-1]);
+    rh.push(Math.max.apply(null,hh));
+    rl.push(Math.min.apply(null,ll));
   }
-  return { closes: rc2, highs: rh2, lows: rl2 };
+  return {closes:rc,highs:rh,lows:rl};
 }
 
-// ── 高斯核回歸帶 ──
-function gaussianBands(closes, bandwidth, deviation) {
-  bandwidth = bandwidth || 14;
-  deviation = deviation || 1.5;
-  var n = closes.length;
-  if (n < bandwidth * 2) return null;
-  var kernel = [], ksum = 0;
-  for (var i = 0; i < bandwidth * 3; i++) {
-    var x = i / bandwidth;
-    var k = Math.exp(-0.5 * x * x);
-    kernel.push(k);
-    ksum += k;
+// ── 高斯核回歸 ──
+function gaussianBands(closes,bw,dev){
+  bw=bw||14; dev=dev||1.5;
+  var n=closes.length;
+  if(n<bw*2) return null;
+  var kernel=[],ksum=0;
+  for(var i=0;i<bw*3;i++){var x=i/bw,k=Math.exp(-0.5*x*x);kernel.push(k);ksum+=k;}
+  var mid=[],std_arr=[];
+  for(var i=0;i<n;i++){
+    var ws=0,wc=0;
+    for(var j=0;j<kernel.length&&j<=i;j++){ws+=closes[i-j]*kernel[j];wc+=kernel[j];}
+    var m=ws/wc; mid.push(m);
+    var vs=0;
+    for(var j=0;j<kernel.length&&j<=i;j++) vs+=kernel[j]*Math.pow(closes[i-j]-m,2);
+    std_arr.push(Math.sqrt(vs/wc));
   }
-  var mid = [], std_arr = [];
-  for (var i = 0; i < n; i++) {
-    var wsum = 0, wcount = 0;
-    for (var j = 0; j < kernel.length && j <= i; j++) {
-      wsum += closes[i - j] * kernel[j];
-      wcount += kernel[j];
-    }
-    var m = wsum / wcount;
-    mid.push(m);
-    var vsum = 0;
-    for (var j = 0; j < kernel.length && j <= i; j++) {
-      vsum += kernel[j] * Math.pow(closes[i-j] - m, 2);
-    }
-    std_arr.push(Math.sqrt(vsum / wcount));
-  }
-  var last = n - 1;
-  return {
-    upper: mid[last] + deviation * std_arr[last],
-    mid:   mid[last],
-    lower: mid[last] - deviation * std_arr[last],
-    std:   std_arr[last]
-  };
+  var last=n-1;
+  return {upper:mid[last]+dev*std_arr[last],mid:mid[last],lower:mid[last]-dev*std_arr[last],std:std_arr[last]};
 }
 
-// ── SMI (Stochastic Momentum Index) ──
-function calcSMI(closes, lk, ld, lema) {
-  lk = lk || 10; ld = ld || 3; lema = lema || 3;
-  var n = closes.length;
-  if (n < lk + ld + lema) return null;
-  function ema(arr, p) {
-    var k = 2/(p+1), e = arr[0];
-    for (var i = 1; i < arr.length; i++) e = arr[i]*k + e*(1-k);
-    return e;
+// ── SMI ──
+function calcSMI(closes,lk,ld,lema){
+  lk=lk||10;ld=ld||3;lema=lema||3;
+  var n=closes.length;
+  if(n<lk+ld+lema) return null;
+  function ema(arr,p){var k=2/(p+1),e=arr[0];for(var i=1;i<arr.length;i++)e=arr[i]*k+e*(1-k);return e;}
+  var smi_arr=[];
+  for(var i=lk;i<n;i++){
+    var chunk=closes.slice(i-lk,i+1),hh=Math.max.apply(null,chunk),ll=Math.min.apply(null,chunk);
+    var m=(hh+ll)/2,diff=closes[i]-m,range=(hh-ll)/2||1;
+    smi_arr.push(100*diff/range);
   }
-  // 計算每根的 HH/LL
-  var smi_arr = [], ema_arr = [];
-  for (var i = lk; i < n; i++) {
-    var chunk = closes.slice(i - lk, i + 1);
-    var hh = Math.max.apply(null, chunk), ll = Math.min.apply(null, chunk);
-    var m = (hh + ll) / 2;
-    var diff = closes[i] - m;
-    var range = (hh - ll) / 2 || 1;
-    smi_arr.push(100 * diff / range);
+  if(smi_arr.length<ld) return null;
+  var smi_smooth=[];
+  for(var i=ld-1;i<smi_arr.length;i++) smi_smooth.push(ema(smi_arr.slice(0,i+1),ld));
+  var smi_val=smi_smooth[smi_smooth.length-1];
+  var ema_val=ema(smi_smooth,lema);
+  var cross='none';
+  if(smi_smooth.length>=6){
+    var ps=smi_smooth[smi_smooth.length-2],pe=ema(smi_smooth.slice(0,-1),lema);
+    if(ps<=pe&&smi_val>ema_val) cross='gold';
+    else if(ps>=pe&&smi_val<ema_val) cross='dead';
   }
-  if (smi_arr.length < ld) return null;
-  var smi_smooth = [];
-  for (var i = ld - 1; i < smi_arr.length; i++) {
-    smi_smooth.push(ema(smi_arr.slice(0, i+1), ld));
-  }
-  var smi_val = smi_smooth[smi_smooth.length - 1];
-  var ema_val = ema(smi_smooth, lema);
-  // 黃金/死亡交叉（最近5根）
-  var cross = 'none';
-  if (smi_smooth.length >= 6) {
-    var prev_smi = smi_smooth[smi_smooth.length-2], prev_ema = ema(smi_smooth.slice(0,-1), lema);
-    if (prev_smi <= prev_ema && smi_val > ema_val) cross = 'gold';
-    else if (prev_smi >= prev_ema && smi_val < ema_val) cross = 'dead';
-  }
-  return { smi: smi_val, ema: ema_val, cross: cross };
+  return {smi:smi_val,ema:ema_val,cross:cross};
 }
 
-// ── MA / RSI / MACD ──
-function calcMA(arr, n) {
-  var valid = arr.slice(-n).filter(function(v){return v!=null;});
-  if (valid.length < n) return null;
-  return valid.reduce(function(a,b){return a+b;},0) / valid.length;
+// ── 基本指標 ──
+function calcMA(arr,n){var v=arr.slice(-n).filter(function(x){return x!=null;});return v.length>=n?v.reduce(function(a,b){return a+b;},0)/v.length:null;}
+function calcRSI(arr,p){
+  p=p||14;if(arr.length<p+1)return null;
+  var s=arr.slice(-(p+1)).filter(function(v){return v!=null;}),g=0,l=0;
+  for(var i=1;i<s.length;i++){var d=s[i]-s[i-1];if(d>0)g+=d;else l-=d;}
+  var ag=g/p,al=l/p;return al===0?100:100-100/(1+ag/al);
 }
-function calcRSI(arr, p) {
-  p = p || 14;
-  if (arr.length < p+1) return null;
-  var s = arr.slice(-(p+1)).filter(function(v){return v!=null;});
-  var g=0, l=0;
-  for (var i=1;i<s.length;i++){var d=s[i]-s[i-1]; if(d>0)g+=d; else l-=d;}
-  var ag=g/p, al=l/p;
-  if(al===0) return 100;
-  return 100 - 100/(1+ag/al);
-}
-function calcEMA(arr, n) {
-  var k=2/(n+1), e=arr[0];
-  for(var i=1;i<arr.length;i++) e=arr[i]*k+e*(1-k);
-  return e;
-}
-function calcMACD(arr) {
-  if(arr.length<26) return null;
-  var e12=calcEMA(arr.slice(-26),12), e26=calcEMA(arr,26);
-  return e12-e26;
+function calcEMA(arr,n){var k=2/(n+1),e=arr[0];for(var i=1;i<arr.length;i++)e=arr[i]*k+e*(1-k);return e;}
+function calcMACD(arr){if(arr.length<26)return null;return calcEMA(arr.slice(-26),12)-calcEMA(arr,26);}
+
+// ── 多時框評分 ──
+function scoreTf(closes,highs,lows){
+  var n=closes.length,score=0,bull=0,bear=0;
+  var price=closes[n-1];
+  var ma5=calcMA(closes,5),ma20=calcMA(closes,20),ma60=calcMA(closes,60);
+  var rsi=calcRSI(closes);
+  var macd=calcMACD(closes);
+  if(ma5&&ma20){if(ma5>ma20){score+=2;bull++;}else{score-=2;bear++;}}
+  if(ma20&&ma60){if(ma20>ma60){score+=2;bull++;}else{score-=2;bear++;}}
+  if(price&&ma20){if(price>ma20){score+=1;bull++;}else{score-=1;bear++;}}
+  if(rsi){if(rsi>50&&rsi<70){score+=2;bull++;}else if(rsi>=70){score-=1;bear++;}else if(rsi<30){score+=1;bull++;}else{score-=1;bear++;}}
+  if(macd){if(macd>0){score+=2;bull++;}else{score-=2;bear++;}}
+  var band=gaussianBands(closes,14,1.5);
+  if(band){var pos=(price-band.lower)/(band.upper-band.lower||1);if(pos<0.3){score+=1;bull++;}else if(pos>0.7){score-=1;bear++;}}
+  return {score:score,bull:bull,bear:bear};
 }
 
 // ── renderAll ──
-function renderAll(sym, data) {
-  var raw_c = (data.closes||[]).filter(function(v){return v!=null;});
-  var raw_h = (data.highs||[]).filter(function(v){return v!=null;});
-  var raw_l = (data.lows||[]).filter(function(v){return v!=null;});
-  var rs = resample(raw_c, raw_h, raw_l, currentTf);
-  var closes = rs.closes, highs = rs.highs, lows = rs.lows;
-
-  // 標題
-  document.getElementById('d-sym').textContent = sym;
-  document.getElementById('d-name').textContent = (data.name||'') + (data.sector ? ' · '+data.sector : '') + '  【' + currentTf + '】';
-  var price = data.price;
-  var prev = data.previousClose || (raw_c.length>=2 ? raw_c[raw_c.length-2] : price);
-  var chgPct = ((price-prev)/prev*100);
-  document.getElementById('d-price').textContent = price ? price.toLocaleString() : '—';
-  var chgEl = document.getElementById('d-chg');
-  chgEl.textContent = (chgPct>=0?'▲':'▼') + Math.abs(chgPct).toFixed(2) + '%  (' + (data.currency||'') + ')';
-  chgEl.className = 'price-chg ' + (chgPct>=0?'up':'dn');
-
-  // TradingView
-  renderTV(sym, data);
-
-  // 三貓咪隧道
-  renderTunnel(closes, highs, lows, price);
-
-  // PHL
-  renderPHL(closes, price);
-
-  // 均線
-  renderMA(raw_c, price);
-
-  // 動能
-  renderInd(raw_c);
-
-  // 支撐壓力
-  renderSR(raw_h, raw_l, price);
-}
-
-// ── TradingView Widget ──
-function renderTV(sym, data) {
-  var tvSym = sym;
-  if (currentMkt === 'tw') {
-    if (data.symbol && data.symbol.includes('.TWO')) tvSym = 'TPEX:' + sym;
-    else tvSym = 'TWSE:' + sym;
-  }
-  var tfMap = {'D':'D','H4':'240','H1':'60'};
-  var interval = tfMap[currentTf] || 'D';
-  var container = document.getElementById('tv-container');
-  container.innerHTML = '<div id="tv-widget-inner" style="width:100%;height:400px;"></div>';
-  var script = document.createElement('script');
-  script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
-  script.async = true;
-  script.innerHTML = JSON.stringify({
-    "autosize": true,
-    "symbol": tvSym,
-    "interval": interval,
-    "timezone": "Asia/Taipei",
-    "theme": "dark",
-    "style": "1",
-    "locale": "zh_TW",
-    "enable_publishing": false,
-    "hide_top_toolbar": false,
-    "hide_legend": false,
-    "save_image": false,
-    "container_id": "tv-widget-inner"
-  });
-  document.getElementById('tv-widget-inner').appendChild(script);
-}
-
-// ── 三貓咪隧道 ──
-function renderTunnel(closes, highs, lows, price) {
-  var bw = 14;
-  // 小貓咪 = 全量, 中貓咪 = 最近2/3, 大貓咪 = 最近1/3
-  var n = closes.length;
-  var sets = [
-    { label:'小貓咪（短）', data: closes, bw: bw, dev: 1.5 },
-    { label:'中貓咪（中）', data: closes.slice(-Math.floor(n*2/3)), bw: bw, dev: 1.5 },
-    { label:'大貓咪（長）', data: closes.slice(-Math.floor(n/3)), bw: Math.floor(bw/2), dev: 1.5 },
-  ];
-  var colors = ['#00d4ff','#a78bfa','#f59e0b'];
-  var html = '';
-  sets.forEach(function(s, idx) {
-    var band = gaussianBands(s.data, s.bw, s.dev);
-    if (!band) { html += '<div style="color:#4a6080;font-size:12px;padding:6px 0">'+s.label+'：資料不足</div>'; return; }
-    var range = band.upper - band.lower;
-    var pos = range > 0 ? Math.max(0, Math.min(1, (price - band.lower) / range)) : 0.5;
-    var posStr = (pos * 100).toFixed(0) + '%';
-    var zone = pos > 0.75 ? 'upper' : pos < 0.25 ? 'lower' : 'mid';
-    var zoneLabel = zone==='upper'?'上軌附近（超買）':zone==='lower'?'下軌附近（超賣）':'隧道中段';
-    var badgeCls = zone==='upper'?'tb-upper':zone==='lower'?'tb-lower':'tb-mid';
-    var color = colors[idx];
-    html += '<div class="tunnel-row">';
-    html += '<div class="tunnel-label"><span style="color:'+color+'">'+s.label+'</span><span style="color:#7a90b0">上軌 '+band.upper.toFixed(2)+' ｜ 中軌 '+band.mid.toFixed(2)+' ｜ 下軌 '+band.lower.toFixed(2)+'</span></div>';
-    html += '<div class="tunnel-bar-bg">';
-    html += '<div class="tunnel-bar-fill" style="width:'+posStr+';background:linear-gradient(90deg,#00e676,#00d4ff,#ff5252)"></div>';
-    html += '<div class="tunnel-marker" style="left:calc('+posStr+' - 2px)"></div>';
-    html += '</div>';
-    html += '<div class="tunnel-zones"><span>下軌</span><span>中軌</span><span>上軌</span></div>';
-    html += '<span class="tunnel-badge '+badgeCls+'">'+zoneLabel+'</span>';
-    html += '</div>';
-  });
-  document.getElementById('tunnel-wrap').innerHTML = html;
-}
-
-// ── PHL 指標 ──
-function renderPHL(closes, price) {
-  var configs = [
-    {label:'V1', lk:10, ld:3, lema:3, trig:-40},
-    {label:'V2', lk:20, ld:6, lema:6, trig:-45},
-    {label:'V3', lk:30, ld:9, lema:9, trig:-40},
-  ];
-  var html = '';
-  var phls = [];
-  configs.forEach(function(c) {
-    var r = calcSMI(closes, c.lk, c.ld, c.lema);
-    phls.push(r);
-    if (!r) { html += '<div class="phl-row"><span class="phl-label">'+c.label+'</span><span style="color:#4a6080;font-size:12px">資料不足</span></div>'; return; }
-    var val = r.smi;
-    var pct = Math.max(0, Math.min(1, (val + 100) / 200));
-    var isOB = val > 40, isOS = val < c.trig;
-    var valCls = isOB ? 'ob' : isOS ? 'os' : 'mid';
-    var fillColor = isOB ? '#ff5252' : isOS ? '#00e676' : '#00d4ff';
-    var crossLabel = r.cross==='gold'?'黃金交叉':r.cross==='dead'?'死亡交叉':'';
-    var crossCls = r.cross==='gold'?'gold':r.cross==='dead'?'dead':'none';
-    html += '<div class="phl-row">';
-    html += '<span class="phl-label" style="color:#a8b8d8">'+c.label+'</span>';
-    html += '<div class="phl-gauge-bg"><div class="phl-gauge-fill" style="left:'+(pct<0.5?(pct*100)+'%;width:'+(50-pct*100)+'%;background:rgba(0,230,118,.5)':(50)+'%;width:'+((pct-0.5)*100)+'%;background:rgba(255,82,82,.5)')+'"></div></div>';
-    html += '<span class="phl-val '+valCls+'">'+val.toFixed(1)+'</span>';
-    html += '<span class="phl-cross '+crossCls+'">'+(crossLabel||'—')+'</span>';
-    html += '</div>';
-  });
-  // 超賣條件
-  var osCount = phls.filter(function(r,i){ return r && r.smi < configs[i].trig; }).length;
-  html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:12px;color:#7a90b0">超賣條件：<span style="color:'+(['#ff5252','#f59e0b','#a78bfa','#00e676'][osCount]||'#7a90b0')+'">'+osCount+' / 3 個達到超賣</span></div>';
-  document.getElementById('phl-wrap').innerHTML = html;
-  return phls;
-}
-
-// ── 共振條件 ──
-function renderRes(closes, highs, lows, price) {
-  // 重新計算共振
-  var band_s = gaussianBands(closes, 14, 1.5); // 小
-  var n = closes.length;
-  var band_m = gaussianBands(closes.slice(-Math.floor(n*2/3)), 14, 1.5); // 中
-  var band_l = gaussianBands(closes.slice(-Math.floor(n/3)), Math.floor(14/2), 1.5); // 大
-  var phl1 = calcSMI(closes, 10, 3, 3);
-  var phl2 = calcSMI(closes, 20, 6, 6);
-  var phl3 = calcSMI(closes, 30, 9, 9);
-
-  var conds = [
-    { text:'小貓咪下軌 < 中貓咪下軌', met: band_s && band_m ? band_s.lower < band_m.lower : false },
-    { text:'價格觸及大貓咪下軌', met: band_l ? price <= band_l.lower * 1.02 : false },
-    { text:'PHL V1 超賣（< -40）', met: phl1 ? phl1.smi < -40 : false },
-    { text:'PHL V2 超賣（< -45）', met: phl2 ? phl2.smi < -45 : false },
-    { text:'PHL V3 超賣（< -40）', met: phl3 ? phl3.smi < -40 : false },
-    { text:'V1 黃金交叉（SMI上穿EMA）', met: phl1 ? phl1.cross === 'gold' : false },
-  ];
-  var metCount = conds.filter(function(c){return c.met;}).length;
-  var isFull = metCount >= 6, isNear = metCount >= 3;
-  var badgeHtml = isFull
-    ? '<div class="res-badge long">⚡ 完整做多共振（'+metCount+'/6）</div>'
-    : isNear
-    ? '<div class="res-badge none">⏳ 接近共振（'+metCount+'/6）</div>'
-    : '<div class="res-badge none">— 未達共振（'+metCount+'/6）</div>';
-
-  var condHtml = conds.map(function(c){
-    return '<div class="res-cond '+(c.met?'met':isNear?'near':'')+'"><span class="icon">'+(c.met?'✅':'⏳')+'</span>'+c.text+'</div>';
-  }).join('');
-  document.getElementById('res-wrap').innerHTML = badgeHtml + '<div class="res-cond-list">'+condHtml+'</div>';
-}
-
-// ── 均線 ──
-function renderMA(closes, price) {
-  var mas = [
-    {l:'MA5',  v:calcMA(closes,5)},
-    {l:'MA10', v:calcMA(closes,10)},
-    {l:'MA20', v:calcMA(closes,20)},
-    {l:'MA50', v:calcMA(closes,50)},
-    {l:'MA60', v:calcMA(closes,60)},
-    {l:'MA120',v:calcMA(closes,120)},
-  ];
-  var html = mas.map(function(m){
-    var diff = m.v ? ((price-m.v)/m.v*100) : null;
-    var cls = diff===null?'':diff>0?'up':'dn';
-    return '<div class="ma-cell"><div class="ma-cell-l">'+m.l+'</div><div class="ma-cell-v '+cls+'">'+(m.v?m.v.toFixed(2):'—')+'</div><div class="ma-cell-s">'+(diff!==null?(diff>=0?'▲':'▼')+Math.abs(diff).toFixed(2)+'%':'')+'</div></div>';
-  }).join('');
-  document.getElementById('ma-grid').innerHTML = html;
-}
-
-// ── RSI / MACD ──
-function renderInd(closes) {
-  var rsi = calcRSI(closes);
-  var macd = calcMACD(closes);
-  var rsiPct = rsi ? Math.min(100, Math.max(0, rsi)) : 50;
-  var rsiColor = rsi>=70?'#ff5252':rsi<=30?'#00e676':'#00d4ff';
-  var rsiNote = rsi>=70?'超買':rsi>=60?'偏強':rsi<=30?'超賣':rsi<=40?'偏弱':'中性';
-  var html = '<div class="ind-row">';
-  html += '<div class="ind-label">RSI (14)</div>';
-  html += '<div class="ind-val-row"><span class="ind-val" style="color:'+rsiColor+'">'+(rsi?rsi.toFixed(1):'—')+'</span><span class="ind-note" style="background:rgba(0,0,0,.2);color:'+rsiColor+'">'+rsiNote+'</span></div>';
-  html += '<div class="rsi-bar-bg"><div class="rsi-bar-fill" style="width:'+rsiPct+'%;background:linear-gradient(90deg,#00e676 30%,#00d4ff 50%,#ff5252 70%)"></div></div>';
-  html += '<div class="rsi-zones"><span>超賣 30</span><span>中性</span><span>超買 70</span></div>';
-  html += '</div>';
-  html += '<div class="ind-row" style="margin-top:4px">';
-  html += '<div class="ind-label">MACD</div>';
-  var macdColor = macd===null?'#7a90b0':macd>0?'#00e676':'#ff5252';
-  var macdNote = macd===null?'—':macd>0?'偏多':'偏空';
-  html += '<div class="ind-val-row"><span class="ind-val" style="color:'+macdColor+'">'+(macd!==null?macd.toFixed(3):'—')+'</span><span class="ind-note" style="background:rgba(0,0,0,.2);color:'+macdColor+'">'+macdNote+'</span></div>';
-  if (macd!==null) {
-    var macdBarW = Math.min(100, Math.abs(macd)/closes[closes.length-1]*2000);
-    html += '<div style="display:flex;align-items:center;gap:6px;margin-top:4px"><div style="flex:1;height:10px;background:rgba(255,255,255,.06);border-radius:5px;position:relative"><div style="position:absolute;'+(macd>=0?'left:50%':'right:50%')+';height:100%;width:'+macdBarW+'%;background:'+macdColor+';border-radius:5px;max-width:50%"></div></div></div>';
-  }
-  html += '</div>';
-  document.getElementById('ind-wrap').innerHTML = html;
-}
-
-// ── 支撐壓力 ──
-function renderSR(highs, lows, price) {
-  var r5h=highs.slice(-5), r5l=lows.slice(-5);
-  var r20h=highs.slice(-20), r20l=lows.slice(-20);
-  var r60h=highs.slice(-60), r60l=lows.slice(-60);
-  function mx(a){return a.length?Math.max.apply(null,a):null;}
-  function mn(a){return a.length?Math.min.apply(null,a):null;}
-  var s5=mn(r5l), r5=mx(r5h), s20=mn(r20l), r20=mx(r20h), s60=mn(r60l), r60=mx(r60h);
-  // 視覺化進度條（以60日範圍）
-  var lo=s60||price*0.9, hi=r60||price*1.1;
-  var range=hi-lo||1;
-  var pos=((price-lo)/range*100).toFixed(1);
-  var pS20=s20?((s20-lo)/range*100).toFixed(1):null;
-  var pR20=r20?((r20-lo)/range*100).toFixed(1):null;
-  var html='<div style="font-size:12px;color:#7a90b0;margin-bottom:6px">目前價格位於60日區間的 <span style="color:#fff;font-weight:700">'+pos+'%</span></div>';
-  html+='<div class="sr-price-line">';
-  html+='<div class="sr-track"></div>';
-  // 支撐線
-  if(pS20) html+='<div class="sr-dot" style="left:'+pS20+'%;background:#00e676;width:10px;height:10px"></div>';
-  // 壓力線
-  if(pR20) html+='<div class="sr-dot" style="left:'+pR20+'%;background:#ff5252;width:10px;height:10px"></div>';
-  // 目前價格
-  html+='<div class="sr-dot-price" style="left:'+pos+'%;background:#fff"></div>';
-  html+='</div>';
-  html+='<div style="display:flex;justify-content:space-between;font-size:11px;color:#4a6080;margin-bottom:10px"><span>'+lo.toFixed(2)+'</span><span style="color:#fff">'+price+'</span><span>'+hi.toFixed(2)+'</span></div>';
-  html+='<div class="sr-rows">';
-  var rows=[
-    {l:'5日支撐',v:s5,cls:'sup'},{l:'5日壓力',v:r5,cls:'res'},
-    {l:'20日支撐',v:s20,cls:'sup'},{l:'20日壓力',v:r20,cls:'res'},
-    {l:'60日支撐',v:s60,cls:'sup'},{l:'60日壓力',v:r60,cls:'res'},
-  ];
-  rows.forEach(function(r){
-    var diff=r.v&&price?(((r.v-price)/price)*100):null;
-    html+='<div class="sr-item"><div class="sr-item-l">'+r.l+'</div><div class="sr-item-v '+r.cls+'">'+(r.v?r.v.toFixed(2):'—')+'</div>'+(diff!==null?'<div style="font-size:11px;color:#7a90b0;">'+(diff>=0?'▲':'▼')+Math.abs(diff).toFixed(1)+'%</div>':'')+'</div>';
-  });
-  html+='</div>';
-  document.getElementById('sr-wrap').innerHTML=html;
-}
-
-// ── override renderAll 加入共振 ──
-var _renderAll = renderAll;
-renderAll = function(sym, data) {
-  _renderAll(sym, data);
+function renderAll(sym,data){
   var raw_c=(data.closes||[]).filter(function(v){return v!=null;});
   var raw_h=(data.highs||[]).filter(function(v){return v!=null;});
   var raw_l=(data.lows||[]).filter(function(v){return v!=null;});
   var rs=resample(raw_c,raw_h,raw_l,currentTf);
-  renderRes(rs.closes, rs.highs, rs.lows, data.price);
-};
+  var closes=rs.closes,highs=rs.highs,lows=rs.lows;
+  var price=data.price;
+  var prev=data.previousClose||(raw_c.length>=2?raw_c[raw_c.length-2]:price);
+  var chgPct=((price-prev)/prev*100);
+
+  // 標題
+  document.getElementById('d-sym').textContent=sym;
+  document.getElementById('d-name').textContent=(data.name||'')+(data.sector?' · '+data.sector:'')+'  【'+currentTf+'】';
+  document.getElementById('d-price').textContent=price?price.toLocaleString():'—';
+  var ce=document.getElementById('d-chg');
+  ce.textContent=(chgPct>=0?'▲':'▼')+Math.abs(chgPct).toFixed(2)+'%  '+(data.currency||'');
+  ce.className='price-chg '+(chgPct>=0?'up':'dn');
+
+  renderTV(sym,data);
+  renderTfScore(raw_c,raw_h,raw_l);
+  renderTunnel(closes,highs,lows,price);
+  renderPHL(closes);
+  renderRes(closes,highs,lows,price);
+  renderMA(raw_c,price);
+  renderInd(raw_c);
+  renderSR(raw_h,raw_l,price);
+  renderAnalyst(data);
+  renderVal(data,price);
+  renderEPS(data);
+}
+
+// ── TradingView ──
+function renderTV(sym,data){
+  var tvSym=sym;
+  if(currentMkt==='tw'){
+    if(data.symbol&&data.symbol.includes('.TWO')) tvSym='TPEX:'+sym;
+    else tvSym='TWSE:'+sym;
+  }
+  var tfMap={'D':'D','H4':'240','H1':'60'};
+  var interval=tfMap[currentTf]||'D';
+  document.getElementById('tv-container').innerHTML='<iframe frameborder="0" scrolling="no" allowtransparency="true" allowfullscreen="" style="width:100%;height:380px;" src="https://www.tradingview.com/chart/?symbol='+encodeURIComponent(tvSym)+'&interval='+interval+'&theme=dark&locale=zh_TW"></iframe>';
+}
+
+// ── 多時框評分 ──
+function renderTfScore(raw_c,raw_h,raw_l){
+  var tfs=[
+    {label:'H1',  closes:resample(raw_c,raw_h,raw_l,'H1').closes},
+    {label:'H4',  closes:resample(raw_c,raw_h,raw_l,'H4').closes},
+    {label:'Day', closes:raw_c},
+    {label:'Week',closes:(function(){var r=[];for(var i=0;i<raw_c.length-4;i+=5)r.push(raw_c[i+4]);return r;})()},
+  ];
+  var html='';
+  tfs.forEach(function(tf){
+    if(tf.closes.length<20){html+='<div class="tf-score-cell"><div class="tf-score-lbl">'+tf.label+'</div><div class="tf-score-val neu">—</div><div class="tf-score-tag tag-neu">資料不足</div></div>';return;}
+    var r=scoreTf(tf.closes,[],[]);
+    var s=r.score,cls=s>=3?'bull':s<=-3?'bear':'neu',tag=s>=3?'偏多':s<=-3?'偏空':'中性',tagCls=s>=3?'tag-bull':s<=-3?'tag-bear':'tag-neu';
+    html+='<div class="tf-score-cell"><div class="tf-score-lbl">'+tf.label+'</div><div class="tf-score-val '+cls+'">'+s+'</div><div class="tf-score-tag '+tagCls+'">'+tag+'</div><div style="font-size:10px;color:#4a6080;margin-top:4px">多'+r.bull+' 空'+r.bear+'</div></div>';
+  });
+  document.getElementById('tf-score-grid').innerHTML=html;
+}
+
+// ── 三貓咪隧道 ──
+function renderTunnel(closes,highs,lows,price){
+  var n=closes.length;
+  var sets=[
+    {label:'小貓咪（短線）',data:closes,bw:14,dev:1.5,color:'#00d4ff'},
+    {label:'中貓咪（中線）',data:closes.slice(-Math.floor(n*2/3)),bw:14,dev:1.5,color:'#a78bfa'},
+    {label:'大貓咪（長線）',data:closes.slice(-Math.floor(n/3)),bw:7,dev:1.5,color:'#f59e0b'},
+  ];
+  var html='';
+  sets.forEach(function(s){
+    var band=gaussianBands(s.data,s.bw,s.dev);
+    if(!band){html+='<div class="tunnel-row"><div class="tunnel-label"><span style="color:'+s.color+'">'+s.label+'</span><span>資料不足</span></div></div>';return;}
+    var range=band.upper-band.lower||1;
+    var pos=Math.max(0,Math.min(1,(price-band.lower)/range));
+    var posStr=(pos*100).toFixed(0)+'%';
+    var zone=pos>0.75?'upper':pos<0.25?'lower':'mid';
+    var zl=zone==='upper'?'上軌附近（超買）':zone==='lower'?'下軌附近（超賣）':'隧道中段';
+    var bc=zone==='upper'?'tb-upper':zone==='lower'?'tb-lower':'tb-mid';
+    html+='<div class="tunnel-row">';
+    html+='<div class="tunnel-label"><span style="color:'+s.color+';font-weight:700">'+s.label+'</span><span>上 '+band.upper.toFixed(2)+' ｜ 中 '+band.mid.toFixed(2)+' ｜ 下 '+band.lower.toFixed(2)+'</span></div>';
+    html+='<div class="tunnel-bar-bg"><div style="height:100%;width:100%;border-radius:6px;background:linear-gradient(90deg,#00e676 0%,#00d4ff 50%,#ff5252 100%)"></div><div class="tunnel-marker" style="left:calc('+posStr+' - 2px)"></div></div>';
+    html+='<div class="tunnel-zones"><span>下軌</span><span>中軌</span><span>上軌</span></div>';
+    html+='<span class="tunnel-badge '+bc+'">'+zl+'</span>';
+    html+='</div>';
+  });
+  document.getElementById('tunnel-wrap').innerHTML=html;
+}
+
+// ── PHL ──
+function renderPHL(closes){
+  var configs=[{label:'V1',lk:10,ld:3,lema:3,trig:-40},{label:'V2',lk:20,ld:6,lema:6,trig:-45},{label:'V3',lk:30,ld:9,lema:9,trig:-40}];
+  var html='',osCount=0;
+  configs.forEach(function(c){
+    var r=calcSMI(closes,c.lk,c.ld,c.lema);
+    if(!r){html+='<div class="phl-row"><span class="phl-label">'+c.label+'</span><span style="color:#4a6080;font-size:11px">資料不足</span></div>';return;}
+    var val=r.smi,pct=Math.max(0,Math.min(1,(val+100)/200));
+    var isOB=val>40,isOS=val<c.trig;
+    if(isOS) osCount++;
+    var vc=isOB?'ob':isOS?'os':'mid';
+    var fc=isOB?'#ff5252':isOS?'#00e676':'#00d4ff';
+    var cl=r.cross==='gold'?'gold':r.cross==='dead'?'dead':'none';
+    var ct=r.cross==='gold'?'黃金交叉':r.cross==='dead'?'死亡交叉':'—';
+    var left=pct<0.5?(pct*100)+'%;width:'+(50-pct*100)+'%;background:rgba(0,230,118,.5)':'50%;width:'+((pct-0.5)*100)+'%;background:rgba(255,82,82,.5)';
+    html+='<div class="phl-row"><span class="phl-label">'+c.label+'</span><div class="phl-gauge-bg"><div class="phl-gauge-fill" style="left:'+left+'"></div></div><span class="phl-val '+vc+'">'+val.toFixed(1)+'</span><span class="phl-cross '+cl+'">'+ct+'</span></div>';
+  });
+  html+='<div style="margin-top:8px;padding:8px;background:rgba(255,255,255,.03);border-radius:6px;font-size:11px;color:#7a90b0;text-align:center">超賣條件 <span style="color:'+(['#7a90b0','#f59e0b','#a78bfa','#00e676'][osCount]||'#7a90b0')+';font-weight:700">'+osCount+'/3</span> 達到</div>';
+  document.getElementById('phl-wrap').innerHTML=html;
+}
+
+// ── 共振 ──
+function renderRes(closes,highs,lows,price){
+  var n=closes.length;
+  var bs=gaussianBands(closes,14,1.5);
+  var bm=gaussianBands(closes.slice(-Math.floor(n*2/3)),14,1.5);
+  var bl=gaussianBands(closes.slice(-Math.floor(n/3)),7,1.5);
+  var p1=calcSMI(closes,10,3,3),p2=calcSMI(closes,20,6,6),p3=calcSMI(closes,30,9,9);
+  var conds=[
+    {text:'小貓咪下軌 < 中貓咪下軌',met:bs&&bm?bs.lower<bm.lower:false},
+    {text:'價格觸及大貓咪下軌（±2%）',met:bl?price<=bl.lower*1.02:false},
+    {text:'PHL V1 超賣（< -40）',met:p1?p1.smi<-40:false},
+    {text:'PHL V2 超賣（< -45）',met:p2?p2.smi<-45:false},
+    {text:'PHL V3 超賣（< -40）',met:p3?p3.smi<-40:false},
+    {text:'V1 黃金交叉（SMI 上穿 EMA）',met:p1?p1.cross==='gold':false},
+  ];
+  var mc=conds.filter(function(c){return c.met;}).length;
+  var badgeCls=mc>=6?'long':mc>=3?'near':'none';
+  var badgeTxt=mc>=6?'⚡ 完整做多共振':mc>=3?'⏳ 接近共振':'— 未達共振';
+  document.getElementById('res-badge-wrap').innerHTML='<div class="res-badge '+badgeCls+'">'+badgeTxt+'（'+mc+'/6）</div>';
+  document.getElementById('res-cond-list').innerHTML=conds.map(function(c){
+    return '<div class="res-cond '+(c.met?'met':'')+'"><span class="icon">'+(c.met?'✅':'⏳')+'</span>'+c.text+'</div>';
+  }).join('');
+}
+
+// ── 均線 ──
+function renderMA(closes,price){
+  var mas=[{l:'MA5',n:5},{l:'MA10',n:10},{l:'MA20',n:20},{l:'MA50',n:50},{l:'MA60',n:60},{l:'MA120',n:120}];
+  document.getElementById('ma-grid').innerHTML=mas.map(function(m){
+    var v=calcMA(closes,m.n),diff=v?((price-v)/v*100):null;
+    var cls=diff===null?'':diff>0?'up':'dn';
+    return '<div class="ma-cell"><div class="ma-cell-l">'+m.l+'</div><div class="ma-cell-v '+cls+'">'+(v?v.toFixed(2):'—')+'</div><div class="ma-cell-s">'+(diff!==null?(diff>=0?'▲':'▼')+Math.abs(diff).toFixed(2)+'%':'')+'</div></div>';
+  }).join('');
+}
+
+// ── RSI / MACD ──
+function renderInd(closes){
+  var rsi=calcRSI(closes),macd=calcMACD(closes);
+  var rsiPct=rsi?Math.min(100,Math.max(0,rsi)):50;
+  var rc=rsi>=70?'#ff5252':rsi<=30?'#00e676':'#00d4ff';
+  var rn=rsi>=70?'超買':rsi>=60?'偏強':rsi<=30?'超賣':rsi<=40?'偏弱':'中性';
+  var mc=macd===null?'#7a90b0':macd>0?'#00e676':'#ff5252';
+  var mn=macd===null?'—':macd>0?'偏多':'偏空';
+  var html='<div><div class="ind-label">RSI (14)</div>';
+  html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="ind-val" style="color:'+rc+'">'+(rsi?rsi.toFixed(1):'—')+'</span><span class="ind-note" style="color:'+rc+'">'+rn+'</span></div>';
+  html+='<div class="rsi-bar-bg"><div style="height:100%;width:'+rsiPct+'%;background:linear-gradient(90deg,#00e676 30%,#00d4ff 50%,#ff5252 70%);border-radius:6px"></div></div>';
+  html+='<div class="rsi-zones"><span>超賣 30</span><span>中性 50</span><span>超買 70</span></div></div>';
+  html+='<div style="margin-top:4px"><div class="ind-label">MACD</div>';
+  html+='<div style="display:flex;align-items:center;gap:8px"><span class="ind-val" style="color:'+mc+'">'+(macd!==null?macd.toFixed(3):'—')+'</span><span class="ind-note" style="color:'+mc+'">'+mn+'</span></div>';
+  if(macd!==null){var bw=Math.min(50,Math.abs(macd)/(closes[closes.length-1]||1)*1500);html+='<div style="height:10px;background:rgba(255,255,255,.06);border-radius:5px;position:relative;margin-top:6px;overflow:hidden"><div style="position:absolute;'+(macd>=0?'left:50%':'right:50%')+';height:100%;width:'+bw+'%;background:'+mc+';max-width:50%"></div></div>';}
+  html+='</div>';
+  document.getElementById('ind-wrap').innerHTML=html;
+}
+
+// ── 支撐壓力 ──
+function renderSR(highs,lows,price){
+  function mx(a){return a.length?Math.max.apply(null,a):null;}
+  function mn(a){return a.length?Math.min.apply(null,a):null;}
+  var s5=mn(lows.slice(-5)),r5=mx(highs.slice(-5));
+  var s20=mn(lows.slice(-20)),r20=mx(highs.slice(-20));
+  var s60=mn(lows.slice(-60)),r60=mx(highs.slice(-60));
+  var lo=s60||price*0.9,hi=r60||price*1.1,range=hi-lo||1;
+  var pos=((price-lo)/range*100).toFixed(1);
+  var pS20=s20?((s20-lo)/range*100).toFixed(1):null;
+  var pR20=r20?((r20-lo)/range*100).toFixed(1):null;
+  var html='<div style="font-size:11px;color:#7a90b0;margin-bottom:6px">位於60日區間 <span style="color:#fff;font-weight:700">'+pos+'%</span></div>';
+  html+='<div class="sr-price-line"><div class="sr-track"></div>';
+  if(pS20) html+='<div class="sr-dot" style="left:'+pS20+'%;background:#00e676"></div>';
+  if(pR20) html+='<div class="sr-dot" style="left:'+pR20+'%;background:#ff5252"></div>';
+  html+='<div class="sr-dot-price" style="left:'+pos+'%"></div></div>';
+  html+='<div style="display:flex;justify-content:space-between;font-size:10px;color:#4a6080;margin-bottom:8px"><span>'+lo.toFixed(2)+'</span><span style="color:#fff">'+price+'</span><span>'+hi.toFixed(2)+'</span></div>';
+  var rows=[{l:'5日支撐',v:s5,c:'sup'},{l:'5日壓力',v:r5,c:'res'},{l:'20日支撐',v:s20,c:'sup'},{l:'20日壓力',v:r20,c:'res'},{l:'60日支撐',v:s60,c:'sup'},{l:'60日壓力',v:r60,c:'res'}];
+  html+='<div class="sr-rows">'+rows.map(function(r){
+    var diff=r.v&&price?((r.v-price)/price*100):null;
+    return '<div class="sr-item"><div class="sr-item-l">'+r.l+'</div><div class="sr-item-v '+r.c+'">'+(r.v?r.v.toFixed(2):'—')+'</div>'+(diff!==null?'<div style="font-size:10px;color:#7a90b0">'+(diff>=0?'▲':'▼')+Math.abs(diff).toFixed(1)+'%</div>':'')+'</div>';
+  }).join('')+'</div>';
+  document.getElementById('sr-wrap').innerHTML=html;
+}
+
+// ── 分析師評級 ──
+function renderAnalyst(data){
+  var recMap={'strong_buy':'強力買進','buy':'買進','hold':'持有','underperform':'表現落後','sell':'賣出'};
+  var recCls={'strong_buy':'rec-strong-buy','buy':'rec-buy','hold':'rec-hold','underperform':'rec-sell','sell':'rec-sell'};
+  var rec=data.recommendationKey||'';
+  var recTxt=recMap[rec]||rec||'—';
+  var recC=recCls[rec]||'rec-hold';
+  var html='<div class="rec-badge '+recC+'">'+recTxt+'</div>';
+  html+='<div style="font-size:11px;color:#7a90b0;margin-bottom:6px">分析師數量：<span style="color:#fff;font-weight:700">'+(data.numberOfAnalystOpinions||'—')+'</span> 位</div>';
+  if(data.targetMeanPrice&&data.price){
+    var lo=data.targetLowPrice||data.price,hi=data.targetHighPrice||data.price;
+    var range=hi-lo||1;
+    var pPrice=((data.price-lo)/range*100).toFixed(0);
+    var pMean=((data.targetMeanPrice-lo)/range*100).toFixed(0);
+    var upside=((data.targetMeanPrice-data.price)/data.price*100).toFixed(1);
+    html+='<div style="font-size:11px;color:#7a90b0;margin-bottom:4px">目標價區間</div>';
+    html+='<div class="analyst-bar-bg">';
+    html+='<div style="height:100%;background:linear-gradient(90deg,rgba(0,212,255,.15),rgba(0,230,118,.25));border-radius:7px"></div>';
+    html+='<div class="analyst-marker" style="left:'+pPrice+'%"><div class="analyst-marker-line" style="background:#fff"></div></div>';
+    html+='<div class="analyst-marker" style="left:'+pMean+'%"><div class="analyst-marker-line" style="background:#00d4ff"></div></div>';
+    html+='</div>';
+    html+='<div class="analyst-labels"><span style="color:#ff9800">低 '+(lo.toLocaleString())+'</span><span style="color:#00d4ff">均 '+(data.targetMeanPrice.toLocaleString())+'</span><span style="color:#00e676">高 '+(hi.toLocaleString())+'</span></div>';
+    html+='<div style="margin-top:8px;padding:8px;background:rgba(0,212,255,.06);border-radius:6px;text-align:center;border:1px solid rgba(0,212,255,.15)"><span style="font-size:11px;color:#7a90b0">平均上漲空間 </span><span style="font-family:Bebas Neue,sans-serif;font-size:22px;color:'+(parseFloat(upside)>=0?'#00e676':'#ff5252')+'">'+(parseFloat(upside)>=0?'+':'')+upside+'%</span></div>';
+  } else {
+    html+='<div style="color:#4a6080;font-size:12px">無分析師目標價資料</div>';
+  }
+  document.getElementById('analyst-wrap').innerHTML=html;
+}
+
+// ── 估值 ──
+function renderVal(data,price){
+  var eps=data.forwardEps||data.trailingEps;
+  var pe=data.forwardPE||data.trailingPE;
+  var html='';
+  if(data.targetMeanPrice){
+    html+='<div style="font-size:11px;color:#7a90b0;margin-bottom:6px;font-weight:700">分析師目標價</div>';
+    html+='<div class="val-row">';
+    html+='<div class="val-item"><div class="val-item-l">最低</div><div class="val-item-v" style="color:#ff9800">'+(data.targetLowPrice?data.targetLowPrice.toLocaleString():'—')+'</div></div>';
+    html+='<div class="val-item highlight"><div class="val-item-l">平均</div><div class="val-item-v" style="color:#00d4ff">'+(data.targetMeanPrice.toLocaleString())+'</div></div>';
+    html+='<div class="val-item"><div class="val-item-l">最高</div><div class="val-item-v" style="color:#00e676">'+(data.targetHighPrice?data.targetHighPrice.toLocaleString():'—')+'</div></div>';
+    html+='</div>';
+  }
+  if(eps&&pe){
+    var fairPE=Math.round(eps*pe);
+    html+='<div style="font-size:11px;color:#7a90b0;margin-bottom:6px;font-weight:700;margin-top:10px">EPS × 本益比</div>';
+    html+='<div class="val-row">';
+    html+='<div class="val-item"><div class="val-item-l">保守（×12）</div><div class="val-item-v">'+(Math.round(eps*12)).toLocaleString()+'</div></div>';
+    html+='<div class="val-item highlight"><div class="val-item-l">現值（×'+pe+'）</div><div class="val-item-v" style="color:#00d4ff">'+fairPE.toLocaleString()+'</div></div>';
+    html+='<div class="val-item"><div class="val-item-l">樂觀（×25）</div><div class="val-item-v">'+(Math.round(eps*25)).toLocaleString()+'</div></div>';
+    html+='</div>';
+  }
+  if(!data.targetMeanPrice&&!eps){
+    html='<div style="color:#4a6080;font-size:12px;padding:10px 0">無估值資料（台股部分個股不提供）</div>';
+  }
+  document.getElementById('val-wrap').innerHTML=html;
+}
+
+// ── EPS趨勢 ──
+function renderEPS(data){
+  var html='';
+  if(data.trailingEps||data.forwardEps){
+    html+='<div class="eps-compare">';
+    html+='<div class="eps-block"><div class="eps-block-l">近四季 EPS</div><div class="eps-block-v">'+(data.trailingEps||'—')+'</div><div style="font-size:10px;color:#7a90b0">Trailing EPS</div></div>';
+    var arrow='→',arrowColor='#7a90b0';
+    if(data.forwardEps&&data.trailingEps){
+      if(data.forwardEps>data.trailingEps){arrow='↗';arrowColor='#00e676';}
+      else if(data.forwardEps<data.trailingEps){arrow='↘';arrowColor='#ff5252';}
+    }
+    html+='<div class="eps-arrow" style="color:'+arrowColor+'">'+arrow+'</div>';
+    html+='<div class="eps-block"><div class="eps-block-l">預估 EPS</div><div class="eps-block-v" style="color:'+(data.forwardEps&&data.trailingEps?(data.forwardEps>data.trailingEps?'#00e676':'#ff5252'):'#fff')+'">'+(data.forwardEps||'—')+'</div><div style="font-size:10px;color:#7a90b0">Forward EPS</div></div>';
+    html+='</div>';
+    html+='<div class="pe-row">';
+    var peItems=[
+      {l:'歷史本益比',v:data.trailingPE,sub:'Trailing P/E'},
+      {l:'預估本益比',v:data.forwardPE,sub:'Forward P/E'},
+      {l:'PEG 比率',v:data.pegRatio,sub:data.pegRatio?(data.pegRatio<1?'偏低':data.pegRatio<2?'合理':'偏高'):''},
+      {l:'EPS成長率',v:data.earningsGrowth?data.earningsGrowth+'%':null,sub:'YoY'},
+    ];
+    peItems.forEach(function(p){
+      var vc='#fff';
+      if(p.l==='PEG 比率'&&p.v) vc=p.v<1?'#00e676':p.v<2?'#00d4ff':'#ff5252';
+      if(p.l==='EPS成長率'&&p.v) vc=parseFloat(p.v)>0?'#00e676':'#ff5252';
+      html+='<div class="pe-item"><div class="pe-item-l">'+p.l+'</div><div class="pe-item-v" style="color:'+vc+'">'+(p.v||'—')+'</div><div style="font-size:10px;color:#4a6080">'+p.sub+'</div></div>';
+    });
+    html+='</div>';
+  } else {
+    html='<div style="color:#4a6080;font-size:12px;padding:10px 0">無 EPS 資料</div>';
+  }
+  document.getElementById('eps-wrap').innerHTML=html;
+}
 </script>
 </body>
 </html>
