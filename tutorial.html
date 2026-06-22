@@ -516,16 +516,31 @@ function renderAll(sym, data) {
 function renderTV(sym, data) {
   var tvSym = sym;
   if (currentMkt === 'tw') {
-    if (data.symbol && data.symbol.includes('.TW')) tvSym = 'TWSE:' + sym;
-    else if (data.symbol && data.symbol.includes('.TWO')) tvSym = 'TPEX:' + sym;
+    if (data.symbol && data.symbol.includes('.TWO')) tvSym = 'TPEX:' + sym;
     else tvSym = 'TWSE:' + sym;
-  } else {
-    tvSym = sym;
   }
   var tfMap = {'D':'D','H4':'240','H1':'60'};
   var interval = tfMap[currentTf] || 'D';
-  document.getElementById('tv-container').innerHTML =
-    '<iframe src="https://www.tradingview.com/widgetbar-chart-only/?symbol='+tvSym+'&interval='+interval+'&theme=dark&locale=zh_TW&hide_side_toolbar=0&allow_symbol_change=0&save_image=0&calendar=false&hide_volume=false&support_host=https://www.tradingview.com" frameborder="0" allowtransparency="true" allowfullscreen="" style="width:100%;height:400px;"></iframe>';
+  var container = document.getElementById('tv-container');
+  container.innerHTML = '<div id="tv-widget-inner" style="width:100%;height:400px;"></div>';
+  var script = document.createElement('script');
+  script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+  script.async = true;
+  script.innerHTML = JSON.stringify({
+    "autosize": true,
+    "symbol": tvSym,
+    "interval": interval,
+    "timezone": "Asia/Taipei",
+    "theme": "dark",
+    "style": "1",
+    "locale": "zh_TW",
+    "enable_publishing": false,
+    "hide_top_toolbar": false,
+    "hide_legend": false,
+    "save_image": false,
+    "container_id": "tv-widget-inner"
+  });
+  document.getElementById('tv-widget-inner').appendChild(script);
 }
 
 // ── 三貓咪隧道 ──
