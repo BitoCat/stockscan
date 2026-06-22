@@ -263,16 +263,24 @@
 <script src="js/supabase.js"></script>
 <script>
 const RAILWAY_URL = 'https://splendid-prosperity-production-41ab.up.railway.app';
-let currentMkt = 'tw', currentTf = 'D', currentSym = '', quoteData = null;
+let currentUser = null, currentProfile = null, currentMkt = 'tw', currentTf = 'D', currentSym = '', quoteData = null;
 
 (async () => {
-  const u = await requireAuth();
-  if (!u) return;
-  const p = await getProfile(u.id);
+  currentUser = await requireAuth();
+  if (!currentUser) return;
+  currentProfile = await getProfile(currentUser.id);
+  if (!currentProfile) {
+    await sb.from('profiles').insert({
+      id: currentUser.id,
+      display_name: currentUser.user_metadata?.display_name || currentUser.email.split('@')[0],
+      plan: 'free', daily_count: 0, last_date: new Date().toDateString()
+    }).then(() => {}).catch(() => {});
+    currentProfile = await getProfile(currentUser.id);
+  }
   const nb = document.getElementById('nav-plan');
-  nb.textContent = planLabel(p?.plan || 'free');
-  nb.className = 'plan-badge ' + planBadge(p?.plan || 'free');
-  if (p?.plan === 'free') {
+  nb.textContent = planLabel(currentProfile?.plan || 'free');
+  nb.className = 'plan-badge ' + planBadge(currentProfile?.plan || 'free');
+  if ((currentProfile?.plan || 'free') === 'free') {
     document.getElementById('empty-state').innerHTML = '<div class="empty-state"><div class="empty-icon">🔒</div><div class="empty-txt">此功能需要開通會員<br>請聯繫管理員開通</div></div>';
   }
 })();
