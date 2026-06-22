@@ -161,6 +161,8 @@
 <script>
 let currentUser = null, currentProfile = null, currentMkt = 'tw', lastResult = null;
 
+const RAILWAY_URL = 'https://splendid-prosperity-production-41ab.up.railway.app';
+
 (async () => {
   currentUser = await requireAuth();
   if (!currentUser) return;
@@ -174,7 +176,6 @@ let currentUser = null, currentProfile = null, currentMkt = 'tw', lastResult = n
   nb.className = 'plan-badge ' + planBadge(currentProfile?.plan || 'free');
   const pts = await getPoints(currentUser.id);
   document.getElementById('pts-display').textContent = pts + ' 點';
-  // 從 DB 同步 Groq Key 到 localStorage
   await getAIKeyFromDB(currentUser.id);
 })();
 
@@ -191,10 +192,18 @@ function toggleLoad(on){
 }
 function showErr(msg){ const e=document.getElementById('err-box'); e.textContent=msg; e.style.display='block'; }
 function hideErr(){ document.getElementById('err-box').style.display='none'; }
-  
+
+// ── 統一的報價抓取函式（台股美股共用，不用 AbortSignal.timeout）────
+async function fetchQuote(sym) {
+  const r = await fetch(RAILWAY_URL + '/quote?symbol=' + sym);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const data = await r.json();
+  if (!data.price) throw new Error('查無報價');
+  return data;
+}
+
 async function analyze() {
   const sym = document.getElementById('stock-inp').value.trim().toUpperCase();
-  // 只接受數字和英文
   if (!/^[A-Z0-9.\-]+$/.test(sym)) {
     showErr('請輸入股票代號（數字或英文），如 2330 或 NVDA，不支援中文名稱');
     return;
@@ -207,147 +216,175 @@ async function analyze() {
   hideErr();
 
   let livePrice = null, priceContext = '';
+
   try {
-    let pd = null;
-    if (currentMkt === 'tw') {
-      // 台股用 Railway 後端抓，自動判斷上市/上櫃
-      try {
-        const r = await fetch('https://splendid-prosperity-production-41ab.up.railway.app/quote?symbol=' + sym);
-        const data = await r.json();
-        if (data.price) {
-          pd = {chart:{result:[{meta:{regularMarketPrice:data.price,symbol:data.symbol,currency:data.currency,shortName:data.name||data.symbol,previousClose:data.previousClose},indicators:{quote:[{close:data.closes,high:data.highs||[],low:data.lows||[]}]}}]}};
-          pd._eps = { forwardEps:data.forwardEps, trailingEps:data.trailingEps, forwardPE:data.forwardPE, trailingPE:data.trailingPE, pegRatio:data.pegRatio, earningsGrowth:data.earningsGrowth, industryPE:data.industryPE, targetMeanPrice:data.targetMeanPrice, targetLowPrice:data.targetLowPrice, targetHighPrice:data.targetHighPrice };
+    // ── 台股美股全部走同一條路：Railway /quote ──
+    const data = await fetchQuote(sym);
+
+    const closes = (data.closes || []).filter(function(c){ return c != null && !isNaN(c); });
+    const highs   = (data.highs  || []).filter(function(v){ return v != null && !isNaN(v); });
+    const lows    = (data.lows   || []).filter(function(v){ return v != null && !isNaN(v); });
+
+    if (data.price && closes.length > 0) {
+      const ma = function(arr, n) {
+        if (arr.length < n) return null;
+        const s = arr.slice(-n);
+        return (s.reduce(function(a,b){return a+b;}, 0) / s.length).toFixed(2);
+      };
+      const ma5  = ma(closes, 5);
+      const ma20 = ma(closes, 20);
+      const ma60 = ma(closes, 60);
+
+      const calcRSI = function(arr, p) {
+        p = p || 14;
+        if (arr.length < p + 1) return null;
+        const s = arr.slice(-(p + 1));
+        var g = 0, l = 0;
+        for (var i = 1; i < s.length; i++) {
+          var d = s[i] - s[i-1];
+          if (d > 0) g += d; else l -= d;
         }
-      } catch(e) { console.error('台股抓取失敗:', e); }
-    } else {
-      // 美股用 Yahoo proxy
-      async function tryFetchYahoo(symbol) {
-        const url = "https://query2.finance.yahoo.com/v8/finance/chart/" + symbol + "?interval=1d&range=3mo";
-        const proxies = [
-          "https://corsproxy.io/?" + encodeURIComponent(url),
-          "https://api.allorigins.win/get?url=" + encodeURIComponent(url),
-          "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url),
-          "https://thingproxy.freeboard.io/fetch/" + encodeURIComponent(url),
-        ];
-        for (const proxyUrl of proxies) {
-          try {
-            const r = await fetch('https://splendid-prosperity-production-41ab.up.railway.app/quote?symbol=' + sym);
-            const raw = await r.json();
-            const pd = raw?.contents ? JSON.parse(raw.contents) : raw;
-            const result = pd?.chart?.result?.[0];
-            if (result?.meta?.regularMarketPrice) return pd;
-          } catch(e2) { continue; }
-        }
-        return null;
+        var ag = g/p, al = l/p;
+        if (al === 0) return '100.0';
+        return (100 - 100/(1 + ag/al)).toFixed(1);
+      };
+      const rsi = calcRSI(closes);
+
+      const ema = function(arr, n) {
+        var k = 2/(n+1), e = arr[0];
+        for (var i = 1; i < arr.length; i++) e = arr[i]*k + e*(1-k);
+        return e;
+      };
+      var macd = null;
+      if (closes.length >= 26) {
+        var e12 = ema(closes.slice(-26), 12), e26 = ema(closes, 26);
+        macd = (e12 - e26).toFixed(3);
       }
-      pd = await tryFetchYahoo(sym);
-      // 美股：另外打後端取 EPS / PE 資料
-      if (pd) {
-        try {
-          const er = await fetch('https://splendid-prosperity-production-41ab.up.railway.app/quote?symbol=' + sym, {signal: AbortSignal.timeout(8000)});
-          const ed = await er.json();
-          if (ed.forwardEps || ed.trailingEps) {
-            pd._eps = { forwardEps:ed.forwardEps, trailingEps:ed.trailingEps, forwardPE:ed.forwardPE, trailingPE:ed.trailingPE, pegRatio:ed.pegRatio, earningsGrowth:ed.earningsGrowth, industryPE:ed.industryPE, targetMeanPrice:ed.targetMeanPrice, targetLowPrice:ed.targetLowPrice, targetHighPrice:ed.targetHighPrice };
-          }
-        } catch(e) {}
-      }
+
+      // 支撐壓力
+      const r5h  = highs.slice(-5),  r5l  = lows.slice(-5);
+      const r20h = highs.slice(-20), r20l = lows.slice(-20);
+      const r60h = highs.slice(-60), r60l = lows.slice(-60);
+      const minArr = function(a){ return a.length ? Math.min.apply(null,a).toFixed(2) : null; };
+      const maxArr = function(a){ return a.length ? Math.max.apply(null,a).toFixed(2) : null; };
+
+      const support_s    = minArr(r5l),  resistance_s = maxArr(r5h);
+      const support      = minArr(r20l), resistance   = maxArr(r20h);
+      const support_l    = minArr(r60l), resistance_l = maxArr(r60h);
+
+      const prev = data.previousClose || closes[closes.length - 2] || data.price;
+      const changePct = ((data.price - prev) / prev * 100).toFixed(2);
+
+      const today = new Date();
+      const dateStr = today.getFullYear() + '年' + (today.getMonth()+1) + '月' + today.getDate() + '日';
+
+      livePrice = {
+        name: data.name || sym,
+        price: data.price,
+        prev: prev,
+        changePct: changePct,
+        ma5: ma5, ma20: ma20, ma60: ma60,
+        rsi: rsi, macd: macd,
+        support_s: support_s, resistance_s: resistance_s,
+        support: support, resistance: resistance,
+        support_l: support_l, resistance_l: resistance_l,
+        date: dateStr,
+        forwardEps: data.forwardEps, trailingEps: data.trailingEps,
+        forwardPE: data.forwardPE, trailingPE: data.trailingPE,
+        pegRatio: data.pegRatio, earningsGrowth: data.earningsGrowth,
+        industryPE: data.industryPE,
+        targetMeanPrice: data.targetMeanPrice,
+        targetLowPrice: data.targetLowPrice,
+        targetHighPrice: data.targetHighPrice
+      };
+
+      priceContext = '\n\n[即時技術分析資料 ' + dateStr + ']\n' +
+        '公司名稱: ' + livePrice.name + '\n' +
+        '目前股價: ' + livePrice.price + '\n' +
+        '漲跌幅: ' + livePrice.changePct + '%\n' +
+        'MA5: ' + (ma5||'N/A') + ' MA20: ' + (ma20||'N/A') + ' MA60: ' + (ma60||'N/A') + '\n' +
+        'RSI(14): ' + (rsi||'N/A') + '\n' +
+        'MACD: ' + (macd||'N/A') + '\n' +
+        '短線支撐: ' + (support_s||'N/A') + ' 短線壓力: ' + (resistance_s||'N/A') + '\n' +
+        '中線支撐: ' + (support||'N/A') + ' 中線壓力: ' + (resistance||'N/A') + '\n' +
+        '長線支撐: ' + (support_l||'N/A') + ' 長線壓力: ' + (resistance_l||'N/A') + '\n' +
+        '[請根據以上真實技術指標進行分析]';
     }
-    const result = pd?.chart?.result?.[0];
-    const meta = result?.meta;
-    const closes = result?.indicators?.quote?.[0]?.close || [];
-    const highs = result?.indicators?.quote?.[0]?.high || [];
-    const lows = result?.indicators?.quote?.[0]?.low || [];
-    const volumes = result?.indicators?.quote?.[0]?.volume || [];
-    if (meta?.regularMarketPrice && closes.length > 0) {
-      const validCloses = closes.filter(c => c != null);
-      const ma = (arr, n) => { if (arr.length < n) return null; const s = arr.slice(-n).filter(v=>v!=null); return (s.reduce((a,b)=>a+b,0)/s.length).toFixed(2); };
-      const ma5=ma(validCloses,5), ma20=ma(validCloses,20), ma60=ma(validCloses,60);
-      const calcRSI = (arr,p=14) => { if(arr.length<p+1)return null; const s=arr.slice(-(p+1)).filter(v=>v!=null); let g=0,l=0; for(let i=1;i<s.length;i++){const d=s[i]-s[i-1];if(d>0)g+=d;else l-=d;} const ag=g/p,al=l/p; if(al===0)return 100; return(100-100/(1+ag/al)).toFixed(1); };
-      const rsi=calcRSI(validCloses);
-      const ema=(arr,n)=>{const k=2/(n+1);let e=arr[0];for(let i=1;i<arr.length;i++)e=arr[i]*k+e*(1-k);return e;};
-      const validC=validCloses.filter(v=>v!=null);
-      let macd=null;
-      if(validC.length>=26){const e12=ema(validC.slice(-26),12),e26=ema(validC,26);macd=(e12-e26).toFixed(3);}
-      // 短線（5日）
-      const r5h=highs.slice(-5).filter(v=>v!=null), r5l=lows.slice(-5).filter(v=>v!=null);
-      const support_s=r5l.length?Math.min(...r5l).toFixed(2):null;
-      const resistance_s=r5h.length?Math.max(...r5h).toFixed(2):null;
-      // 中線（20日）
-      const r20h=highs.slice(-20).filter(v=>v!=null), r20l=lows.slice(-20).filter(v=>v!=null);
-      const support=r20l.length?Math.min(...r20l).toFixed(2):null;
-      const resistance=r20h.length?Math.max(...r20h).toFixed(2):null;
-      // 長線（60日）
-      const r60h=highs.slice(-60).filter(v=>v!=null), r60l=lows.slice(-60).filter(v=>v!=null);
-      const support_l=r60l.length?Math.min(...r60l).toFixed(2):null;
-      const resistance_l=r60h.length?Math.max(...r60h).toFixed(2):null;
-      const today=new Date(); const dateStr=today.getFullYear()+"年"+(today.getMonth()+1)+"月"+today.getDate()+"日";
-      const epsData = pd?._eps || {};
-      livePrice = { name:meta.shortName||meta.longName||sym, price:meta.regularMarketPrice, high:meta.regularMarketDayHigh, low:meta.regularMarketDayLow, prev:meta.previousClose, changePct:(((meta.regularMarketPrice-meta.previousClose)/meta.previousClose)*100).toFixed(2), ma5,ma20,ma60,rsi,macd,support,resistance,support_s,resistance_s,support_l,resistance_l,date:dateStr, forwardEps:epsData.forwardEps, trailingEps:epsData.trailingEps, forwardPE:epsData.forwardPE, trailingPE:epsData.trailingPE, pegRatio:epsData.pegRatio, earningsGrowth:epsData.earningsGrowth, industryPE:epsData.industryPE, targetMeanPrice:epsData.targetMeanPrice, targetLowPrice:epsData.targetLowPrice, targetHighPrice:epsData.targetHighPrice };
-      priceContext = "\n\n[即時技術分析資料 "+dateStr+"]\n公司名稱: "+livePrice.name+"\n目前股價: "+livePrice.price+"\n漲跌幅: "+livePrice.changePct+"%\nMA5: "+(ma5||'N/A')+" MA20: "+(ma20||'N/A')+" MA60: "+(ma60||'N/A')+"\nRSI(14): "+(rsi||'N/A')+"\nMACD: "+(macd||'N/A')+"\n短線支撐: "+(support_s||'N/A')+" 短線壓力: "+(resistance_s||'N/A')+"\n中線支撐: "+(support||'N/A')+" 中線壓力: "+(resistance||'N/A')+"\n長線支撐: "+(support_l||'N/A')+" 長線壓力: "+(resistance_l||'N/A')+"\n[請根據以上真實技術指標進行分析]";
-    }
-  } catch(e) { console.log('股價抓取失敗', e); }
+  } catch(e) {
+    console.log('報價抓取失敗', e);
+  }
 
   const market = currentMkt === 'tw' ? '台灣股市(台股)' : '美國股市(美股)';
-  // 台股：提前查 Supabase 取中文名，讓 prompt 也用正確名稱
-  let twChineseName = null;
-  if (currentMkt === 'tw' && livePrice?.name) {
+
+  // 台股補查中文名稱
+  var twChineseName = null;
+  if (currentMkt === 'tw' && livePrice) {
     try {
-      const {data: rr} = await sb.from('tw_radar_new_positions').select('stock_name').eq('ticker', sym).limit(1).maybeSingle();
-      if (rr?.stock_name) twChineseName = rr.stock_name;
+      var rr = await sb.from('tw_radar_new_positions').select('stock_name').eq('ticker', sym).limit(1).maybeSingle();
+      if (rr.data && rr.data.stock_name) twChineseName = rr.data.stock_name;
       if (!twChineseName) {
-        const {data: fr} = await sb.from('tw_fund_positions').select('name').eq('ticker', sym).not('name', 'is', null).limit(1).maybeSingle();
-        if (fr?.name) twChineseName = fr.name;
+        var fr = await sb.from('tw_fund_positions').select('name').eq('ticker', sym).not('name','is',null).limit(1).maybeSingle();
+        if (fr.data && fr.data.name) twChineseName = fr.data.name;
       }
     } catch(e) {}
   }
+
   const displayName = twChineseName || livePrice?.name;
-  const companyHint = displayName ? "公司名稱是" + displayName + "，" : "";
+  const companyHint = displayName ? '公司名稱是' + displayName + '，' : '';
 
-  // 技術指標解讀
   const rsiVal = parseFloat(livePrice?.rsi || 50);
-  const rsiNote = rsiVal >= 70 ? "超買警戒" : rsiVal >= 60 ? "偏強" : rsiVal <= 30 ? "超賣反彈機會" : rsiVal <= 40 ? "偏弱" : "中性";
+  const rsiNote = rsiVal >= 70 ? '超買警戒' : rsiVal >= 60 ? '偏強' : rsiVal <= 30 ? '超賣反彈機會' : rsiVal <= 40 ? '偏弱' : '中性';
   const maStatus = (livePrice?.ma5 && livePrice?.ma20) ?
-    (parseFloat(livePrice.ma5) > parseFloat(livePrice.ma20) ? "MA5上穿MA20黃金交叉" : "MA5下穿MA20死亡交叉") : "";
-  const macdNote = livePrice?.macd ? (parseFloat(livePrice.macd) > 0 ? "MACD正值偏多" : "MACD負值偏空") : "";
+    (parseFloat(livePrice.ma5) > parseFloat(livePrice.ma20) ? 'MA5上穿MA20黃金交叉' : 'MA5下穿MA20死亡交叉') : '';
+  const macdNote = livePrice?.macd ? (parseFloat(livePrice.macd) > 0 ? 'MACD正值偏多' : 'MACD負值偏空') : '';
 
-  const prompt = "你是頂級股票分析師，擁有20年實戰經驗。" + companyHint + "請對" + market + "股票代號「" + sym + "」進行專業分析。" + priceContext +
-    "\n\n技術指標解讀：RSI=" + (livePrice?.rsi||'N/A') + "(" + rsiNote + ")，" + maStatus + "，" + macdNote +
-    "\n\n請輸出純JSON，格式如下（禁止使用markdown）：" +
-    "{" +
-    "\"stockName\":\"" + (displayName||sym) + "\"," +
-    "\"sector\":\"產業別\"," +
-    "\"healthScore\":75," +
-    "\"grade\":\"強力買進\"," +
-    "\"trend\":\"上升\"," +
-    "\"peRatio\":\"估計PE\"," +
-    "\"support\":\"支撐位\"," +
-    "\"resistance\":\"壓力位\"," +
-    "\"signals\":[" +
-    "{\"type\":\"bull\",\"text\":\"具體多頭信號，必須包含實際數字，如：RSI65突破、MA5(182)站上MA20(175)、成交量放大30%\"}," +
-    "{\"type\":\"bear\",\"text\":\"具體空頭風險，必須包含實際數字或事件\"}," +
-    "{\"type\":\"neutral\",\"text\":\"中性觀察，包含產業動態或籌碼面\"}]," +
-    "\"analysis\":\"【基本面】公司核心業務、營收獲利趨勢、本益比估值（必須有具體數字）。【技術面】根據提供的RSI/MACD/MA數據詳細解析目前趨勢，不可重複關鍵信號內容。【產業鏈】上下游影響、競爭對手動態、產業景氣位置。【催化劑與風險】近期重要事件（財報/法說/產品）、法人籌碼動向、3項具體風險。【操作策略】建議進場區間、短線目標價、停損位置。以上共700字以上，每段都要有具體數字支撐，禁止籠統描述。\"" +
-    "}" +
-    "\ngrade必須是：強力買進、買進、谷底反彈機會、觀察等待、持有、減碼、避開之一";
+  const prompt = '你是頂級股票分析師，擁有20年實戰經驗。' + companyHint + '請對' + market + '股票代號「' + sym + '」進行專業分析。' + priceContext +
+    '\n\n技術指標解讀：RSI=' + (livePrice?.rsi||'N/A') + '(' + rsiNote + ')，' + maStatus + '，' + macdNote +
+    '\n\n請輸出純JSON，格式如下（禁止使用markdown）：' +
+    '{' +
+    '"stockName":"' + (displayName||sym) + '",' +
+    '"sector":"產業別",' +
+    '"healthScore":75,' +
+    '"grade":"強力買進",' +
+    '"trend":"上升",' +
+    '"peRatio":"估計PE",' +
+    '"support":"支撐位",' +
+    '"resistance":"壓力位",' +
+    '"signals":[' +
+    '{"type":"bull","text":"具體多頭信號，必須包含實際數字，如：RSI65突破、MA5(182)站上MA20(175)、成交量放大30%"},' +
+    '{"type":"bear","text":"具體空頭風險，必須包含實際數字或事件"},' +
+    '{"type":"neutral","text":"中性觀察，包含產業動態或籌碼面"}],' +
+    '"analysis":"【基本面】公司核心業務、營收獲利趨勢、本益比估值（必須有具體數字）。【技術面】根據提供的RSI/MACD/MA數據詳細解析目前趨勢，不可重複關鍵信號內容。【產業鏈】上下游影響、競爭對手動態、產業景氣位置。【催化劑與風險】近期重要事件（財報/法說/產品）、法人籌碼動向、3項具體風險。【操作策略】建議進場區間、短線目標價、停損位置。以上共700字以上，每段都要有具體數字支撐，禁止籠統描述。"' +
+    '}' +
+    '\ngrade必須是：強力買進、買進、谷底反彈機會、觀察等待、持有、減碼、避開之一';
 
- try {
+  try {
     const raw = await callAI(prompt, 2500);
     const clean = raw.replace(/```json|```/g, '').trim();
-    let obj;
-    try { obj = JSON.parse(clean); } catch(e) { const m=clean.match(/\{[\s\S]*\}/); obj=JSON.parse(m[0]); }
+    var obj;
+    try { obj = JSON.parse(clean); } catch(e) { var m=clean.match(/\{[\s\S]*\}/); obj=JSON.parse(m[0]); }
+
     if (!livePrice?.price) {
       showErr('⚠️ 目前無法取得此股票即時資料，分析結果僅供參考，請自行確認股價與公司名稱');
     }
-    if (livePrice?.price) {
-      obj.changePct = livePrice.changePct;
-    }
+    if (livePrice?.price) { obj.changePct = livePrice.changePct; }
     obj.stockName = displayName || livePrice?.name || obj.stockName;
+
     if (livePrice) {
-      obj.support_s=livePrice.support_s; obj.resistance_s=livePrice.resistance_s; obj.support=livePrice.support; obj.resistance=livePrice.resistance; obj.support_l=livePrice.support_l; obj.resistance_l=livePrice.resistance_l;
-      obj.forwardEps=livePrice.forwardEps; obj.trailingEps=livePrice.trailingEps; obj.forwardPE=livePrice.forwardPE; obj.trailingPE=livePrice.trailingPE; obj.pegRatio=livePrice.pegRatio; obj.earningsGrowth=livePrice.earningsGrowth; obj.industryPE=livePrice.industryPE; obj.targetMeanPrice=livePrice.targetMeanPrice; obj.targetLowPrice=livePrice.targetLowPrice; obj.targetHighPrice=livePrice.targetHighPrice;
+      obj.support_s    = livePrice.support_s;    obj.resistance_s = livePrice.resistance_s;
+      obj.support      = livePrice.support;       obj.resistance   = livePrice.resistance;
+      obj.support_l    = livePrice.support_l;     obj.resistance_l = livePrice.resistance_l;
+      obj.forwardEps   = livePrice.forwardEps;    obj.trailingEps  = livePrice.trailingEps;
+      obj.forwardPE    = livePrice.forwardPE;     obj.trailingPE   = livePrice.trailingPE;
+      obj.pegRatio     = livePrice.pegRatio;      obj.earningsGrowth = livePrice.earningsGrowth;
+      obj.industryPE   = livePrice.industryPE;
+      obj.targetMeanPrice = livePrice.targetMeanPrice;
+      obj.targetLowPrice  = livePrice.targetLowPrice;
+      obj.targetHighPrice = livePrice.targetHighPrice;
     }
-    lastResult = {...obj, symbol:sym, market:currentMkt};
-    await deductPoint(currentUser.id, "AI 健診："+sym);
+
+    lastResult = Object.assign({}, obj, {symbol: sym, market: currentMkt});
+    await deductPoint(currentUser.id, 'AI 健診：' + sym);
     const newPts = await getPoints(currentUser.id);
     document.getElementById('pts-display').textContent = newPts + ' 點';
     renderResult(sym, obj);
@@ -358,43 +395,34 @@ async function analyze() {
 function renderResult(sym, d) {
   document.getElementById('r-id').textContent = sym;
   document.getElementById('r-name').textContent = (d.stockName||'') + (d.sector ? ' · '+d.sector : '');
-  const score=parseInt(d.healthScore)||50;
-  const color=score>=75?'#2ecc71':score>=50?'#00d4ff':score>=35?'#f39c12':'#e74c3c';
-  const r=34,circ=2*Math.PI*r,dash=(score/100)*circ;
+  const score = parseInt(d.healthScore) || 50;
+  const color = score>=75 ? '#2ecc71' : score>=50 ? '#00d4ff' : score>=35 ? '#f39c12' : '#e74c3c';
+  const r = 34, circ = 2*Math.PI*r, dash = (score/100)*circ;
   document.getElementById('r-ring').innerHTML = '<svg width="84" height="84" viewBox="0 0 84 84"><circle cx="42" cy="42" r="'+r+'" fill="none" stroke="#1c2d50" stroke-width="6"/><circle cx="42" cy="42" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="6" stroke-dasharray="'+dash+' '+circ+'" stroke-dashoffset="'+circ/4+'" stroke-linecap="round" style="filter:drop-shadow(0 0 6px '+color+')"/><text x="42" y="44" text-anchor="middle" dominant-baseline="middle" font-size="20" fill="white" font-family="Bebas Neue">'+score+'</text><text x="42" y="57" text-anchor="middle" font-family="Share Tech Mono" font-size="7" fill="#4a6080">HEALTH</text></svg>';
-  const grade=d.grade||'—';
-  const gEl=document.getElementById('r-grade');
-  gEl.textContent=grade;
-  gEl.className='grade '+gradeClass(grade);
-  // 計算合理股價
-  const eps = d.forwardEps || d.trailingEps;
-  const pe = d.forwardPE || d.trailingPE;
-  const fairLow = eps ? (eps * 12).toFixed(0) : null;
-  const fairMid = (eps && pe) ? (eps * pe).toFixed(0) : null;
-  const fairHigh = eps ? (eps * 25).toFixed(0) : null;
-  const fairStr = fairMid ? fairLow+'～'+fairMid+'～'+fairHigh : (fairLow ? fairLow+'～'+fairHigh : '—');
-  const epsLabel = d.forwardEps ? '預估EPS '+d.forwardEps : (d.trailingEps ? '近四季EPS '+d.trailingEps : '');
-  const mets=[
-    {l:'趨勢',v:d.trend||'—',c:d.trend?.includes('上')?'up':d.trend?.includes('下')?'dn':''},
-    {l:d.currentPrice?'即時股價':'本益比',v:d.currentPrice?String(d.currentPrice):(d.peRatio||'—'),c:d.changePct>0?'up':d.changePct<0?'dn':'',s:d.currentPrice?(d.changePct>0?'▲':'▼')+d.changePct+'%':'估計值'},
-    {l:'短線支撐',v:d.support_s||d.support||'—',c:'up',s:'5日'},
-    {l:'短線壓力',v:d.resistance_s||d.resistance||'—',c:'dn',s:'5日'},
-    {l:'中線支撐',v:d.support||'—',c:'up',s:'20日'},
-    {l:'中線壓力',v:d.resistance||'—',c:'dn',s:'20日'},
-    {l:'長線支撐',v:d.support_l||'—',c:'up',s:'60日'},
-    {l:'長線壓力',v:d.resistance_l||'—',c:'dn',s:'60日'},
-  ];
-  // 各種估值計算
+  const grade = d.grade || '—';
+  const gEl = document.getElementById('r-grade');
+  gEl.textContent = grade;
+  gEl.className = 'grade ' + gradeClass(grade);
+
   const trailingFair = (d.trailingEps && d.trailingPE) ? Math.round(d.trailingEps * d.trailingPE) : null;
   const forwardFair  = (d.forwardEps  && d.forwardPE)  ? Math.round(d.forwardEps  * d.forwardPE)  : null;
   const pegFair      = (d.forwardEps  && d.earningsGrowth) ? Math.round(d.forwardEps * d.earningsGrowth) : null;
   const industryFair = (d.forwardEps  && d.industryPE)  ? Math.round(d.forwardEps  * d.industryPE)  : null;
-  const pegVal = d.pegRatio;
+  const pegVal  = d.pegRatio;
   const pegColor = pegVal ? (pegVal < 1 ? '#00e676' : pegVal < 2 ? '#00d4ff' : '#ff5252') : '#7a90b0';
-  const pegNote = pegVal ? (pegVal < 1 ? '偏低' : pegVal < 2 ? '合理' : '偏高') : '';
+  const pegNote  = pegVal ? (pegVal < 1 ? '偏低' : pegVal < 2 ? '合理' : '偏高') : '';
+  const eps = d.forwardEps || d.trailingEps;
 
-  const fmtPrice = v => v ? `<span class="fv-num">${v.toLocaleString()}</span>` : `<span class="fv-na">—</span>`;
-  const fmtPE    = v => v ? `<span class="fv-pe">${v}</span>` : `<span class="fv-na">—</span>`;
+  const mets = [
+    {l:'趨勢',   v:d.trend||'—', c:d.trend?.includes('上')?'up':d.trend?.includes('下')?'dn':''},
+    {l:d.currentPrice?'即時股價':'本益比', v:d.currentPrice?String(d.currentPrice):(d.peRatio||'—'), c:d.changePct>0?'up':d.changePct<0?'dn':'', s:d.currentPrice?(d.changePct>0?'▲':'▼')+d.changePct+'%':'估計值'},
+    {l:'短線支撐', v:d.support_s||d.support||'—', c:'up',  s:'5日'},
+    {l:'短線壓力', v:d.resistance_s||d.resistance||'—', c:'dn', s:'5日'},
+    {l:'中線支撐', v:d.support||'—',    c:'up',  s:'20日'},
+    {l:'中線壓力', v:d.resistance||'—', c:'dn',  s:'20日'},
+    {l:'長線支撐', v:d.support_l||'—',    c:'up',  s:'60日'},
+    {l:'長線壓力', v:d.resistance_l||'—', c:'dn',  s:'60日'},
+  ];
 
   const hasAny = eps || d.targetMeanPrice;
   const fairBlock = hasAny ? `
@@ -403,7 +431,6 @@ function renderResult(sym, d) {
         <span class="fair-title">📐 估值參考</span>
         <span class="fair-src">資料來源：yfinance</span>
       </div>
-
       ${d.targetMeanPrice ? `
       <div class="fair-section-title">分析師目標價</div>
       <div class="fair-analyst-row">
@@ -420,7 +447,6 @@ function renderResult(sym, d) {
           <div class="fair-analyst-val hi">${d.targetHighPrice?.toLocaleString() || '—'}</div>
         </div>
       </div>` : ''}
-
       ${eps ? `
       <div class="fair-section-title" style="margin-top:14px">EPS 估值（EPS × 本益比）</div>
       <div class="fair-calc-row">
@@ -445,7 +471,6 @@ function renderResult(sym, d) {
           <div class="fair-calc-sub">EPS ${d.forwardEps} × 產業${d.industryPE}倍</div>
         </div>` : ''}
       </div>
-
       <div class="fair-pe-row" style="margin-top:12px">
         <div class="fair-pe-item">
           <div class="fair-pe-label">歷史本益比</div>
@@ -468,64 +493,73 @@ function renderResult(sym, d) {
           <div class="fair-pe-sub">Industry P/E</div>
         </div>` : ''}
       </div>` : ''}
-
       <div class="fair-note">以上數據來自 yfinance，僅供參考，不構成投資建議</div>
     </div>` : '';
-  document.getElementById('r-metrics').innerHTML=mets.map(m=>'<div class="met"><div class="met-l">'+m.l+'</div><div class="met-v '+m.c+'">'+m.v+'</div>'+(m.s?'<div class="met-s">'+m.s+'</div>':'')+'</div>').join('')+fairBlock;
-  document.getElementById('r-signals').innerHTML=(d.signals||[]).map(s=>'<div class="sig"><div class="dot '+s.type+'"></div><span>'+s.text+'</span></div>').join('');
+
+  document.getElementById('r-metrics').innerHTML = mets.map(function(m){
+    return '<div class="met"><div class="met-l">'+m.l+'</div><div class="met-v '+m.c+'">'+m.v+'</div>'+(m.s?'<div class="met-s">'+m.s+'</div>':'')+'</div>';
+  }).join('') + fairBlock;
+
+  document.getElementById('r-signals').innerHTML = (d.signals||[]).map(function(s){
+    return '<div class="sig"><div class="dot '+s.type+'"></div><span>'+s.text+'</span></div>';
+  }).join('');
+
   const analysisText = d.analysis || '';
-  const sections = analysisText.split(/(?=\u3010)/);
-  let analysisHtml = '';
+  const sections = analysisText.split(/(?=【)/);
+  var analysisHtml = '';
   sections.forEach(function(s) {
-    const titleMatch = s.match(/^\u3010(.+?)\u3011/);
+    const titleMatch = s.match(/^【(.+?)】/);
     if (titleMatch) {
       const title = titleMatch[0];
       const body = s.replace(title, '').trim();
-      analysisHtml += '<div class="ai-section"><span class="ai-section-title">' + title + '</span><div class="ai-section-body">' + body + '</div></div>';
+      analysisHtml += '<div class="ai-section"><span class="ai-section-title">'+title+'</span><div class="ai-section-body">'+body+'</div></div>';
     } else if (s.trim()) {
-      analysisHtml += '<div class="ai-section"><div class="ai-section-body">' + s + '</div></div>';
+      analysisHtml += '<div class="ai-section"><div class="ai-section-body">'+s+'</div></div>';
     }
   });
   document.getElementById('r-analysis').innerHTML = analysisHtml;
-  document.getElementById('r-time').textContent='診斷：'+new Date().toLocaleString('zh-TW');
+  document.getElementById('r-time').textContent = '診斷：' + new Date().toLocaleString('zh-TW');
   document.getElementById('res-card').classList.add('show');
-  document.getElementById('res-card').scrollIntoView({behavior:'smooth',block:'nearest'});
+  document.getElementById('res-card').scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
 function gradeClass(g) {
-  if(g.includes('強力買進')||g.includes('買進'))return 'g-buy';
-  if(g.includes('谷底'))return 'g-rebound';
-  if(g.includes('觀察'))return 'g-watch';
-  if(g.includes('持有'))return 'g-hold';
+  if (g.includes('強力買進') || g.includes('買進')) return 'g-buy';
+  if (g.includes('谷底')) return 'g-rebound';
+  if (g.includes('觀察')) return 'g-watch';
+  if (g.includes('持有')) return 'g-hold';
   return 'g-avoid';
 }
 
 async function saveToWatchlist() {
   if (!lastResult) return;
-  const btn=document.getElementById('save-btn'); btn.disabled=true;
-  const {error}=await sb.from('watchlist').upsert({user_id:currentUser.id,symbol:lastResult.symbol,market:lastResult.market,name:lastResult.stockName,sector:lastResult.sector,grade:lastResult.grade,health_score:lastResult.healthScore,added_at:new Date().toISOString()},{onConflict:'user_id,symbol'});
-  if(error){showToast('❌ 儲存失敗','error');btn.disabled=false;}
-  else{showToast('✅ 已加入觀察名單','success');}
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  const res = await sb.from('watchlist').upsert({
+    user_id: currentUser.id, symbol: lastResult.symbol, market: lastResult.market,
+    name: lastResult.stockName, sector: lastResult.sector, grade: lastResult.grade,
+    health_score: lastResult.healthScore, added_at: new Date().toISOString()
+  }, {onConflict:'user_id,symbol'});
+  if (res.error) { showToast('❌ 儲存失敗','error'); btn.disabled=false; }
+  else { showToast('✅ 已加入觀察名單','success'); }
 }
 
 (function(){
   const urlParams = new URLSearchParams(window.location.search);
   const ticker = urlParams.get('ticker');
   const market = urlParams.get('market');
-  if(ticker){
+  if (ticker) {
     const inp = document.getElementById('stock-inp');
-    if(inp){
+    if (inp) {
       inp.value = ticker;
-      // 依 market 參數決定切換哪個市場，預設美股
-      if(market === 'tw'){
-        const twBt = document.getElementById('mbt-tw');
-        if(twBt) twBt.click();
+      if (market === 'tw') {
+        var twBt = document.getElementById('mbt-tw');
+        if (twBt) twBt.click();
       } else {
-        const usBt = document.getElementById('mbt-us');
-        if(usBt) usBt.click();
+        var usBt = document.getElementById('mbt-us');
+        if (usBt) usBt.click();
       }
-      const btn = document.getElementById('analyze-btn');
-      if(btn) setTimeout(()=>btn.click(), 800);
+      setTimeout(function(){ document.getElementById('analyze-btn').click(); }, 800);
     }
   }
 })();
