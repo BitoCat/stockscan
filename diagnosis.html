@@ -195,11 +195,20 @@ function hideErr(){ document.getElementById('err-box').style.display='none'; }
 
 // ── 統一的報價抓取函式（台股美股共用，不用 AbortSignal.timeout）────
 async function fetchQuote(sym) {
-  const r = await fetch(RAILWAY_URL + '/quote?symbol=' + sym);
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  const data = await r.json();
-  if (!data.price) throw new Error('查無報價');
-  return data;
+  return new Promise(function(resolve, reject) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', RAILWAY_URL + '/quote?symbol=' + sym);
+    xhr.onload = function() {
+      if (xhr.status !== 200) { reject(new Error('HTTP ' + xhr.status)); return; }
+      try {
+        var data = JSON.parse(xhr.responseText);
+        if (!data.price) { reject(new Error('查無報價')); return; }
+        resolve(data);
+      } catch(e) { reject(e); }
+    };
+    xhr.onerror = function() { reject(new Error('網路錯誤')); };
+    xhr.send();
+  });
 }
 
 async function analyze() {
