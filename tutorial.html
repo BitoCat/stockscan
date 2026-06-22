@@ -25,7 +25,7 @@
 .price-main{font-family:'Bebas Neue',sans-serif;font-size:40px;color:#fff;line-height:1}
 .price-chg{font-size:14px;margin-top:4px}
 .price-chg.up{color:#00e676}.price-chg.dn{color:#ff5252}
-.tv-wrap{width:100%;height:380px;background:#0d1421}
+.tv-wrap{width:100%;height:140px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border)}
 .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px}
 @media(max-width:600px){.dash-grid{grid-template-columns:1fr}}
 .dash-full{grid-column:1/-1}
@@ -495,7 +495,13 @@ function renderTV(sym,data){
   }
   var tfMap={'D':'D','H4':'240','H1':'60'};
   var interval=tfMap[currentTf]||'D';
-  document.getElementById('tv-container').innerHTML='<iframe frameborder="0" scrolling="no" allowtransparency="true" allowfullscreen="" style="width:100%;height:380px;" src="https://www.tradingview.com/chart/?symbol='+encodeURIComponent(tvSym)+'&interval='+interval+'&theme=dark&locale=zh_TW"></iframe>';
+  var url='https://www.tradingview.com/chart/?symbol='+encodeURIComponent(tvSym)+'&interval='+interval+'&theme=dark&locale=zh_TW';
+  document.getElementById('tv-container').innerHTML=
+    '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;padding:24px">'
+    +'<div style="font-size:13px;color:#7a90b0;text-align:center">TradingView 不支援嵌入外部網站<br>點下方按鈕在新分頁開啟圖表</div>'
+    +'<a href="'+url+'" target="_blank" class="btn btn-primary" style="text-decoration:none;padding:10px 24px;font-size:14px">📈 在 TradingView 開啟 '+tvSym+'</a>'
+    +'<div style="font-size:11px;color:#4a6080">時框：'+currentTf+'</div>'
+    +'</div>';
 }
 
 // ── 多時框評分 ──
