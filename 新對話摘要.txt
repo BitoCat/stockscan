@@ -374,6 +374,77 @@ concepts.html（🇹🇼/🇺🇸 切換頁籤）
 - Railway 的 Redeploy 是重部「該筆 deployment 的 commit」，不是 GitHub 最新版
 
 ---
+---
+
+## 股票篩選器（screener.html）✅ 2026-07-03 完成（台股+美股）
+
+### 架構
+
+GitHub Actions pattern_scanner.yml(排程)
+→ trading-bot/pattern_scanner.py(每日掃描器)
+→ Railway GET /screener-quote(trading-bot/screener_api.py,批次抓一年日線+評級+基本面)
+→ Supabase screener_results 表
+→ screener.html(會員秒查) + Telegram 收盤彙總(台股報報/美股報報)
+
+### 排程
+- 台股: 週一~五 15:30(cron 30 7 * * 1-5),掃完推台股報報彙總
+- 美股: 週二~六 08:00 台灣時間(cron 0 0 * * 2-6),掃完推美股報報彙總
+- 手動: Actions → Pattern Scanner → Run workflow(可選市場、可選是否推播)
+
+### 股票池
+- 台股: data/concepts.json 全部成分股 ∪ tw_fund_positions 主力雷達持股(欄位自動偵測,
+  排除ETF),約200檔;中文名用 tw_stocks 補齊
+- 美股: data/us_concepts.json ∪ scan_watchlist,約100檔
+
+### 八個型態(毛哥教學邏輯:兩個時期、兩種進場+衍生)
+| 型態代號 | 名稱 | 條件摘要 |
+|---------|------|---------|
+| pullback_ma20 | 🔵強勢回調月線起漲 | 價>SMA10且價<SMA25(月線攻防區,毛哥TV原式)+月線>季線+距高點≤30% |
+| deep_pullback | 🔄深度回調起漲 | 同月線攻防區但月線≤季線(深修正後起漲)+距高點≤45% |
+| pullback_ma60 | 🔷強勢回調季線起漲 | 價>SMA10+價格在季線±5%+季線上揚+距高點≤35% |
+| reversal_ma20 | 🟢低檔站上月線 | 昨日月線下今日站上+低檔(距低點≤25%)+量比≥1.5 |
+| reversal_ma60 | 💚低檔站上季線 | 近5日從季線下站上+月線上彎+距低點≤30% |
+| high_52w | ⭐突破52週新高 | 收盤創一年新高+量比≥1.2 |
+| bull_alignment | 🚀多頭排列 | SMA10>20>60且價在三線上+距高點≤20% |
+| laggard | 🏃落後補漲 | 價>月線>季線但距高點20~45%(尚未大漲) |
+
+- 設計原則: 全部用「站上/位置」邏輯,不用交叉(符合毛哥教學語言)
+- 型態演進紀錄: 回調型態最初用「回踩不破」邏輯→改「跌破又站回」→最終定案毛哥TV原式
+  「SMA10之上SMA25之下」的月線攻防區;衝刺期(月線>季線)與修復期(月線≤季線)拆成兩類
+- 型態是每日快照,某型態某天0檔是正常的(前端顯示友善提示)
+
+### 後端資料端點(trading-bot/screener_api.py)
+- GET /screener-quote?codes=2330,NVDA 一次最多10檔,回傳260日OHLCV+評級+目標價+基本面
+- GET /screener-quote/test?code=2330 瀏覽器測試(回傳含 ver 標記)
+- 共用 concept_analysis.py 的 _resolve(台美股自動判斷)
+- 掃描器透過此端點取資料(Yahoo不能從GitHub Actions直接抓的既有限制)
+
+### Supabase: screener_results
+- 欄位: market/scan_date/pattern/code/name/price/change_pct/sector/industry/
+  rating/rating_mean/analysts/target/target_upside_pct/pe/eps_growth/revenue_growth/
+  roe/dividend_yield/market_cap/rel_volume/dist_high_pct/dist_low_pct
+- RLS: anon SELECT+INSERT+DELETE(比照 scan_results)
+- 每次掃描先刪同市場同日舊資料再寫入(重跑=覆蓋)
+
+### 前端(screener.html)
+- 台美頁籤+八型態按鈕牆,每型態附教學說明;預設按目標價空間%排序,欄位可點排序
+- 表格: 股票/現價/漲跌%/產業(中文化)/評級(中文化+顏色)/目標價空間%/PE/量比/距高點%
+- 點列展開: 分析師數/目標價/EPS成長/營收成長/ROE/市值/距低點/細分產業
+- 代號連 diagnosis.html;free鎖定;底部tabbar(篩選器active)
+- 首頁 index.html quick-btns 加 🎯 股票篩選器入口
+
+### 已知注意事項
+- workflow 檔曾誤放到 stockscan repo 導致找不到 pattern_scanner.py — 掃描器全家住 trading-bot
+- 舊 scanner.yml(trading-bot)每次push必失敗變紅X — 待清理或修復
+- 台股中小型股常無分析師評級(顯示「無評級」),屬資料覆蓋現實
+
+### 未來計畫(篩選器相關)
+- V2 盤中五分鐘掃描器(Railway常駐):抓現價套用每日預算門檻,新進榜訊號推Telegram
+  (只推「變化」不推「狀態」,同檔同型態每日一次)
+- 比特聯盟幣圈版:資料源換Bitunix kline、池換合約清單、八型態複用、
+  可融入三貓咪隧道條件做獨家型態(股票篩選器完工當日已規劃)
+
+================================================================================================
 
 ## 新聞系統（news.html）
 
@@ -457,4 +528,4 @@ concepts.html（🇹🇼/🇺🇸 切換頁籤）
 ### 未來計畫
 - 港股北水追蹤
 - 新聞更多台灣在地來源
-- 自建指標掃描器（突破 TradingView 兩清單快訊限制，參考 daily_scanner.py 模式）
+
