@@ -1,5 +1,6 @@
 # 交易大師 ProTrader 專案摘要（貼給 Claude 用）
-> 最後更新：2026年6月14日
+> 最後更新：2026年7月3日
+> 本次變更：tw-alert-bot 除役刪除、改記錄 TradingView 快訊直送 Telegram 做法、概念股雷達補分批載入說明
 
 ---
 
@@ -51,13 +52,13 @@ Supabase memberships 表寫入
 | 綠界回傳網址 | https://web-production-9ba5b.up.railway.app/ecpay/notify |
 | 管理員 Telegram ID | 6499571217 |
 
-### Telegram 頻道
+### Telegram 頻道（會員邀請對象，由 tg-member-bot 管理，持續使用中）
 
 | 頻道 | ID | 用途 |
 |------|-----|------|
 | 交易大師頻道 | -1003983491999 | 每日盤面解析（付費會員） |
-| 台股報報 | -1003883576984 | 台股指標快訊 |
-| 美股報報 | -1003990900011 | 美股指標快訊 |
+| 台股報報 | -1003883576984 | 台股指標快訊（TradingView 直送） |
+| 美股報報 | -1003990900011 | 美股指標快訊（TradingView 直送） |
 
 ### 付款方式
 - 信用卡、ATM 轉帳、超商代碼、超商條碼（全透過綠界）
@@ -139,66 +140,28 @@ Supabase memberships 表寫入
 
 ---
 
-## TradingView 快訊中繼 Bot（tw-alert-bot）✅ 2026-06-07 完成
-
-### 目的
-TradingView 快訊只送股票代號（如 `2330`），中繼 Bot 自動補上台股中文名稱後送到 Telegram。美股維持原代號不轉換。
+## TradingView 指標快訊（直送 Telegram）✅ 2026-07 現行做法
 
 ### 架構
 ```
-TradingView Webhook → Railway（FastAPI）→ Supabase tw_stocks → Telegram
+TradingView 快訊 Webhook → Telegram Bot API 直接發布到頻道
 ```
+- 台股報報（-1003883576984）、美股報報（-1003990900011）
+- 不經任何中繼伺服器，TradingView 快訊設定裡直接填 Telegram API 網址
 
-### 關鍵資訊
-| 項目 | 內容 |
-|------|------|
-| GitHub | https://github.com/BitoCat/tw-alert-bot |
-| Railway Webhook URL | https://tw-alert-bot-production.up.railway.app/webhook |
-| Railway Health Check | https://tw-alert-bot-production.up.railway.app/health |
-| 本機專案位置 | `~/Downloads/home/claude/tw-alert-bot/` |
+### 限制與注意事項
+- TradingView Premium 的篩選器快訊只能對「兩個清單」掃描發布（伺服器端配額，
+  中繼站或 Webhook 都無法突破）。目前台股、美股各用掉名額
+- 想擴充標的：優先把清單「加大」（單一清單可容納數百檔）而不是「加多」；
+  再不夠的選項：升級 Ultimate，或自建掃描器（參考 daily_scanner.py 模式，
+  GitHub Actions/Railway 排程 + Telegram 推播，不受配額限制）
+- Bot Token 寫在每條 TradingView 快訊的 URL 裡，若 Token 重置需逐條更新
+- 台股訊號只顯示代號、無中文名稱補齊（原補名功能隨 tw-alert-bot 除役）
 
-### Railway 環境變數
-- `SUPABASE_URL`：同交易大師專案
-- `SUPABASE_KEY`：**service_role key**（不是 anon key，因為需要寫入權限）
-- `TELEGRAM_TOKEN`：Telegram Bot Token
-
-### Supabase 資料表
-- 資料表：`tw_stocks`（欄位：`code` PK、`name`、`updated_at`）
-- 資料來源：TWSE Open API（上市）+ TPEX Open API（上櫃）
-- 共 2249 筆
-
-### TradingView 快訊 JSON 格式
-```json
-{
-  "chat_id": "頻道ID",
-  "text": "🚨: {{ticker}} 15m 低點下軌"
-}
-```
-
-### 使用方式
-- **早上**：開兩個台股指標快訊，對應台股清單，Webhook 打到上方 URL
-- **晚上**：關台股，開兩個美股指標快訊，對應美股清單，Webhook 同一個 URL
-- 切換時只在 TradingView 操作，server 完全不用動
-
-### 運作邏輯
-- ticker 是純數字（如 `2330`）→ 查 `tw_stocks`，補中文名稱
-- ticker 有 `TWSE:` 或 `TPEX:` 前綴 → 去掉前綴後查表
-- ticker 是美股（NASDAQ/NYSE/AMEX）→ 直接送出代號，不查表
-
-### Telegram 頻道
-- 台股報報：台股快訊頻道
-- 美股報報：美股快訊頻道
-
-### 日常維護
-```bash
-# 每季更新台股名稱（新股上市時）
-cd ~/Downloads/home/claude/tw-alert-bot
-python3 import_stocks.py
-
-# 修改程式後部署
-git add . && git commit -m "說明" && git push
-# push 後 Railway 自動重新部署
-```
+### 歷史紀錄
+- 前代方案 tw-alert-bot（TradingView → Railway FastAPI → 查 tw_stocks 補中文名 → Telegram）
+  已於 2026-07 除役，Railway 服務已關閉，GitHub repo（BitoCat/tw-alert-bot）保留封存。
+  未來若要恢復「補中文名／訊息加工／分流」需求，可參考該 repo 重建
 
 ---
 
@@ -231,9 +194,10 @@ const SB_HEADERS = {
 
 | 路由 | 功能 |
 |------|------|
-| /webhook | TradingView 快訊接收（指標通知已停用） |
+| /webhook | （已停用）原 TradingView 快訊接收 |
 | /quote | 股票報價 API（台股自動判斷 .TW / .TWO） |
 | /sec13f | SEC EDGAR 機構持股查詢（yfinance institutional_holders + EDGAR 總機構數） |
+| /concept-analysis | 概念股批次估值（詳見概念股雷達章節） |
 | /test | 健康檢查 |
 | /state | 查看狀態 |
 
@@ -264,6 +228,7 @@ const SB_HEADERS = {
 | tracker.html | 追蹤中心入口 | sb（需加CDN） |
 | daily.html | 盤面解析 + 強力買入清單 | sb（需加CDN）+ 直接 fetch |
 | news.html | 新聞日報（台股/美股） | 直接 fetch |
+| concepts.html | 概念股雷達（台股/美股） | sb CDN（auth）+ 直接 fetch |
 | alerts.html | 即時快訊 | sb（需加CDN） |
 | announcement.html | 官方公告 | sb（需加CDN） |
 | tutorial.html | 投資教學 | sb（需加CDN） |
@@ -310,8 +275,10 @@ const SB_HEADERS = {
 - scan_watchlist — 掃描股票清單（symbol, name, market，admin 在 daily.html 管理）
 - scan_results — 每日掃描結果（symbol, name, scan_date, score, tech_score, analyst_score, whale_score, fundamental_score, tech_detail, analyst_detail, whale_detail, fundamental_detail, grade, price）
 
-### TradingView 快訊中繼
-- tw_stocks — 台股代號對照表（code PK, name, updated_at），存放在交易大師同一個 Supabase 專案
+### 其他
+- tw_stocks — 台股代號對照表（code PK, name, updated_at，共2249筆，
+  來源 TWSE/TPEX Open API）。原供 tw-alert-bot 補中文名使用，該服務除役後
+  資料表保留，未來任何「代號查中文名」功能可直接取用
 
 ---
 
@@ -375,6 +342,8 @@ concepts.html（🇹🇼/🇺🇸 切換頁籤）
 - 台股 code 只放四碼數字（後端自動試 .TW 再 .TWO）；美股直接放代號（NVDA）
 - category 可自由新增，前端自動產生新分組按鈕
 - 金融類概念加 "valuation_hint": "pb"（台股金融股、美國銀行股已標）
+- 單一概念檔數無硬上限：超過15檔時前端自動分批呼叫後端（每批15檔）再合併，
+  25檔約20-40秒（快取後秒回）。建議單一概念控制在25檔內以維持聚焦比較
 - JSON 改壞時整片按鈕會消失 → 用 jsonlint.com 驗證（常見錯誤：多/少逗號、全形引號）
 - 美股特殊代號：Block=XYZ（原SQ）、SanDisk=SNDK（2025從威騰分拆）
 
@@ -398,9 +367,9 @@ concepts.html（🇹🇼/🇺🇸 切換頁籤）
 - 上方阻力/下方支撐 = 近60交易日高低點；含全站共用底部 tabbar（概念股設 active）
 - 首頁 index.html quick-btns 已加 🧩 概念股雷達入口
 
-### 開發注意事項（新增教訓）
+### 開發注意事項（教訓）
 - ⚠️ Safari 會快取 GET API 回應：測試 API「結果連小數點都不變」時先懷疑瀏覽器快取，
-  網址加 &x=隨機數 或 Cmd+Shift+R 排除。這次曾因此誤判部署失敗，除錯半天
+  網址加 &x=隨機數 或 Cmd+Shift+R 排除。曾因此誤判部署失敗，除錯半天
 - 驗證部署版本的技巧：在 /test 路由回傳加 "ver" 版本標記，一看就知道跑的是哪版
 - Railway 的 Redeploy 是重部「該筆 deployment 的 commit」，不是 GitHub 最新版
 
@@ -446,6 +415,7 @@ concepts.html（🇹🇼/🇺🇸 切換頁籤）
 
 ### 關鍵限制
 - Safari 不支援 AbortSignal.timeout()：fetch 不可加此參數
+- Safari 會快取 GET API 回應：測試時網址加 &x=隨機數 或 Cmd+Shift+R
 - supabase-js apikey header 問題：新頁面用直接 fetch
 - JS 字串內禁止用全形字元
 - GitHub Actions 版本要用 v4
@@ -467,6 +437,7 @@ concepts.html（🇹🇼/🇺🇸 切換頁籤）
 - 不需要加 port，public URL 已是 443
 - tg-member-bot 在 honest-vibrancy project
 - trading-bot 在 trading-bot project（含 tarot-app、mailbox-mgmt、splendid-prosperity）
+- tw-alert-bot 服務已於 2026-07 除役關閉（repo 保留封存）
 
 ---
 
@@ -486,3 +457,4 @@ concepts.html（🇹🇼/🇺🇸 切換頁籤）
 ### 未來計畫
 - 港股北水追蹤
 - 新聞更多台灣在地來源
+- 自建指標掃描器（突破 TradingView 兩清單快訊限制，參考 daily_scanner.py 模式）
