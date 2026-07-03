@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>股票篩選器 - 交易大師 ProTrader</title>
+<link rel="stylesheet" href="css/base.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
+<style>
+  body { padding-bottom: 90px; }
+  .sc-wrap { max-width: 1150px; margin: 0 auto; padding: 16px; }
+  .sc-title { font-size: 1.5em; font-weight: 700; margin: 12px 0 4px; }
+  .sc-sub { color: #888; font-size: 0.9em; margin-bottom: 14px; }
+
+  .sc-tabs { display: flex; gap: 8px; margin: 4px 0 12px; }
+  .sc-tab {
+    padding: 8px 20px; border-radius: 8px; border: 1px solid #444;
+    background: #1e1e2a; color: #ddd; cursor: pointer; font-size: 1em; font-weight: 700;
+  }
+  .sc-tab.active { background: #2a2a3a; border-color: #f0a500; color: #f0a500; }
+
+  .sc-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+  .sc-btn {
+    padding: 8px 14px; border-radius: 20px; border: 1px solid #444;
+    background: #1e1e2a; color: #ddd; cursor: pointer; font-size: 0.95em;
+  }
+  .sc-btn:hover { border-color: #f0a500; color: #f0a500; }
+  .sc-btn.active { background: #f0a500; color: #111; border-color: #f0a500; font-weight: 700; }
+  .sc-date { color: #777; font-size: 0.85em; margin: 6px 0 0; }
+  .sc-desc { color: #999; font-size: 0.9em; margin: 10px 0 0; padding: 10px 12px;
+    border-left: 3px solid #f0a500; background: #181822; border-radius: 0 8px 8px 0; }
+
+  .sc-table-box { margin-top: 14px; overflow-x: auto; }
+  table.sc-table { width: 100%; border-collapse: collapse; font-size: 0.93em; }
+  .sc-table th, .sc-table td { padding: 9px 8px; border-bottom: 1px solid #333; text-align: right; white-space: nowrap; }
+  .sc-table th { color: #aaa; cursor: pointer; user-select: none; position: sticky; top: 0; background: #15151f; }
+  .sc-table th:hover { color: #f0a500; }
+  .sc-table td:first-child, .sc-table th:first-child,
+  .sc-table td:nth-child(4), .sc-table th:nth-child(4),
+  .sc-table td:nth-child(5), .sc-table th:nth-child(5) { text-align: left; }
+  .sc-stock-link { color: #4da3ff; cursor: pointer; text-decoration: none; }
+  .sc-stock-link:hover { text-decoration: underline; }
+  .up { color: #ff4d4d; }
+  .down { color: #2ecc71; }
+  .muted { color: #666; }
+  tr.sc-row { cursor: pointer; }
+  tr.sc-row:hover { background: #1c1c28; }
+  .rate-sb { color: #ff4d4d; font-weight: 700; }
+  .rate-b { color: #ff8c66; }
+  .rate-h { color: #aaa; }
+  .rate-s { color: #2ecc71; }
+
+  .sc-detail td { background: #181822; padding: 12px; white-space: normal; }
+  .sc-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
+  .sc-detail-grid .item { border: 1px solid #333; border-radius: 8px; padding: 8px 10px; text-align: left; font-size: 0.9em; }
+  .sc-detail-grid .item span { display: block; color: #888; font-size: 0.85em; }
+
+  .sc-loading { text-align: center; padding: 30px; color: #aaa; }
+  .sc-empty { text-align: center; padding: 30px; color: #777; }
+  .sc-locked { text-align: center; padding: 60px 20px; }
+  .sc-locked h2 { color: #f0a500; }
+  .sc-locked a { color: #4da3ff; }
+  .sc-note { color: #777; font-size: 0.82em; margin-top: 14px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<div class="sc-wrap">
+  <div class="sc-title">🎯 股票篩選器</div>
+  <div class="sc-sub">每日收盤後自動掃描,依進場型態分類(點股票列展開基本面明細)</div>
+
+  <div id="lockedBox" class="sc-locked" style="display:none">
+    <h2>🔒 此功能為付費會員專屬</h2>
+    <p>請至 <a href="profile.html">我的帳號</a> 聯繫管理員升級方案</p>
+  </div>
+
+  <div id="mainBox" style="display:none">
+    <div class="sc-tabs">
+      <button class="sc-tab active" data-market="tw">🇹🇼 台股</button>
+      <button class="sc-tab" data-market="us">🇺🇸 美股</button>
+    </div>
+    <div class="sc-btns" id="patternBtns"></div>
+    <div class="sc-date" id="scanDate"></div>
+    <div class="sc-desc" id="patternDesc" style="display:none"></div>
+
+    <div class="sc-table-box">
+      <div id="loadingBox" class="sc-loading" style="display:none">載入中...</div>
+      <div id="emptyBox" class="sc-empty" style="display:none">此型態今日無符合標的(型態是每日盤面快照,明日可能就有)</div>
+      <table class="sc-table" id="resultTable" style="display:none">
+        <thead>
+          <tr>
+            <th data-key="name">股票</th>
+            <th data-key="price">現價</th>
+            <th data-key="change_pct">漲跌%</th>
+            <th data-key="sector">產業</th>
+            <th data-key="rating">評級</th>
+            <th data-key="target_upside_pct">目標價空間%▼</th>
+            <th data-key="pe">P/E</th>
+            <th data-key="rel_volume">量比</th>
+            <th data-key="dist_high_pct">距高點%</th>
+          </tr>
+        </thead>
+        <tbody id="resultBody"></tbody>
+      </table>
+    </div>
+
+    <div class="sc-note">
+      評級與目標價為法人共識(yfinance),小型股常無覆蓋顯示「無評級」。量比=今日量/20日均量。
+      距高點%=距52週高點距離。掃描時間:台股每交易日15:30、美股台灣時間早上08:00。
+      本頁資料僅供研究參考,非投資建議。
+    </div>
+  </div>
+</div>
+
+<nav class="tabbar">
+  <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
+  <a class="tb" href="watchlist.html"><span class="ti">⭐</span>觀察名單</a>
+  <a class="tb" href="news.html"><span class="ti">📰</span>新聞</a>
+  <a class="tb" href="daily.html"><span class="ti">📊</span>盤面</a>
+  <a class="tb active" href="screener.html"><span class="ti">🎯</span>篩選器</a>
+  <a class="tb" href="alerts.html"><span class="ti">⚡</span>快訊</a>
+  <a class="tb" href="profile.html"><span class="ti">👤</span>我的</a>
+</nav>
+
+<script>
+const SUPABASE_URL = 'https://kldumnxdlgovaxtiszyn.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI';
+const SB_HEADERS = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON };
+
+const PATTERNS = [
+  { id: 'pullback_ma20', name: '🔵 強勢回調月線起漲',
+    desc: '衝刺期進場:站上10日線、位於月線攻防區,月線在季線上(多頭結構完好的淺回調)' },
+  { id: 'deep_pullback', name: '🔄 深度回調起漲',
+    desc: '修復期進場:同樣站回10日線的月線攻防區,但月線已跌破季線(較深修正後的起漲,注意設好停損)' },
+  { id: 'pullback_ma60', name: '🔷 強勢回調季線起漲',
+    desc: '平緩期進場:站上10日線,價格位於季線±5%攻防區,季線上揚' },
+  { id: 'reversal_ma20', name: '🟢 低檔站上月線',
+    desc: '超跌反轉:低檔區帶量站上月線' },
+  { id: 'reversal_ma60', name: '💚 低檔站上季線',
+    desc: '趨勢反轉確認:低檔區站上季線,月線開始上彎' },
+  { id: 'high_52w', name: '⭐ 突破52週新高',
+    desc: '動能策略:收盤創一年新高且帶量,強者恆強' },
+  { id: 'bull_alignment', name: '🚀 多頭排列',
+    desc: '持續強勢:10日>月線>季線且價格站在三線之上,距高點20%內的主流強勢群' },
+  { id: 'laggard', name: '🏃 落後補漲',
+    desc: '補漲候選:多頭結構已成形(價>月線>季線),但距52週高點還有20~45%,尚未大漲' },
+];
+
+let currentMarket = 'tw';
+let currentPattern = 'pullback_ma20';
+let currentRows = [];
+let sortKey = 'target_upside_pct';
+let sortAsc = false;
+
+async function checkAccess() {
+  try {
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    const sessRes = await sb.auth.getSession();
+    const session = sessRes.data ? sessRes.data.session : null;
+    if (!session) { location.href = 'login.html'; return false; }
+    const res = await fetch(SUPABASE_URL + '/rest/v1/profiles?id=eq.' + session.user.id + '&select=plan', {
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + session.access_token }
+    });
+    const rows = await res.json();
+    const plan = (rows && rows[0]) ? rows[0].plan : 'free';
+    return plan !== 'free';
+  } catch (e) {
+    console.error('auth check failed', e);
+    return false;
+  }
+}
+
+function renderPatternBtns() {
+  const box = document.getElementById('patternBtns');
+  box.innerHTML = PATTERNS.map(p =>
+    '<button class="sc-btn' + (p.id === currentPattern ? ' active' : '') +
+    '" data-id="' + p.id + '">' + p.name + '</button>').join('');
+  box.querySelectorAll('.sc-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentPattern = btn.dataset.id;
+      box.querySelectorAll('.sc-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadResults();
+    });
+  });
+}
+
+async function loadResults() {
+  const table = document.getElementById('resultTable');
+  const loading = document.getElementById('loadingBox');
+  const empty = document.getElementById('emptyBox');
+  table.style.display = 'none';
+  empty.style.display = 'none';
+  loading.style.display = 'block';
+
+  const p = PATTERNS.find(x => x.id === currentPattern);
+  const descBox = document.getElementById('patternDesc');
+  descBox.textContent = p ? p.desc : '';
+  descBox.style.display = p ? 'block' : 'none';
+
+  try {
+    const url = SUPABASE_URL + '/rest/v1/screener_results' +
+      '?market=eq.' + currentMarket +
+      '&pattern=eq.' + currentPattern +
+      '&select=*&order=scan_date.desc&limit=200';
+    const res = await fetch(url, { headers: SB_HEADERS });
+    let rows = await res.json();
+    if (!Array.isArray(rows)) rows = [];
+
+    // 只留最新一次掃描的結果
+    if (rows.length) {
+      const latest = rows[0].scan_date;
+      rows = rows.filter(r => r.scan_date === latest);
+      document.getElementById('scanDate').textContent = '掃描日期: ' + latest;
+    } else {
+      document.getElementById('scanDate').textContent = '';
+    }
+
+    currentRows = rows;
+    loading.style.display = 'none';
+    if (!rows.length) { empty.style.display = 'block'; return; }
+    sortKey = 'target_upside_pct'; sortAsc = false;
+    renderTable();
+    table.style.display = 'table';
+  } catch (e) {
+    console.error(e);
+    loading.textContent = '載入失敗,請稍後再試';
+  }
+}
+
+function fmt(v, suffix) {
+  if (v === null || v === undefined) return '<span class="muted">-</span>';
+  return v + (suffix || '');
+}
+function pctClass(v) {
+  if (v === null || v === undefined) return '';
+  return v > 0 ? 'up' : (v < 0 ? 'down' : '');
+}
+function rateClass(r) {
+  if (r === '強力買入') return 'rate-sb';
+  if (r === '買入') return 'rate-b';
+  if (r === '賣出' || r === '強力賣出' || r === '減碼') return 'rate-s';
+  return 'rate-h';
+}
+
+function renderTable() {
+  const sorted = [...currentRows].sort((a, b) => {
+    const av = a[sortKey], bv = b[sortKey];
+    if (av === null || av === undefined) return 1;
+    if (bv === null || bv === undefined) return -1;
+    if (typeof av === 'string') return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    return sortAsc ? av - bv : bv - av;
+  });
+
+  let html = '';
+  sorted.forEach((r, idx) => {
+    html += '<tr class="sc-row" data-idx="' + idx + '">' +
+      '<td><a class="sc-stock-link" href="diagnosis.html?symbol=' + r.code +
+        '" onclick="event.stopPropagation()">' + r.code + ' ' + (r.name || '') + '</a></td>' +
+      '<td>' + fmt(r.price) + '</td>' +
+      '<td class="' + pctClass(r.change_pct) + '">' + fmt(r.change_pct, '%') + '</td>' +
+      '<td>' + fmt(r.sector) + '</td>' +
+      '<td class="' + rateClass(r.rating) + '">' + fmt(r.rating) + '</td>' +
+      '<td class="' + pctClass(r.target_upside_pct) + '"><b>' + fmt(r.target_upside_pct, '%') + '</b></td>' +
+      '<td>' + fmt(r.pe) + '</td>' +
+      '<td>' + fmt(r.rel_volume) + '</td>' +
+      '<td>' + fmt(r.dist_high_pct, '%') + '</td>' +
+      '</tr>';
+    html += '<tr class="sc-detail" style="display:none"><td colspan="9">' +
+            renderDetail(r) + '</td></tr>';
+  });
+  document.getElementById('resultBody').innerHTML = html;
+
+  document.querySelectorAll('tr.sc-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const detail = row.nextElementSibling;
+      if (detail && detail.classList.contains('sc-detail')) {
+        detail.style.display = (detail.style.display === 'none') ? 'table-row' : 'none';
+      }
+    });
+  });
+}
+
+function pctFmt(v) {
+  if (v === null || v === undefined) return '-';
+  return (v * 100).toFixed(1) + '%';
+}
+function capFmt(v) {
+  if (!v) return '-';
+  if (v >= 1e12) return (v / 1e12).toFixed(2) + ' 兆';
+  if (v >= 1e8) return (v / 1e8).toFixed(1) + ' 億';
+  return v;
+}
+
+function renderDetail(r) {
+  const items = [
+    ['分析師人數', r.analysts || '-'],
+    ['目標價', r.target || '-'],
+    ['EPS成長', pctFmt(r.eps_growth)],
+    ['營收成長', pctFmt(r.revenue_growth)],
+    ['ROE', pctFmt(r.roe)],
+    ['市值', capFmt(r.market_cap)],
+    ['距52週低點', (r.dist_low_pct !== null && r.dist_low_pct !== undefined) ? '+' + r.dist_low_pct + '%' : '-'],
+    ['細分產業', r.industry || '-'],
+  ];
+  return '<div class="sc-detail-grid">' + items.map(it =>
+    '<div class="item"><span>' + it[0] + '</span>' + it[1] + '</div>').join('') + '</div>';
+}
+
+document.querySelectorAll('.sc-table th').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.key;
+    if (sortKey === key) { sortAsc = !sortAsc; }
+    else { sortKey = key; sortAsc = false; }
+    document.querySelectorAll('.sc-table th').forEach(h => {
+      h.textContent = h.textContent.replace(/[▼▲]/g, '');
+    });
+    th.textContent = th.textContent + (sortAsc ? '▲' : '▼');
+    renderTable();
+  });
+});
+
+document.querySelectorAll('.sc-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    if (tab.dataset.market === currentMarket) return;
+    currentMarket = tab.dataset.market;
+    document.querySelectorAll('.sc-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    loadResults();
+  });
+});
+
+(async function init() {
+  const ok = await checkAccess();
+  if (!ok) {
+    document.getElementById('lockedBox').style.display = 'block';
+    return;
+  }
+  document.getElementById('mainBox').style.display = 'block';
+  renderPatternBtns();
+  loadResults();
+})();
+</script>
+</body>
+</html>
