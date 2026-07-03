@@ -210,6 +210,7 @@ async function analyze() {
   }
   if (!sym) return;
   if (currentProfile?.plan === 'free') { showErr('此功能需要開通會員才能使用，請聯繫管理員開通。'); return; }
+  if (!currentProfile?.groq_key || !currentProfile.groq_key.trim()) { showErr('AI 健診需要設定您的 Groq API Key 才能使用。請至「我的帳號」頁面免費申請並填入（申請網址 console.groq.com，約 2 分鐘完成）。'); return; }
   const pts = await getPoints(currentUser.id);
   toggleLoad(true);
   document.getElementById('res-card').classList.remove('show');
@@ -359,7 +360,7 @@ async function analyze() {
     '\ngrade必須是：強力買進、買進、谷底反彈機會、觀察等待、持有、減碼、避開之一';
 
   try {
-    const raw = await callAI(prompt, 2500);
+    const raw = await callGroq(prompt, 2500, currentProfile.groq_key);
     const clean = raw.replace(/```json|```/g, '').trim();
     var obj;
     try { obj = JSON.parse(clean); } catch(e) { var m=clean.match(/\{[\s\S]*\}/); obj=JSON.parse(m[0]); }
