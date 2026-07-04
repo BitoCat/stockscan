@@ -103,7 +103,7 @@ let allItems = [], currentFilter = 'all', currentUser = null;
   currentUser = await requireAuth();
   if (!currentUser) return;
   const cp = await getProfile(currentUser.id);
-  if (cp?.plan === 'free') {
+  if (!hasAccess(cp)) {
     document.querySelector('.page-wrap').innerHTML = `
       <div style="text-align:center;padding:60px 20px;background:rgba(255,255,255,.02);border:1px dashed var(--border);border-radius:12px;margin-top:20px">
         <div style="font-size:48px;margin-bottom:16px">🔒</div>
