@@ -151,7 +151,7 @@ async function checkAccess() {
     });
     const rows = await res.json();
     const plan = (rows && rows[0]) ? rows[0].plan : 'free';
-    return plan !== 'free';
+    return ['tw', 'us', 'all', 'admin'].indexOf(plan) !== -1;
   } catch (e) {
     console.error('auth check failed', e);
     return false;
