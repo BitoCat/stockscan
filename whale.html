@@ -116,6 +116,21 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif
 const SUPABASE_URL='https://kldumnxdlgovaxtiszyn.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
+// ── 權限守衛(白名單) ──
+(async () => {
+  const sessRes = await sb.auth.getSession();
+  const session = sessRes.data ? sessRes.data.session : null;
+  if (!session) { location.href = 'login.html'; return; }
+  try {
+    const r = await fetch(SUPABASE_URL + '/rest/v1/profiles?id=eq.' + session.user.id + '&select=plan', {
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + session.access_token }
+    });
+    const rows = await r.json();
+    const plan = (rows && rows[0]) ? rows[0].plan : 'free';
+    if (['tw', 'us', 'all', 'admin'].indexOf(plan) === -1) { location.href = 'index.html'; }
+  } catch (e) { location.href = 'index.html'; }
+})();
+  
 let allNewPositions=[],filers=[],currentFilter='all';
 function switchTab(n){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));document.getElementById('tab-btn-'+n).classList.add('active');document.getElementById('tab-'+n).classList.add('active');}
 document.getElementById('tab-btn-new').addEventListener('click',()=>switchTab('new'));
