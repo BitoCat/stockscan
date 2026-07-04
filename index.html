@@ -199,7 +199,7 @@ let currentUser = null, currentProfile = null;
   loadContent();
   
   // 控制導覽列：Free 會員鎖住頁籤
-  onst isFree = !hasAccess(currentProfile);
+  const isFree = !hasAccess(currentProfile);
   if (isFree) {
     document.querySelectorAll('.tb-locked').forEach(el => {
       el.style.opacity = '0.35';
