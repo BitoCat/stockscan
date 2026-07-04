@@ -310,7 +310,7 @@ let currentUser = null, currentProfile = null, currentMkt = 'tw', currentTf = 'D
   var nb = document.getElementById('nav-plan');
   nb.textContent = planLabel(currentProfile?.plan || 'free');
   nb.className = 'plan-badge ' + planBadge(currentProfile?.plan || 'free');
-  if ((currentProfile?.plan || 'free') === 'free') {
+  if (!hasAccess(currentProfile)) {
     document.getElementById('empty-state').innerHTML = '<div class="empty-state"><div class="empty-icon">🔒</div><div class="empty-txt">此功能需要開通會員<br>請聯繫管理員開通</div></div>';
   }
 })();
