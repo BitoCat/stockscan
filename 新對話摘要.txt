@@ -274,6 +274,15 @@ const SB_HEADERS = {
 
 ---
 
+### 導覽列與首頁改版 ✅ 2026-07-04
+- 底部 tabbar 全站統一為8頁籤(兩字標籤): 首頁/名單/盤面/追蹤/圖表(tutorial)/概念(concepts)/篩選(screener)/我的
+- 快訊(alerts)、新聞(news)自 tabbar 移除,頁面保留可直接連入
+- tb-locked 只保留在 index.html(free鎖定用);其他頁面 tabbar 一律乾淨的 tb
+  (教訓:各頁守衛會把 tb-locked 全部灰掉,付費會員也被鎖,只有 index 有 isFree 判斷)
+- 首頁卡片「投資教學」改為「技術儀表板」(多週期評分・技術指標,連 tutorial.html)
+
+---
+
 ## Supabase 資料表
 
 ### 用戶相關
