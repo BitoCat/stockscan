@@ -209,7 +209,7 @@ async function analyze() {
     return;
   }
   if (!sym) return;
-  if (currentProfile?.plan === 'free') { showErr('此功能需要開通會員才能使用，請聯繫管理員開通。'); return; }
+  if (!hasAccess(currentProfile)) { showErr('此功能需要開通會員才能使用，請聯繫管理員開通。'); return; }
   if (!currentProfile?.groq_key || !currentProfile.groq_key.trim()) { showErr('AI 健診需要設定您的 Groq API Key 才能使用。請至「我的帳號」頁面免費申請並填入（申請網址 console.groq.com，約 2 分鐘完成）。'); return; }
   const pts = await getPoints(currentUser.id);
   toggleLoad(true);
