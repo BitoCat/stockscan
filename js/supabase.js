@@ -218,3 +218,9 @@ async function getNextGroqKey() {
     return null;
   }
 }
+
+// ── 交易大師合法方案白名單(比特聯盟等級一律視同未開通) ──
+const VALID_PLANS = ['tw', 'us', 'all', 'admin'];
+function hasAccess(profile) {
+  return !!(profile && VALID_PLANS.indexOf(profile.plan) !== -1);
+}
