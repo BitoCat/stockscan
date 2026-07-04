@@ -8,7 +8,7 @@
   if (!user) return;
   const profile = await getProfile(user.id);
   const plan = profile?.plan || 'free';
-  if (plan === 'free') {
+  if (!hasAccess(profile)) {
     window.location.href = 'index.html';
     return;
   }
