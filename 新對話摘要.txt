@@ -140,6 +140,39 @@ Supabase memberships 表寫入
 
 ---
 
+---
+
+## 權限白名單修補 + 健診 Groq Key ✅ 2026-07-04 完成
+
+### 背景:共用 Supabase 的跨平台漏洞
+- 交易大師與比特聯盟共用同一個 Supabase 專案,auth.users 全專案共用
+- 比特聯盟註冊的帳號可直接登入交易大師;其 plan 值(如 master、未來的礦工~至尊)
+  不等於 'free',舊判斷「plan !== 'free' 即放行」會讓比特聯盟用戶全站通行
+- 另發現 whale.html 與 radar.html 原本完全沒有權限守衛(直接輸入網址可進)
+
+### 修補內容:全站改白名單判斷
+- js/supabase.js 末尾新增:
+  VALID_PLANS = ['tw','us','all','admin']
+  hasAccess(profile) → plan 在白名單內才放行,其他值(含比特聯盟等級)一律視同未開通
+- 已改用 hasAccess 的頁面: index(3處)、news、daily、tracker、alerts、
+  watchlist(2處)、tutorial、diagnosis
+- concepts.html、screener.html(未載入 js/supabase.js):checkAccess 內改為
+  ['tw','us','all','admin'].indexOf(plan) !== -1
+- whale.html:在 createClient 下方新增權限守衛 IIFE(session檢查+plan白名單,不符跳回首頁)
+- radar.html:head 補 supabase-js CDN,fetch helper 上方新增同款守衛
+- 新頁面開發規範:一律用白名單判斷,禁止再寫 plan !== 'free'
+
+### 健診改為需要用戶自備 Groq Key(diagnosis.html)
+- analyze() 在會員檢查後新增:currentProfile.groq_key 為空 → 擋下並提示
+  至「我的帳號」填入(免費申請 console.groq.com)
+- AI 呼叫由 callAI(共用 api_keys 輪替池)改為 callGroq(prompt, 2500, currentProfile.groq_key)
+  → 健診成本轉嫁到用戶自己的 Groq 免費額度,不再消耗管理員共用 Key,也避免撞 rate limit
+- js/supabase.js 的 callAI/api_keys 輪替機制保留未動(其他功能仍可用)
+- 用戶填 Key 介面:profile.html 既有(saveAIKeyToDB 存入 profiles.groq_key)
+
+### 待辦(重要)
+- 比特聯盟上線前需做鏡像修補:比特聯盟側用自己的等級白名單(礦工~至尊),
+  擋掉交易大師的 tw/us/all/admin 帳號,否則交易大師會員可反向免費使用比特聯盟
 ## TradingView 指標快訊（直送 Telegram）✅ 2026-07 現行做法
 
 ### 架構
