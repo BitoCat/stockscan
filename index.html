@@ -199,7 +199,7 @@ let currentUser = null, currentProfile = null;
   loadContent();
   
   // 控制導覽列：Free 會員鎖住頁籤
-  const isFree = !currentProfile || currentProfile.plan === 'free';
+  onst isFree = !hasAccess(currentProfile);
   if (isFree) {
     document.querySelectorAll('.tb-locked').forEach(el => {
       el.style.opacity = '0.35';
@@ -214,7 +214,7 @@ function renderHeader() {
   const nb = document.getElementById('nav-plan');
   nb.textContent = planLabel(p.plan || 'free');
   nb.className = 'plan-badge ' + planBadge(p.plan || 'free');
-  if (p.plan === 'free') {
+  if (!hasAccess(p)) {
     document.getElementById('user-sub').textContent = '免費會員・聯繫管理員開通功能';
     document.getElementById('free-guide').style.display = 'block';
   } else {
@@ -227,7 +227,7 @@ function renderHeader() {
 }
 
 async function loadContent() {
-  const isFree = currentProfile?.plan === 'free';
+  const isFree = !hasAccess(currentProfile);
 
   // 公告（所有會員都能看）
   const annRes = await sb.from('announcements').select('*').eq('show_on_home', true).order('is_pinned', {ascending:false}).order('published_at', {ascending:false}).limit(10);
