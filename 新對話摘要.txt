@@ -462,6 +462,8 @@ GitHub Actions pattern_scanner.yml(排程)
 ---
 
 ## 用戶方案邏輯
+- 權限判斷一律白名單:plan 必須是 tw/us/all/admin 才放行(hasAccess 函式,詳見權限白名單修補章節)
+- AI 健診需用戶在 profile.html 自備 Groq Key(profiles.groq_key),用用戶自己的額度
 - free：功能全鎖，首頁顯示公告 + 「帳號尚未開通」提示，底部頁籤除首頁和我的外全部鎖定
 - tw/us/all/admin：功能全開
 - 每日登入自動補 100 點，AI 健診每次扣 1 點
@@ -488,6 +490,7 @@ GitHub Actions pattern_scanner.yml(排程)
 - Safari 不支援 AbortSignal.timeout()：fetch 不可加此參數
 - Safari 會快取 GET API 回應：測試時網址加 &x=隨機數 或 Cmd+Shift+R
 - supabase-js apikey header 問題：新頁面用直接 fetch
+- 權限判斷禁用 plan !== 'free' 寫法(比特聯盟共用 Supabase,等級值會誤放行),一律用 hasAccess 白名單
 - JS 字串內禁止用全形字元
 - GitHub Actions 版本要用 v4
 - profiles 表沒有 email 欄位（需用 get_profile_by_email RPC）
