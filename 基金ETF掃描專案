@@ -1,0 +1,160 @@
+# 基金 / ETF 掃描專案 摘要（貼給 Claude 用）
+> 最後更新：2026-07-09
+> 用途：追蹤「主動式操盤者」的持股進出，推播到台股報報。分兩軌：
+> - **A 軌**＝主動式 ETF（00981A）**每日**完整持股 → 逐日比對
+> - **B 軌**＝境內共同基金（路博邁5G、安聯台灣科技）**每月**前十大 → 逐月比對
+
+---
+
+## 專案概況
+
+| 項目 | 內容 |
+|------|------|
+| 所屬平台 | 交易大師 ProTrader |
+| 程式 repo | BitoCat/**trading-bot**（所有 .py 與 workflow 都住這） |
+| 排程 | GitHub Actions |
+| 資料庫 | Supabase kldumnxdlgovaxtiszyn.supabase.co |
+| 推播 | Telegram @Boss1688Bot → **台股報報**（-1003883576984） |
+| 檔案擺放鐵則 | `.py` 放 repo 根目錄；`.yml` 只能放 `.github/workflows/`；`.sql` 不進 repo（貼 Supabase SQL Editor 執行） |
+
+### 共用環境變數（trading-bot 的 GitHub Secrets）
+| 變數 | 說明 |
+|------|------|
+| SUPABASE_URL / SUPABASE_KEY | 讀寫 Supabase（anon key 即可，相關表都開 anon RLS） |
+| TG_BOT_TOKEN 或 BOT_TOKEN | Boss1688Bot token（程式兩個名字都接，有一個即可） |
+| TW_CHANNEL_ID | 台股報報 id，未設則程式預設 -1003883576984 |
+
+### 共同設計原則（兩軌通用）
+- **首次跑一定是「建基準、不推播」**：資料庫還沒有前一期可比，先寫基準，下一期才開始推。
+- **只推「變化」不推「狀態」**：沒有進出/加減碼就靜默。
+- 揭露頻率是天生的：**A 軌天天有可能變、B 軌一個月才變一次**（B 軌每天掃只是為了第一時間抓到新月報，多數日子會印「跳過」，正常）。
+
+---
+
+## A 軌：00981A 主動式ETF 每日持股掃描 ✅ 2026-07-08 上線
+
+### 目的
+00981A（主動統一台股增長）法規強制**每日公告完整持股（PCF）**。逐日比對，偵測操盤手的：新買入、賣出、放大建倉、加碼、減碼、出清。
+
+### 檔案
+| 檔案 | 位置 | 功能 |
+|------|------|------|
+| active_etf_scanner.py | trading-bot 根目錄 | 掃描核心 |
+| active_etf_scanner.yml | .github/workflows/ | 排程（每交易日 17:30、20:00） |
+| active_etf_holdings.sql | Supabase 執行過 | 建持股快照表 |
+
+### 資料源決策（重要，未來換源前先看）
+- **統一投信官網**：第一手，但 robots 禁止程式存取＋JS 動態＋熱門會塞機 → 不採用。
+- **證交所 OpenAPI**：查過整份清單，**沒有**單檔 ETF 每日持股端點 → 不可用。
+- **FinMind**：只有個股層級資料集，**沒有** ETF 成分股 → 不可用。
+- **✅ 採用 etfinfo.tw**（第三方資訊網，伺服器渲染可解析）：
+  - 網址 `https://www.etfinfo.tw/etf/00981A/holdings`
+  - 是 **Nuxt** 網站。SSR 的 `<table>` 只放分頁第一頁（約15檔）；**完整50檔在 `__NUXT_DATA__` 那包 JSON**。
+  - 取捨：第三方非第一手（可能慢半拍/偶誤）、爬 HTML 脆弱、ToS 灰色。抓取獨立成函式，未來要換源只改那塊。
+
+### 解析器（active_etf_scanner.py）
+- **主解析 `parse_nuxt_data`**：讀 `<script id="__NUXT_DATA__">` 的攤平陣列。
+  持股物件形如 `{"code":i,"name":j,"weight":k,"shares":l,"unit":m,"industry":n}`，
+  i/j/k/l 是**指向同一陣列的索引**，deref 後得代號/名稱/權重/張數。這樣一次拿完整 50 檔。
+- **後備 `parse_etfinfo_table`**：解 `<tr class="holding-row">`，代號在 `a.stock-code-link`、
+  名稱在 `div.cell-etf-stacked span.stock-name-sub`（代號被 Vue 包在 `<!--[-->…<!--]-->` 註解標記裡，get_text 會自動略過註解）。只抓得到約15檔，僅備援。
+- **資料日**：抓 meta 的「快照（YYYY-MM-DD）」。
+- 解析<45檔時會印 `診斷輸出v2`（holding-row 數量＋第一列完整 tr＋NUXT around 2330），供校準。
+
+### Supabase 表：active_etf_holdings
+`etf_code / snapshot_date / stock_code / stock_name / weight_pct / shares / created_at`
+- 唯一鍵 (etf_code, snapshot_date, stock_code)；RLS anon 全開。
+- 每次寫入先刪同 etf 同日再整批 insert（重跑=覆蓋）。
+
+### 比對邏輯（門檻在檔案頂端，可調）
+```
+TOKEN_SHARES   = 1000    # ≤1張(1000股) 視為建倉/觀察倉
+SCALEUP_SHARES = 10000   # 建倉倉放大到 ≥此張數 才算「放大建倉」
+ADJ_SHARE_PCT  = 0.15    # 加減碼：張數同向變動 ≥15%
+ADJ_WEIGHT_PP  = 0.3     # 且 權重同向 ≥0.3個百分點
+```
+- **關鍵洞見**：判斷加減碼**以「張數」為主、「權重」同向確認**。因為權重會被股價漲跌帶動（沒動作也變）、張數會被大額申贖帶動（全部等比例動）；要求兩者同向，才能濾掉這兩種雜訊、只留真正的主動加減碼。
+- 七類異動：`new_real`（新買入實倉）、`new_token`（新建倉1張觀察倉）、`sells`（完全剔除）、`scaleup`（1張→實倉，最重要訊號）、`add`（加碼）、`reduce`（減碼）、`shrink_token`（實倉→剩1張）。
+- **1張(1000股)/0% 是「建倉/觀察倉」**：操盤手雷達名單，1張→大量才是真下注。快訊裡標「建倉1張」與真買入分開。
+
+### 訊息格式（推台股報報）
+標題 `📊【00981A 主動式ETF】操盤手動向` + 資料日，
+分區：🟢新買入 / 🚀放大建倉 / ➕加碼 / 👀新建倉(1張) / ➖減碼 / 🟠出清至1張 / 🔴賣出。
+
+### 排程（active_etf_scanner.yml）
+- cron `30 9 * * 1-5`（台灣17:30）＋ `0 12 * * 1-5`（台灣20:00 保險輪）＋ 手動。
+- 跑兩輪防 etfinfo 更新延遲；**同資料日不會重複推**（main 判斷 latest==snap 就 skip）。
+- 正式跑指令 `python3 active_etf_scanner.py --run`；dry-run 免金鑰只印不寫。
+
+---
+
+## B 軌：基金前十大異動掃描 ✅ 2026-07-09 上線
+
+### 目的
+路博邁5G、安聯台灣科技是**境內共同基金**，SITCA **每月**揭露**前十大持股**。逐月比對，偵測「新進前十大／跌出前十大／權重明顯變化」。
+
+### 資料源：讀自家 tw_fund_positions（不另爬）
+- 你的 taiwan_scanner 每月已把一大批投信基金前十大寫進 **tw_fund_positions**，B 軌直接讀它比對。
+- 表欄位：`id / fund_id / fund_name / company / year_month / rank / ticker / name / shares / value_k / pct / created_at`
+  （這些基金 `shares` 多為 0，用 `pct`(權重) 與 `rank` 判斷）。
+
+### ⚠️ 已知雷：fund_id 撞號
+- **路博邁台日雙星 與 路博邁5G 共用 fund_id `A0050`**（taiwan_scanner 對應撞號）。
+- 因此 B 軌**一律用「基金名稱」比對，不可用 fund_id**，否則兩檔會混在一起。
+- 追蹤清單（FUND_TARGETS，名稱萬用字元比對）：
+  - 路博邁台灣5G股票基金 → `路博*5G`（fund_id A0050，但靠名稱區隔）
+  - 安聯台灣科技基金 → `安聯台灣科技`（fund_id A0036）
+- （建議有空回頭修 taiwan_scanner 的 fund_id 對應，其他基金可能也撞。）
+
+### 檔案
+| 檔案 | 位置 | 功能 |
+|------|------|------|
+| fund_radar_scanner.py | trading-bot 根目錄 | 掃描核心 |
+| fund_radar_scanner.yml | .github/workflows/ | 排程（每天10:00，可手動測試推播） |
+| fund_radar_alert_state.sql | Supabase 執行過 | 建已推播月份狀態表 |
+
+### Supabase 表：fund_radar_alert_state
+`fund_key(顯示名,PK) / last_alerted_ym / updated_at`
+- 記錄每檔基金「已推播到哪個月」，避免每天重推；出新月份才推並更新此表。
+
+### 比對邏輯
+- 取該基金 tw_fund_positions 內最新兩個 year_month（cur / prev）比對。
+- `diff_top`：新進前十大、跌出前十大、權重變化（`PCT_MOVE_PP=1.0` 個百分點以上才列）。
+- 首次建基準（狀態表無紀錄）不推、只記月份。
+
+### 排程與模式（fund_radar_scanner.yml）
+- cron `0 2 * * *`（台灣每天10:00）＋ 手動。
+- 手動觸發可勾「測試推播」→ 跑 `--test`，直接推**最新一個月的真實比對**到台股報報（看樣式＋驗證推播管線）。
+- 只需 `pip install requests`（不需 bs4）。
+
+### 資料侷限（要記得）
+- 只有**前十大**（非完整持股）；訊號語意是「前十大進出」，比 A 軌粗一階。
+- 一個月更新一次，且月報延到月中才出上月數字。
+
+---
+
+## 待辦 / 未來
+
+### 待驗證
+- [ ] **Telegram 推播首次實測**：A、B 軌首次都建基準不推，推播線至今未實際送過。
+      最快驗證：B 軌 workflow 勾「測試推播」跑一次，台股報報有收到即全通。
+      （log 出現「跳過推播」或 Telegram 報錯＝bot token secret 沒設對。）
+
+### 待調 / 待修
+- [ ] taiwan_scanner fund_id 撞號（A0050 = 台日雙星＋5G）源頭修正。
+- [ ] A 軌加減碼門檻（TOKEN_SHARES / SCALEUP_SHARES / ADJ_SHARE_PCT / ADJ_WEIGHT_PP）觀察後微調。
+- [ ] B 軌權重變化門檻（PCT_MOVE_PP）觀察後微調。
+
+### 未來擴充（都很小改）
+- [ ] A 軌加其他主動式ETF：active_etf_scanner.py 可傳參數指定 etf_code；表已含 etf_code 欄位。
+- [ ] B 軌加/減基金：改 FUND_TARGETS 一行即可（記得用名稱比對）。
+- [ ] 評估 ETF/基金訊號是否獨立頻道或綁更高會員等級。
+
+---
+
+## 快速排錯備忘
+- workflow 清單看不到新 workflow → .yml 沒放進 `.github/workflows/`（放到根目錄無效）。
+- A 軌解析不到/檔數<45 → 看 `診斷輸出v2`，多半是 etfinfo 改版（Nuxt 結構或 class 名變了）。
+- B 軌某檔查無資料 → 名稱比對樣式對不上，或該基金該月 taiwan_scanner 沒掃到。
+- 推播沒出現 → TG_BOT_TOKEN/BOT_TOKEN secret 未設；或 chat_id 前後有空格。
+- Supabase 寫入失敗 → 檢查對應表 RLS 是否 anon 全開、SUPABASE_KEY 是否正確。
