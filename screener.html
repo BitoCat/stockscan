@@ -30,6 +30,10 @@
   .sc-desc { color: #999; font-size: 0.9em; margin: 10px 0 0; padding: 10px 12px;
     border-left: 3px solid #f0a500; background: #181822; border-radius: 0 8px 8px 0; }
 
+  /* 籌碼過濾列 */
+  .sc-chiplabel { color: #f0a500; font-size: 0.85em; font-weight: 700; margin: 10px 0 3px; }
+  .sc-btns.chip .sc-btn.active { background: #2ecc71; color: #111; border-color: #2ecc71; }
+
   .sc-table-box { margin-top: 14px; overflow-x: auto; }
   table.sc-table { width: 100%; border-collapse: collapse; font-size: 0.93em; }
   .sc-table th, .sc-table td { padding: 9px 8px; border-bottom: 1px solid #333; text-align: right; white-space: nowrap; }
@@ -49,6 +53,11 @@
   .rate-b { color: #ff8c66; }
   .rate-h { color: #aaa; }
   .rate-s { color: #2ecc71; }
+
+  /* 籌碼欄 */
+  .chip-absorb { color: #f0a500; font-weight: 700; }   /* 象限2 吸貨（金礦） */
+  .chip-distri { color: #ff4d4d; font-weight: 700; }   /* 象限3 出貨（警示） */
+  .chip-dual   { color: #f0a500; font-weight: 700; }   /* 雙主力 */
 
   .sc-detail td { background: #181822; padding: 12px; white-space: normal; }
   .sc-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
@@ -80,6 +89,10 @@
       <button class="sc-tab" data-market="us">🇺🇸 美股</button>
     </div>
     <div class="sc-btns" id="patternBtns"></div>
+
+    <div class="sc-chiplabel" id="chipLabel" style="display:none">🔑 籌碼過濾（法人籌碼疊加在型態上）</div>
+    <div class="sc-btns chip" id="chipBtns" style="display:none"></div>
+
     <div class="sc-date" id="scanDate"></div>
     <div class="sc-desc" id="patternDesc" style="display:none"></div>
 
@@ -98,6 +111,10 @@
             <th data-key="pe">P/E</th>
             <th data-key="rel_volume">量比</th>
             <th data-key="dist_high_pct">距高點%</th>
+            <th data-key="trust_streak">投信連買</th>
+            <th data-key="foreign_streak">外資連買</th>
+            <th data-key="dual_main">雙主力</th>
+            <th data-key="chip_quadrant">象限</th>
           </tr>
         </thead>
         <tbody id="resultBody"></tbody>
@@ -107,6 +124,8 @@
     <div class="sc-note">
       評級與目標價為法人共識(yfinance),小型股常無覆蓋顯示「無評級」。量比=今日量/20日均量。
       距高點%=距52週高點距離。掃描時間:台股每交易日15:30、美股台灣時間早上08:00。
+      籌碼欄(僅台股):投信/外資連買天數、雙主力=當日外資與投信皆淨買、
+      象限=法人合計買賣×股價漲跌(🟢吸貨=買但沒漲、🔴出貨=賣但還漲)。
       本頁資料僅供研究參考,非投資建議。
     </div>
   </div>
@@ -147,8 +166,17 @@ const PATTERNS = [
     desc: '補漲候選:多頭結構已成形(價>月線>季線),但距52週高點還有20~45%,尚未大漲' },
 ];
 
+// 籌碼過濾(僅台股),疊加在型態之上
+const CHIP_FILTERS = [
+  { id: 'all',   name: '全部' },
+  { id: 'q2',    name: '💎 象限2吸貨' },
+  { id: 'trust', name: '投信連買≥2' },
+  { id: 'dual',  name: '雙主力' },
+];
+
 let currentMarket = 'tw';
 let currentPattern = 'pullback_ma20';
+let currentChip = 'all';
 let currentRows = [];
 let sortKey = 'target_upside_pct';
 let sortAsc = false;
@@ -164,7 +192,7 @@ async function checkAccess() {
     });
     const rows = await res.json();
     const plan = (rows && rows[0]) ? rows[0].plan : 'free';
-    return plan !== 'free';
+    return ['tw','us','all','admin'].indexOf(plan) !== -1;
   } catch (e) {
     console.error('auth check failed', e);
     return false;
@@ -184,6 +212,28 @@ function renderPatternBtns() {
       loadResults();
     });
   });
+}
+
+function renderChipBtns() {
+  const box = document.getElementById('chipBtns');
+  box.innerHTML = CHIP_FILTERS.map(c =>
+    '<button class="sc-btn' + (c.id === currentChip ? ' active' : '') +
+    '" data-chip="' + c.id + '">' + c.name + '</button>').join('');
+  box.querySelectorAll('.sc-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentChip = btn.dataset.chip;
+      box.querySelectorAll('.sc-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderTable();
+    });
+  });
+}
+
+// 台股才顯示籌碼過濾列
+function toggleChipBar() {
+  const show = currentMarket === 'tw';
+  document.getElementById('chipLabel').style.display = show ? 'block' : 'none';
+  document.getElementById('chipBtns').style.display = show ? 'flex' : 'none';
 }
 
 async function loadResults() {
@@ -244,8 +294,42 @@ function rateClass(r) {
   return 'rate-h';
 }
 
+// ===== 籌碼欄格式 =====
+function streakFmt(v) {
+  if (!v) return '<span class="muted">-</span>';
+  return v > 0 ? '<span class="up">買' + v + '</span>'
+               : '<span class="down">賣' + (-v) + '</span>';
+}
+function dualFmt(v) {
+  return v === true ? '<span class="chip-dual">✓雙</span>' : '<span class="muted">-</span>';
+}
+function quadFmt(v) {
+  if (v === 2) return '<span class="chip-absorb">🟢吸貨</span>';
+  if (v === 3) return '<span class="chip-distri">🔴出貨</span>';
+  if (v === 1) return '<span class="muted">買漲</span>';
+  if (v === 4) return '<span class="muted">賣跌</span>';
+  return '<span class="muted">-</span>';
+}
+
+// 籌碼過濾:疊加在(已由後端過濾好的)型態結果上
+function applyChip(rows) {
+  if (currentMarket !== 'tw' || currentChip === 'all') return rows;
+  if (currentChip === 'q2')    return rows.filter(r => r.chip_quadrant === 2);
+  if (currentChip === 'trust') return rows.filter(r => (r.trust_streak || 0) >= 2);
+  if (currentChip === 'dual')  return rows.filter(r => r.dual_main === true);
+  return rows;
+}
+
 function renderTable() {
-  const sorted = [...currentRows].sort((a, b) => {
+  const rows = applyChip(currentRows);
+  const body = document.getElementById('resultBody');
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="13" style="text-align:center;color:#777;padding:24px">' +
+                     '此籌碼條件今日無符合標的(可放寬條件或看其他型態)</td></tr>';
+    return;
+  }
+
+  const sorted = [...rows].sort((a, b) => {
     const av = a[sortKey], bv = b[sortKey];
     if (av === null || av === undefined) return 1;
     if (bv === null || bv === undefined) return -1;
@@ -266,11 +350,15 @@ function renderTable() {
       '<td>' + fmt(r.pe) + '</td>' +
       '<td>' + fmt(r.rel_volume) + '</td>' +
       '<td>' + fmt(r.dist_high_pct, '%') + '</td>' +
+      '<td>' + streakFmt(r.trust_streak) + '</td>' +
+      '<td>' + streakFmt(r.foreign_streak) + '</td>' +
+      '<td>' + dualFmt(r.dual_main) + '</td>' +
+      '<td>' + quadFmt(r.chip_quadrant) + '</td>' +
       '</tr>';
-    html += '<tr class="sc-detail" style="display:none"><td colspan="9">' +
+    html += '<tr class="sc-detail" style="display:none"><td colspan="13">' +
             renderDetail(r) + '</td></tr>';
   });
-  document.getElementById('resultBody').innerHTML = html;
+  body.innerHTML = html;
 
   document.querySelectorAll('tr.sc-row').forEach(row => {
     row.addEventListener('click', () => {
@@ -327,6 +415,9 @@ document.querySelectorAll('.sc-tab').forEach(tab => {
     currentMarket = tab.dataset.market;
     document.querySelectorAll('.sc-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
+    currentChip = 'all';           // 切市場時重置籌碼過濾
+    renderChipBtns();
+    toggleChipBar();
     loadResults();
   });
 });
@@ -339,6 +430,8 @@ document.querySelectorAll('.sc-tab').forEach(tab => {
   }
   document.getElementById('mainBox').style.display = 'block';
   renderPatternBtns();
+  renderChipBtns();
+  toggleChipBar();
   loadResults();
 })();
 </script>
