@@ -77,7 +77,10 @@
           <tr>
             <th data-key="code">股票</th>
             <th data-key="change_pct">漲跌%</th>
-            <th data-key="chip_quadrant">象限</th>
+            <th data-key="box_absorb">吸籌</th>
+            <th data-key="box_range">振幅%</th>
+            <th data-key="box_pos">收盤位置</th>
+            <th data-key="excess_5d">5日超額%</th>
             <th data-key="trust_streak">投信連買▼</th>
             <th data-key="foreign_streak">外資連買</th>
             <th data-key="dual_main">雙主力</th>
@@ -114,7 +117,7 @@ const SB_HEADERS = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPAB
 
 const FILTERS = [
   { id: 'gold',    name: '💎 精選金礦' },
-  { id: 'q2',      name: '🟢 象限2吸貨' },
+  { id: 'absorb',  name: '🟢 箱型吸籌' },
   { id: 'dual',    name: '🔥 雙主力' },
   { id: 'trust',   name: '📈 投信連買' },
   { id: 'foreign', name: '🌊 外資連買' },
@@ -123,11 +126,11 @@ const FILTERS = [
 
 // 每顆過濾的常駐說明(切到哪顆就顯示哪段,讓人一看就懂在篩什麼)
 function filterDef() {
-  if (currentFilter === 'gold') return '💎 <b>精選金礦</b> = 象限2吸貨 ＋ 法人合計買超 ≥ ' +
+  if (currentFilter === 'gold') return '💎 <b>精選金礦</b> = 箱型吸籌 ＋ 法人合計買超 ≥ ' +
     GOLD_NET_MIN + ' 張 ＋ 投信連買 ≥ ' + GOLD_TRUST_MIN + ' 日<br>' +
-    '<span style="color:#999">(法人默默買、股價還沒漲、投信在連續進場 → 主力進駐、市場未發現)</span>';
-  if (currentFilter === 'q2') return '🟢 <b>象限2吸貨</b> = 三大法人合計買超 ＋ 當日股價沒漲(平盤或下跌)<br>' +
-    '<span style="color:#999">(法人在買、股價還沒反應 → 默默吸貨的領先訊號,尚未發動)</span>';
+    '<span style="color:#999">(主力在區間內默默吸籌、收盤貼上緣準備發動、投信同步連買 → 最乾淨的進場前訊號)</span>';
+  if (currentFilter === 'absorb') return '🟢 <b>箱型吸籌</b> = 法人買超 ＋ 近20日振幅 < 25% ＋ 收盤位置 ≥ 0.5<br>' +
+    '<span style="color:#999">(股價在區間內漲漲跌跌盤整、主力默默吸納籌碼、收盤貼區間中上緣「洗完準備拉」,不是一路陰跌)</span>';
   if (currentFilter === 'dual') return '🔥 <b>雙主力</b> = 當日外資與投信「同時」淨買<br>' +
     '<span style="color:#999">(兩大主力同步進場,共識最強)</span>';
   if (currentFilter === 'trust') return '📈 <b>投信連買</b> = 投信連續買超 ≥ 2 日<br>' +
@@ -219,10 +222,10 @@ async function loadData() {
 
 function applyFilter(rows) {
   if (currentFilter === 'gold')    return rows.filter(r =>
-        r.chip_quadrant === 2 &&
+        r.box_absorb === true &&
         (r.total_net || 0) >= GOLD_NET_MIN &&
         (r.trust_streak || 0) >= GOLD_TRUST_MIN);
-  if (currentFilter === 'q2')      return rows.filter(r => r.chip_quadrant === 2);
+  if (currentFilter === 'absorb')  return rows.filter(r => r.box_absorb === true);
   if (currentFilter === 'dual')    return rows.filter(r => r.dual_main === true);
   if (currentFilter === 'trust')   return rows.filter(r => (r.trust_streak || 0) >= 2);
   if (currentFilter === 'foreign') return rows.filter(r => (r.foreign_streak || 0) >= 3);
@@ -237,12 +240,21 @@ function streakFmt(v) {
 function dualFmt(v) {
   return v === true ? '<span class="chip-dual">✓雙</span>' : '<span class="muted">-</span>';
 }
-function quadFmt(v) {
-  if (v === 2) return '<span class="chip-absorb">🟢吸貨</span>';
-  if (v === 3) return '<span class="chip-distri">🔴出貨</span>';
-  if (v === 1) return '<span class="muted">買漲</span>';
-  if (v === 4) return '<span class="muted">賣跌</span>';
-  return '<span class="muted">-</span>';
+function absorbFmt(v) {
+  return v === true ? '<span class="chip-absorb">🟢吸籌</span>' : '<span class="muted">-</span>';
+}
+function boxRangeFmt(v) {
+  if (v === null || v === undefined) return '<span class="muted">-</span>';
+  return v + '%';
+}
+function boxPosFmt(v) {
+  if (v === null || v === undefined) return '<span class="muted">-</span>';
+  // 收盤位置越高越接近發動,>=0.5 標金色
+  return '<span class="' + (v >= 0.5 ? 'chip-absorb' : 'muted') + '">' + v + '</span>';
+}
+function excessFmt(v) {
+  if (v === null || v === undefined) return '<span class="muted">-</span>';
+  return '<span class="' + (v > 0 ? 'up' : (v < 0 ? 'down' : '')) + '">' + (v > 0 ? '+' : '') + v + '%</span>';
 }
 function pctClass(v) {
   if (v === null || v === undefined) return '';
@@ -267,8 +279,8 @@ function renderTable() {
 
   document.getElementById('countLine').textContent =
     '符合 ' + rows.length + ' 檔' +
-    (currentFilter === 'gold' ? '(象限2 + 法人買超≥' + GOLD_NET_MIN + '張 + 投信連買≥' + GOLD_TRUST_MIN + '日)'
-     : currentFilter === 'q2' ? '(法人買、股價還沒動,領先訊號)' : '');
+    (currentFilter === 'gold' ? '(箱型吸籌 + 法人買超≥' + GOLD_NET_MIN + '張 + 投信連買≥' + GOLD_TRUST_MIN + '日)'
+     : currentFilter === 'absorb' ? '(主力在區間內吸籌、收盤貼上緣,洗完準備拉)' : '');
 
   if (!rows.length) {
     table.style.display = 'none';
@@ -294,7 +306,10 @@ function renderTable() {
         r.code + ' ' + (r.name || '') + '</a> ' + mtag + '</td>' +
       '<td class="' + pctClass(r.change_pct) + '">' +
         (r.change_pct !== null && r.change_pct !== undefined ? r.change_pct + '%' : '-') + '</td>' +
-      '<td>' + quadFmt(r.chip_quadrant) + '</td>' +
+      '<td>' + absorbFmt(r.box_absorb) + '</td>' +
+      '<td>' + boxRangeFmt(r.box_range) + '</td>' +
+      '<td>' + boxPosFmt(r.box_pos) + '</td>' +
+      '<td>' + excessFmt(r.excess_5d) + '</td>' +
       '<td>' + streakFmt(r.trust_streak) + '</td>' +
       '<td>' + streakFmt(r.foreign_streak) + '</td>' +
       '<td>' + dualFmt(r.dual_main) + '</td>' +
