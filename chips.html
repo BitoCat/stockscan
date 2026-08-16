@@ -110,16 +110,21 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const SB_HEADERS = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON };
 
 const FILTERS = [
-  { id: 'q2',      name: '💎 象限2吸貨' },
+  { id: 'gold',    name: '💎 精選金礦' },
+  { id: 'q2',      name: '🟢 象限2吸貨' },
   { id: 'dual',    name: '🔥 雙主力' },
   { id: 'trust',   name: '📈 投信連買' },
   { id: 'foreign', name: '🌊 外資連買' },
   { id: 'all',     name: '全部' },
 ];
 
+// 精選金礦收斂條件：象限2 + 法人合計買超≥門檻(張) + 投信連買≥門檻
+const GOLD_NET_MIN = 500;    // 法人合計買超張數下限(濾掉只買1張的雜訊)
+const GOLD_TRUST_MIN = 2;    // 投信連買天數下限
+
 let allRows = [];
-let currentFilter = 'q2';
-let sortKey = 'trust_streak';
+let currentFilter = 'gold';
+let sortKey = 'total_net';
 let sortAsc = false;
 
 async function checkAccess() {
@@ -194,6 +199,10 @@ async function loadData() {
 }
 
 function applyFilter(rows) {
+  if (currentFilter === 'gold')    return rows.filter(r =>
+        r.chip_quadrant === 2 &&
+        (r.total_net || 0) >= GOLD_NET_MIN &&
+        (r.trust_streak || 0) >= GOLD_TRUST_MIN);
   if (currentFilter === 'q2')      return rows.filter(r => r.chip_quadrant === 2);
   if (currentFilter === 'dual')    return rows.filter(r => r.dual_main === true);
   if (currentFilter === 'trust')   return rows.filter(r => (r.trust_streak || 0) >= 2);
@@ -232,7 +241,9 @@ function renderTable() {
   const rows = applyFilter(allRows);
 
   document.getElementById('countLine').textContent =
-    '符合 ' + rows.length + ' 檔' + (currentFilter === 'q2' ? '(法人買、股價還沒動,領先訊號)' : '');
+    '符合 ' + rows.length + ' 檔' +
+    (currentFilter === 'gold' ? '(象限2 + 法人買超≥' + GOLD_NET_MIN + '張 + 投信連買≥' + GOLD_TRUST_MIN + '日)'
+     : currentFilter === 'q2' ? '(法人買、股價還沒動,領先訊號)' : '');
 
   if (!rows.length) {
     table.style.display = 'none';
