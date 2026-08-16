@@ -22,6 +22,8 @@
   .cr-btn.active { background: #f0a500; color: #111; border-color: #f0a500; font-weight: 700; }
   .cr-date { color: #777; font-size: 0.85em; margin: 6px 0 0; }
   .cr-count { color: #999; font-size: 0.88em; margin: 4px 0 0; }
+  .cr-golddef { color: #f0a500; font-size: 0.86em; margin: 8px 0 0; padding: 8px 12px;
+    border-left: 3px solid #f0a500; background: #181822; border-radius: 0 8px 8px 0; line-height: 1.5; }
 
   .cr-table-box { margin-top: 12px; overflow-x: auto; }
   table.cr-table { width: 100%; border-collapse: collapse; font-size: 0.93em; }
@@ -63,6 +65,7 @@
 
   <div id="mainBox" style="display:none">
     <div class="cr-btns" id="filterBtns"></div>
+    <div class="cr-golddef" id="goldDef"></div>
     <div class="cr-date" id="scanDate"></div>
     <div class="cr-count" id="countLine"></div>
 
@@ -117,6 +120,22 @@ const FILTERS = [
   { id: 'foreign', name: '🌊 外資連買' },
   { id: 'all',     name: '全部' },
 ];
+
+// 每顆過濾的常駐說明(切到哪顆就顯示哪段,讓人一看就懂在篩什麼)
+function filterDef() {
+  if (currentFilter === 'gold') return '💎 <b>精選金礦</b> = 象限2吸貨 ＋ 法人合計買超 ≥ ' +
+    GOLD_NET_MIN + ' 張 ＋ 投信連買 ≥ ' + GOLD_TRUST_MIN + ' 日<br>' +
+    '<span style="color:#999">(法人默默買、股價還沒漲、投信在連續進場 → 主力進駐、市場未發現)</span>';
+  if (currentFilter === 'q2') return '🟢 <b>象限2吸貨</b> = 三大法人合計買超 ＋ 當日股價沒漲(平盤或下跌)<br>' +
+    '<span style="color:#999">(法人在買、股價還沒反應 → 默默吸貨的領先訊號,尚未發動)</span>';
+  if (currentFilter === 'dual') return '🔥 <b>雙主力</b> = 當日外資與投信「同時」淨買<br>' +
+    '<span style="color:#999">(兩大主力同步進場,共識最強)</span>';
+  if (currentFilter === 'trust') return '📈 <b>投信連買</b> = 投信連續買超 ≥ 2 日<br>' +
+    '<span style="color:#999">(投信資金集中中小型、最能代表主動選股,連買常是波段起漲)</span>';
+  if (currentFilter === 'foreign') return '🌊 <b>外資連買</b> = 外資連續買超 ≥ 3 日<br>' +
+    '<span style="color:#999">(外資偏大型權值,連買代表國際資金流入)</span>';
+  return '';   // 全部:不顯示說明
+}
 
 // 精選金礦收斂條件：象限2 + 法人合計買超≥門檻(張) + 投信連買≥門檻
 const GOLD_NET_MIN = 500;    // 法人合計買超張數下限(濾掉只買1張的雜訊)
@@ -239,6 +258,12 @@ function renderTable() {
   const table = document.getElementById('resultTable');
   const empty = document.getElementById('emptyBox');
   const rows = applyFilter(allRows);
+
+  // 每顆過濾的常駐條件說明
+  const goldDef = document.getElementById('goldDef');
+  const def = filterDef();
+  if (def) { goldDef.style.display = 'block'; goldDef.innerHTML = def; }
+  else { goldDef.style.display = 'none'; }
 
   document.getElementById('countLine').textContent =
     '符合 ' + rows.length + ' 檔' +
