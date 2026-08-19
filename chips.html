@@ -100,20 +100,30 @@ const SUPABASE_URL = 'https://kldumnxdlgovaxtiszyn.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI';
 const SB_HEADERS = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON };
 const FILTERS = [
-  { id: 'mid',    name: '🟢 中段吸籌' },
-  { id: 'bottom', name: '🔵 底部吸籌' },
-  { id: 'chase',  name: '🔥 利多追買' },
-  { id: 'absorb', name: '💧 全部吸籌' },
-  { id: 'all',    name: '全部' },
+  { id: 'mid',     name: '🟢 中段吸籌' },
+  { id: 'bottom',  name: '🔵 底部吸籌' },
+  { id: 'chase',   name: '🔥 利多追買' },
+  { id: 'absorb',  name: '💧 全部吸籌' },
+  { id: 'dual',    name: '🤝 雙主力' },
+  { id: 'trust',   name: '📈 投信連買' },
+  { id: 'foreign', name: '🌊 外資連買' },
+  { id: 'all',     name: '全部' },
 ];
+// 需要全市場資料(不限投信連買≥3分類)的濾鏡
+const WIDE_FILTERS = ['dual', 'trust', 'foreign', 'all'];
 function boardDef() {
   if (currentFilter === 'mid') return '🟢 <b>中段吸籌</b> = 投信連買 ＋ 近5日股價沒噴 ＋ 站在均線上/附近<br><span style="color:#999">(上升波段回檔整理、投信默默續買,右側加碼點;線圖難察,靠籌碼抓)</span>';
   if (currentFilter === 'bottom') return '🔵 <b>底部吸籌</b> = 投信連買 ＋ 近5日股價沒噴 ＋ 位於季線下(跌深)<br><span style="color:#999">(跌深打底、投信低接,長線抄底良機;稀有,左側交易)</span>';
   if (currentFilter === 'chase') return '🔥 <b>利多追買</b> = 投信連買 ＋ 近5日股價在漲<br><span style="color:#999">(利多發酵、投信追價,已發動、順勢跟)</span>';
   if (currentFilter === 'absorb') return '💧 <b>全部吸籌</b> = 投信連買 ＋ 近5日股價沒噴(底部+中段)<br><span style="color:#999">(投信在吃、股價還沒動的所有標的)</span>';
+  if (currentFilter === 'dual') return '🤝 <b>雙主力</b> = 當日外資與投信「同時」淨買<br><span style="color:#999">(兩大主力同步進場,共識最強;全市場)</span>';
+  if (currentFilter === 'trust') return '📈 <b>投信連買</b> = 投信連續買超 ≥ 2 日(全市場)<br><span style="color:#999">(投信主動選股,連買常是波段起漲)</span>';
+  if (currentFilter === 'foreign') return '🌊 <b>外資連買</b> = 外資連續買超 ≥ 3 日(全市場)<br><span style="color:#999">(外資偏大型權值,連買代表國際資金流入)</span>';
   return '';
 }
-let allRows = [];
+let allRows = [];       // 有分類的(投信連買≥3),預設載
+let wideRows = null;    // 全市場(雙主力/投信/外資連買 用),延遲載
+let latestDate = null;
 let currentFilter = 'mid';
 let sortKey = 'trust_conc';
 let sortAsc = false;
@@ -137,10 +147,13 @@ function renderFilterBtns() {
     '<button class="cr-btn' + (f.id === currentFilter ? ' active' : '') +
     '" data-id="' + f.id + '">' + f.name + '</button>').join('');
   box.querySelectorAll('.cr-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       currentFilter = btn.dataset.id;
       box.querySelectorAll('.cr-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
+      if (WIDE_FILTERS.indexOf(currentFilter) !== -1 && !wideRows) {
+        await loadWide();
+      }
       renderTable();
     });
   });
@@ -157,6 +170,7 @@ async function loadData() {
       return;
     }
     const latest = d[0].date;
+    latestDate = latest;
     document.getElementById('scanDate').textContent = '資料日期: ' + latest;
     let rows = [], from = 0;
     while (true) {
@@ -174,7 +188,34 @@ async function loadData() {
     renderTable();
   } catch (e) { console.error(e); loading.textContent = '載入失敗,請稍後再試'; }
 }
-function applyFilter(rows) {
+async function loadWide() {
+  if (wideRows || !latestDate) return;
+  const loading = document.getElementById('loadingBox');
+  loading.style.display = 'block';
+  try {
+    let rows = [], from = 0;
+    while (true) {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/chip_radar?date=eq.' + latestDate + '&select=*', {
+        headers: Object.assign({}, SB_HEADERS, { 'Range-Unit': 'items', 'Range': from + '-' + (from + 999) })
+      });
+      const batch = await res.json();
+      if (!Array.isArray(batch) || !batch.length) break;
+      rows = rows.concat(batch);
+      if (batch.length < 1000) break;
+      from += 1000;
+    }
+    wideRows = rows;
+  } catch (e) { console.error(e); }
+  loading.style.display = 'none';
+}
+
+function applyFilter() {
+  // 三顆單指標用全市場;其餘用有分類的
+  if (currentFilter === 'dual')    return (wideRows || []).filter(r => r.dual_main === true);
+  if (currentFilter === 'trust')   return (wideRows || []).filter(r => (r.trust_streak || 0) >= 2);
+  if (currentFilter === 'foreign') return (wideRows || []).filter(r => (r.foreign_streak || 0) >= 3);
+  if (currentFilter === 'all')     return wideRows || allRows;
+  const rows = allRows;
   if (currentFilter === 'mid')    return rows.filter(r => r.chip_type === 'absorb' && r.ma_pos !== '季線下');
   if (currentFilter === 'bottom') return rows.filter(r => r.chip_type === 'absorb' && r.ma_pos === '季線下');
   if (currentFilter === 'chase')  return rows.filter(r => r.chip_type === 'chase');
@@ -214,7 +255,7 @@ function renderTable() {
   const table = document.getElementById('resultTable');
   const empty = document.getElementById('emptyBox');
   document.getElementById('boardDef').innerHTML = boardDef();
-  const rows = applyFilter(allRows);
+  const rows = applyFilter();
   document.getElementById('countLine').textContent = '符合 ' + rows.length + ' 檔';
   if (!rows.length) { table.style.display = 'none'; empty.style.display = 'block'; return; }
   empty.style.display = 'none';
@@ -263,3 +304,4 @@ document.querySelectorAll('.cr-table th').forEach(th => {
 </script>
 </body>
 </html>
+
