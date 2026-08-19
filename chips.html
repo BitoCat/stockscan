@@ -8,26 +8,22 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
 <style>
   body { padding-bottom: 90px; }
-  .cr-wrap { max-width: 1150px; margin: 0 auto; padding: 16px; }
+  .cr-wrap { max-width: 1200px; margin: 0 auto; padding: 16px; }
   .cr-title { font-size: 1.5em; font-weight: 700; margin: 12px 0 4px; }
   .cr-sub { color: #888; font-size: 0.9em; margin-bottom: 14px; }
   .cr-back { color: #4da3ff; text-decoration: none; font-size: 0.9em; }
-
   .cr-btns { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 6px; }
-  .cr-btn {
-    padding: 8px 14px; border-radius: 20px; border: 1px solid #444;
-    background: #1e1e2a; color: #ddd; cursor: pointer; font-size: 0.95em;
-  }
+  .cr-btn { padding: 8px 14px; border-radius: 20px; border: 1px solid #444;
+    background: #1e1e2a; color: #ddd; cursor: pointer; font-size: 0.95em; }
   .cr-btn:hover { border-color: #f0a500; color: #f0a500; }
   .cr-btn.active { background: #f0a500; color: #111; border-color: #f0a500; font-weight: 700; }
   .cr-date { color: #777; font-size: 0.85em; margin: 6px 0 0; }
   .cr-count { color: #999; font-size: 0.88em; margin: 4px 0 0; }
-  .cr-golddef { color: #f0a500; font-size: 0.86em; margin: 8px 0 0; padding: 8px 12px;
+  .cr-def { color: #f0a500; font-size: 0.86em; margin: 8px 0 0; padding: 8px 12px;
     border-left: 3px solid #f0a500; background: #181822; border-radius: 0 8px 8px 0; line-height: 1.5; }
-
   .cr-table-box { margin-top: 12px; overflow-x: auto; }
-  table.cr-table { width: 100%; border-collapse: collapse; font-size: 0.93em; }
-  .cr-table th, .cr-table td { padding: 9px 8px; border-bottom: 1px solid #333; text-align: right; white-space: nowrap; }
+  table.cr-table { width: 100%; border-collapse: collapse; font-size: 0.92em; }
+  .cr-table th, .cr-table td { padding: 9px 7px; border-bottom: 1px solid #333; text-align: right; white-space: nowrap; }
   .cr-table th { color: #aaa; cursor: pointer; user-select: none; position: sticky; top: 0; background: #15151f; }
   .cr-table th:hover { color: #f0a500; }
   .cr-table td:first-child, .cr-table th:first-child { text-align: left; }
@@ -38,10 +34,9 @@
   .muted { color: #666; }
   .tag-otc { color: #b98bff; font-size: 0.82em; }
   .tag-tw { color: #66b3ff; font-size: 0.82em; }
-  .chip-absorb { color: #f0a500; font-weight: 700; }
-  .chip-distri { color: #ff4d4d; font-weight: 700; }
-  .chip-dual   { color: #f0a500; font-weight: 700; }
-
+  .pure-all { color: #ff8c66; font-size: 0.8em; }
+  .pure-trust { color: #f0a500; font-size: 0.8em; }
+  .ma-bottom { color: #4da3ff; }
   .cr-loading { text-align: center; padding: 30px; color: #aaa; }
   .cr-empty { text-align: center; padding: 30px; color: #777; }
   .cr-locked { text-align: center; padding: 60px 20px; }
@@ -51,24 +46,18 @@
 </style>
 </head>
 <body>
-
 <div class="cr-wrap">
   <div class="cr-title">🔑 全市場籌碼雷達</div>
-  <div class="cr-sub">
-    三大法人足跡 × 股價反應,全市場撈金礦。<a class="cr-back" href="screener.html">← 回股票篩選器</a>
-  </div>
-
+  <div class="cr-sub">投信足跡 × 股價位階,全市場撈吸籌股。<a class="cr-back" href="screener.html">← 回股票篩選器</a></div>
   <div id="lockedBox" class="cr-locked" style="display:none">
     <h2>🔒 此功能為付費會員專屬</h2>
     <p>請至 <a href="profile.html">我的帳號</a> 聯繫管理員升級方案</p>
   </div>
-
   <div id="mainBox" style="display:none">
     <div class="cr-btns" id="filterBtns"></div>
-    <div class="cr-golddef" id="goldDef"></div>
+    <div class="cr-def" id="boardDef"></div>
     <div class="cr-date" id="scanDate"></div>
     <div class="cr-count" id="countLine"></div>
-
     <div class="cr-table-box">
       <div id="loadingBox" class="cr-loading" style="display:none">載入中...</div>
       <div id="emptyBox" class="cr-empty" style="display:none">此條件今日無符合標的</div>
@@ -76,29 +65,26 @@
         <thead>
           <tr>
             <th data-key="code">股票</th>
-            <th data-key="change_pct">漲跌%</th>
-            <th data-key="box_absorb">吸籌</th>
-            <th data-key="box_range">振幅%</th>
-            <th data-key="box_pos">收盤位置</th>
-            <th data-key="excess_5d">5日超額%</th>
             <th data-key="trust_streak">投信連買▼</th>
+            <th data-key="trust_conc">投信集中度</th>
+            <th data-key="concentration">合計集中度</th>
+            <th data-key="chg5_pct">近5日%</th>
+            <th data-key="ma_pos">位階</th>
+            <th data-key="dealer_net">自營商</th>
             <th data-key="foreign_streak">外資連買</th>
-            <th data-key="dual_main">雙主力</th>
-            <th data-key="total_net">法人合計(張)</th>
+            <th data-key="_pure">純度</th>
           </tr>
         </thead>
         <tbody id="resultBody"></tbody>
       </table>
     </div>
-
     <div class="cr-note">
-      象限=三大法人合計買賣 × 當日漲跌:🟢吸貨=法人買但沒漲(領先訊號)、🔴出貨=法人賣但還漲(警訊)、買漲/賣跌為灰。
-      連買=近日同向連續天數(買紅賣綠)。雙主力=當日外資與投信皆淨買。資料每交易日收盤後更新。
-      本頁全市場掃描,僅供研究參考,非投資建議。
+      投信集中度=投信買超÷成交量(投信吃得多兇);合計集中度=三大法人合計÷成交量(整體態度)。
+      位階由均線判斷:季線下=底部、月線季線間/站上均線=中段。自營商參考(避險雜訊多)。
+      純度:🔴三大同買(共識強)、🟡外資倒投信接(底部吸籌典型)。資料每交易日收盤後更新,非投資建議。
     </div>
   </div>
 </div>
-
 <nav class="tabbar">
   <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
   <a class="tb" href="watchlist.html"><span class="ti">⭐</span>名單</a>
@@ -109,46 +95,28 @@
   <a class="tb active" href="screener.html"><span class="ti">🎯</span>篩選</a>
   <a class="tb" href="profile.html"><span class="ti">👤</span>我的</a>
 </nav>
-
 <script>
 const SUPABASE_URL = 'https://kldumnxdlgovaxtiszyn.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI';
 const SB_HEADERS = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON };
-
 const FILTERS = [
-  { id: 'gold',    name: '💎 精選金礦' },
-  { id: 'absorb',  name: '🟢 箱型吸籌' },
-  { id: 'dual',    name: '🔥 雙主力' },
-  { id: 'trust',   name: '📈 投信連買' },
-  { id: 'foreign', name: '🌊 外資連買' },
-  { id: 'all',     name: '全部' },
+  { id: 'mid',    name: '🟢 中段吸籌' },
+  { id: 'bottom', name: '🔵 底部吸籌' },
+  { id: 'chase',  name: '🔥 利多追買' },
+  { id: 'absorb', name: '💧 全部吸籌' },
+  { id: 'all',    name: '全部' },
 ];
-
-// 每顆過濾的常駐說明(切到哪顆就顯示哪段,讓人一看就懂在篩什麼)
-function filterDef() {
-  if (currentFilter === 'gold') return '💎 <b>精選金礦</b> = 箱型吸籌 ＋ 法人合計買超 ≥ ' +
-    GOLD_NET_MIN + ' 張 ＋ 投信連買 ≥ ' + GOLD_TRUST_MIN + ' 日<br>' +
-    '<span style="color:#999">(主力在區間內默默吸籌、收盤貼上緣準備發動、投信同步連買 → 最乾淨的進場前訊號)</span>';
-  if (currentFilter === 'absorb') return '🟢 <b>箱型吸籌</b> = 法人買超 ＋ 近20日振幅 < 25% ＋ 收盤位置 ≥ 0.5<br>' +
-    '<span style="color:#999">(股價在區間內漲漲跌跌盤整、主力默默吸納籌碼、收盤貼區間中上緣「洗完準備拉」,不是一路陰跌)</span>';
-  if (currentFilter === 'dual') return '🔥 <b>雙主力</b> = 當日外資與投信「同時」淨買<br>' +
-    '<span style="color:#999">(兩大主力同步進場,共識最強)</span>';
-  if (currentFilter === 'trust') return '📈 <b>投信連買</b> = 投信連續買超 ≥ 2 日<br>' +
-    '<span style="color:#999">(投信資金集中中小型、最能代表主動選股,連買常是波段起漲)</span>';
-  if (currentFilter === 'foreign') return '🌊 <b>外資連買</b> = 外資連續買超 ≥ 3 日<br>' +
-    '<span style="color:#999">(外資偏大型權值,連買代表國際資金流入)</span>';
-  return '';   // 全部:不顯示說明
+function boardDef() {
+  if (currentFilter === 'mid') return '🟢 <b>中段吸籌</b> = 投信連買 ＋ 近5日股價沒噴 ＋ 站在均線上/附近<br><span style="color:#999">(上升波段回檔整理、投信默默續買,右側加碼點;線圖難察,靠籌碼抓)</span>';
+  if (currentFilter === 'bottom') return '🔵 <b>底部吸籌</b> = 投信連買 ＋ 近5日股價沒噴 ＋ 位於季線下(跌深)<br><span style="color:#999">(跌深打底、投信低接,長線抄底良機;稀有,左側交易)</span>';
+  if (currentFilter === 'chase') return '🔥 <b>利多追買</b> = 投信連買 ＋ 近5日股價在漲<br><span style="color:#999">(利多發酵、投信追價,已發動、順勢跟)</span>';
+  if (currentFilter === 'absorb') return '💧 <b>全部吸籌</b> = 投信連買 ＋ 近5日股價沒噴(底部+中段)<br><span style="color:#999">(投信在吃、股價還沒動的所有標的)</span>';
+  return '';
 }
-
-// 精選金礦收斂條件：象限2 + 法人合計買超≥門檻(張) + 投信連買≥門檻
-const GOLD_NET_MIN = 500;    // 法人合計買超張數下限(濾掉只買1張的雜訊)
-const GOLD_TRUST_MIN = 2;    // 投信連買天數下限
-
 let allRows = [];
-let currentFilter = 'gold';
-let sortKey = 'total_net';
+let currentFilter = 'mid';
+let sortKey = 'trust_conc';
 let sortAsc = false;
-
 async function checkAccess() {
   try {
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
@@ -161,12 +129,8 @@ async function checkAccess() {
     const rows = await res.json();
     const plan = (rows && rows[0]) ? rows[0].plan : 'free';
     return ['tw','us','all','admin'].indexOf(plan) !== -1;
-  } catch (e) {
-    console.error('auth check failed', e);
-    return false;
-  }
+  } catch (e) { console.error('auth check failed', e); return false; }
 }
-
 function renderFilterBtns() {
   const box = document.getElementById('filterBtns');
   box.innerHTML = FILTERS.map(f =>
@@ -181,14 +145,11 @@ function renderFilterBtns() {
     });
   });
 }
-
 async function loadData() {
   const loading = document.getElementById('loadingBox');
   loading.style.display = 'block';
   try {
-    // 先抓最新日期
-    let r = await fetch(SUPABASE_URL + '/rest/v1/chip_radar?select=date&order=date.desc&limit=1',
-                        { headers: SB_HEADERS });
+    let r = await fetch(SUPABASE_URL + '/rest/v1/chip_radar?select=date&order=date.desc&limit=1', { headers: SB_HEADERS });
     let d = await r.json();
     if (!Array.isArray(d) || !d.length) {
       loading.style.display = 'none';
@@ -197,12 +158,9 @@ async function loadData() {
     }
     const latest = d[0].date;
     document.getElementById('scanDate').textContent = '資料日期: ' + latest;
-
-    // 抓當日全市場(分頁,量約1000+)
     let rows = [], from = 0;
     while (true) {
-      const res = await fetch(SUPABASE_URL + '/rest/v1/chip_radar' +
-        '?date=eq.' + latest + '&select=*', {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/chip_radar?date=eq.' + latest + '&chip_type=not.is.null&select=*', {
         headers: Object.assign({}, SB_HEADERS, { 'Range-Unit': 'items', 'Range': from + '-' + (from + 999) })
       });
       const batch = await res.json();
@@ -214,81 +172,52 @@ async function loadData() {
     allRows = rows;
     loading.style.display = 'none';
     renderTable();
-  } catch (e) {
-    console.error(e);
-    loading.textContent = '載入失敗,請稍後再試';
-  }
+  } catch (e) { console.error(e); loading.textContent = '載入失敗,請稍後再試'; }
 }
-
 function applyFilter(rows) {
-  if (currentFilter === 'gold')    return rows.filter(r =>
-        r.box_absorb === true &&
-        (r.total_net || 0) >= GOLD_NET_MIN &&
-        (r.trust_streak || 0) >= GOLD_TRUST_MIN);
-  if (currentFilter === 'absorb')  return rows.filter(r => r.box_absorb === true);
-  if (currentFilter === 'dual')    return rows.filter(r => r.dual_main === true);
-  if (currentFilter === 'trust')   return rows.filter(r => (r.trust_streak || 0) >= 2);
-  if (currentFilter === 'foreign') return rows.filter(r => (r.foreign_streak || 0) >= 3);
+  if (currentFilter === 'mid')    return rows.filter(r => r.chip_type === 'absorb' && r.ma_pos !== '季線下');
+  if (currentFilter === 'bottom') return rows.filter(r => r.chip_type === 'absorb' && r.ma_pos === '季線下');
+  if (currentFilter === 'chase')  return rows.filter(r => r.chip_type === 'chase');
+  if (currentFilter === 'absorb') return rows.filter(r => r.chip_type === 'absorb');
   return rows;
 }
-
 function streakFmt(v) {
   if (!v) return '<span class="muted">-</span>';
-  return v > 0 ? '<span class="up">買' + v + '</span>'
-               : '<span class="down">賣' + (-v) + '</span>';
+  return v > 0 ? '<span class="up">買' + v + '</span>' : '<span class="down">賣' + (-v) + '</span>';
 }
-function dualFmt(v) {
-  return v === true ? '<span class="chip-dual">✓雙</span>' : '<span class="muted">-</span>';
-}
-function absorbFmt(v) {
-  return v === true ? '<span class="chip-absorb">🟢吸籌</span>' : '<span class="muted">-</span>';
-}
-function boxRangeFmt(v) {
+function concFmt(v) {
   if (v === null || v === undefined) return '<span class="muted">-</span>';
-  return v + '%';
+  return '<span class="' + (v > 0 ? 'up' : (v < 0 ? 'down' : '')) + '">' + v + '%</span>';
 }
-function boxPosFmt(v) {
-  if (v === null || v === undefined) return '<span class="muted">-</span>';
-  // 收盤位置越高越接近發動,>=0.5 標金色
-  return '<span class="' + (v >= 0.5 ? 'chip-absorb' : 'muted') + '">' + v + '</span>';
-}
-function excessFmt(v) {
+function chg5Fmt(v) {
   if (v === null || v === undefined) return '<span class="muted">-</span>';
   return '<span class="' + (v > 0 ? 'up' : (v < 0 ? 'down' : '')) + '">' + (v > 0 ? '+' : '') + v + '%</span>';
 }
-function pctClass(v) {
-  if (v === null || v === undefined) return '';
-  return v > 0 ? 'up' : (v < 0 ? 'down' : '');
+function maFmt(v) {
+  if (!v) return '<span class="muted">-</span>';
+  return v === '季線下' ? '<span class="ma-bottom">' + v + '</span>' : v;
 }
-function netFmt(v) {
+function dealerFmt(v) {
   if (v === null || v === undefined) return '<span class="muted">-</span>';
-  const cls = v > 0 ? 'up' : (v < 0 ? 'down' : '');
-  return '<span class="' + cls + '">' + (v > 0 ? '+' : '') + v.toLocaleString() + '</span>';
+  const lots = Math.round(v / 1000);
+  if (lots === 0) return '<span class="muted">-</span>';
+  return '<span class="' + (lots > 0 ? 'up' : 'down') + '">' + (lots > 0 ? '買' : '賣') + Math.abs(lots) + '</span>';
 }
-
+function pureFmt(r) {
+  const tc = r.trust_conc, cc = r.concentration;
+  if (tc === null || tc === undefined) return '<span class="muted">-</span>';
+  if (tc > 0 && cc > 0) return '<span class="pure-all">三大同買</span>';
+  if (tc > 0 && cc <= 0) return '<span class="pure-trust">外資倒投信接</span>';
+  return '<span class="muted">-</span>';
+}
 function renderTable() {
   const table = document.getElementById('resultTable');
   const empty = document.getElementById('emptyBox');
+  document.getElementById('boardDef').innerHTML = boardDef();
   const rows = applyFilter(allRows);
-
-  // 每顆過濾的常駐條件說明
-  const goldDef = document.getElementById('goldDef');
-  const def = filterDef();
-  if (def) { goldDef.style.display = 'block'; goldDef.innerHTML = def; }
-  else { goldDef.style.display = 'none'; }
-
-  document.getElementById('countLine').textContent =
-    '符合 ' + rows.length + ' 檔' +
-    (currentFilter === 'gold' ? '(箱型吸籌 + 法人買超≥' + GOLD_NET_MIN + '張 + 投信連買≥' + GOLD_TRUST_MIN + '日)'
-     : currentFilter === 'absorb' ? '(主力在區間內吸籌、收盤貼上緣,洗完準備拉)' : '');
-
-  if (!rows.length) {
-    table.style.display = 'none';
-    empty.style.display = 'block';
-    return;
-  }
+  document.getElementById('countLine').textContent = '符合 ' + rows.length + ' 檔';
+  if (!rows.length) { table.style.display = 'none'; empty.style.display = 'block'; return; }
   empty.style.display = 'none';
-
   const sorted = [...rows].sort((a, b) => {
     const av = a[sortKey], bv = b[sortKey];
     if (av === null || av === undefined) return 1;
@@ -296,49 +225,37 @@ function renderTable() {
     if (typeof av === 'string') return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
     return sortAsc ? av - bv : bv - av;
   });
-
   let html = '';
   sorted.forEach(r => {
-    const mtag = r.market === 'otc'
-      ? '<span class="tag-otc">櫃</span>' : '<span class="tag-tw">市</span>';
+    const mtag = r.market === 'otc' ? '<span class="tag-otc">櫃</span>' : '<span class="tag-tw">市</span>';
     html += '<tr>' +
-      '<td><a class="cr-stock-link" href="diagnosis.html?symbol=' + r.code + '">' +
-        r.code + ' ' + (r.name || '') + '</a> ' + mtag + '</td>' +
-      '<td class="' + pctClass(r.change_pct) + '">' +
-        (r.change_pct !== null && r.change_pct !== undefined ? r.change_pct + '%' : '-') + '</td>' +
-      '<td>' + absorbFmt(r.box_absorb) + '</td>' +
-      '<td>' + boxRangeFmt(r.box_range) + '</td>' +
-      '<td>' + boxPosFmt(r.box_pos) + '</td>' +
-      '<td>' + excessFmt(r.excess_5d) + '</td>' +
+      '<td><a class="cr-stock-link" href="diagnosis.html?symbol=' + r.code + '">' + r.code + ' ' + (r.name || '') + '</a> ' + mtag + '</td>' +
       '<td>' + streakFmt(r.trust_streak) + '</td>' +
+      '<td>' + concFmt(r.trust_conc) + '</td>' +
+      '<td>' + concFmt(r.concentration) + '</td>' +
+      '<td>' + chg5Fmt(r.chg5_pct) + '</td>' +
+      '<td>' + maFmt(r.ma_pos) + '</td>' +
+      '<td>' + dealerFmt(r.dealer_net) + '</td>' +
       '<td>' + streakFmt(r.foreign_streak) + '</td>' +
-      '<td>' + dualFmt(r.dual_main) + '</td>' +
-      '<td>' + netFmt(r.total_net) + '</td>' +
+      '<td>' + pureFmt(r) + '</td>' +
       '</tr>';
   });
   document.getElementById('resultBody').innerHTML = html;
   table.style.display = 'table';
 }
-
 document.querySelectorAll('.cr-table th').forEach(th => {
   th.addEventListener('click', () => {
     const key = th.dataset.key;
-    if (sortKey === key) { sortAsc = !sortAsc; }
-    else { sortKey = key; sortAsc = false; }
-    document.querySelectorAll('.cr-table th').forEach(h => {
-      h.textContent = h.textContent.replace(/[▼▲]/g, '');
-    });
+    if (key === '_pure') return;
+    if (sortKey === key) { sortAsc = !sortAsc; } else { sortKey = key; sortAsc = false; }
+    document.querySelectorAll('.cr-table th').forEach(h => { h.textContent = h.textContent.replace(/[▼▲]/g, ''); });
     th.textContent = th.textContent + (sortAsc ? '▲' : '▼');
     renderTable();
   });
 });
-
 (async function init() {
   const ok = await checkAccess();
-  if (!ok) {
-    document.getElementById('lockedBox').style.display = 'block';
-    return;
-  }
+  if (!ok) { document.getElementById('lockedBox').style.display = 'block'; return; }
   document.getElementById('mainBox').style.display = 'block';
   renderFilterBtns();
   loadData();
