@@ -574,3 +574,86 @@ GitHub Actions pattern_scanner.yml(排程)
 - 港股北水追蹤
 - 新聞更多台灣在地來源
 
+═══════════════════════════════════════════════════════════════
+【籌碼面系統 大改版 + T86 地基 Bug 修復】(2026/08 更新)
+═══════════════════════════════════════════════════════════════
+
+■ 最重要的教訓:T86 是 19 欄,不是 10 欄
+--------------------------------------------------------------
+taiwan_scanner.py 的 fetch_twse_institutional 原本欄位 index 全錯位,
+導致 tw_institutional 的 trust_net(投信)整欄=0、dealer/total 也錯格。
+症狀:外資有值、自營有值、合計有值,唯獨投信全 0,且合計≠外資+投信+自營。
+
+證交所 T86 正確端點與欄位(19 欄):
+  https://www.twse.com.tw/rwd/zh/fund/T86?date=YYYYMMDD&selectType=ALL&response=json
+  row[0]=代號 row[1]=名稱
+  row[2/3/4]  = 外資 買/賣/淨
+  row[5/6/7]  = 外資自營商 買/賣/淨(通常0)
+  row[8/9/10] = 投信 買/賣/淨   ← 投信淨買是 row[10]!
+  row[11]     = 自營商 買賣超(合計)
+  row[12~17]  = 自營商(自行買賣)、(避險)明細
+  row[18]     = 三大法人買賣超(合計)
+單位是「股」,除 1000 換「張」。寫入前檢查 raw.get("stat")=="OK"。
+
+■ 資料修復步驟(已完成)
+--------------------------------------------------------------
+1. 改 taiwan_scanner.py 的 fetch_twse_institutional 欄位 index(trust=10, dealer=11, total=18)。
+2. backfill_institutional.py:用正確 index 補抓最近15交易日,覆蓋錯誤舊資料。
+   - 用 SUPABASE_SERVICE_KEY(不是 anon key)才有權限 upsert(RLS)。
+   - anon key 會被 RLS 擋:new row violates row-level security policy。
+3. 待辦:fetch_tpex_institutional(上櫃)也是舊 index,尚未修。
+
+■ 籌碼系統架構(全部在 trading-bot 私有 repo)
+--------------------------------------------------------------
+資料表 tw_institutional(taiwan_scanner 寫入,唯一來源):
+  ticker/name/date(YYYYMMDD)/foreign_buy/sell/net/trust_buy/sell/net/dealer_net/total_net
+  ※ 只有 taiwan_scanner.py 寫這張表。市場股價另從 STOCK_DAY_ALL/TPEX 抓。
+
+chip_scanner.py(核心籌碼計算,排程台灣16:00):
+  - 讀 tw_institutional 算:投信連買天數(trust_streak)、外資連買、雙主力
+  - 全市場股價+成交量:TWSE STOCK_DAY_ALL(TradeVolume=成交股數)、TPEX(TradingShares)
+  - 集中度 = 買超(張) ÷ 成交量(張) ×100%  ※ 買超是股要÷1000對齊張,否則爆1000倍
+    · concentration = 三大法人合計 ÷ 量(整體態度)
+    · trust_conc   = 投信 ÷ 量(投信吃多兇,吸籌主角)
+  - 對「投信連買≥3」候選,抓近4個月 STOCK_DAY 算:20MA月線/60MA季線/近5日漲幅chg5/整理天數/均線位置ma_pos
+  - 分類 chip_type:投信連買≥3為前提,近5日漲<3%=absorb(吸籌)、≥3%=chase(追買)
+  - 均線位置 ma_pos:站上均線 / 月線下季線上 / 月線上季線下 / 季線下
+  - 寫 chip_radar(全市場)+ 回寫 screener_results(池內)
+
+chip_radar 欄位(Claude 建的全市場籌碼榜):
+  code/name/date/market/trust_streak/foreign_streak/dual_main/chip_quadrant/
+  change_pct/total_net/foreign_net/trust_net/dealer_net/
+  concentration/trust_conc/chg5_pct/consol_days/box_range/ma_pos/chip_type
+
+■ 籌碼面觀念(毛哥的核心主張,已內化進系統)
+--------------------------------------------------------------
+- 主角是「投信」:外資常左側交易、題材結束就跑;投信低點接手才是吸籌主力。
+  外資/自營只顯示不當門檻(自營多為避險雜訊)。
+- 吸籌本質=投信積極持續買 + 控量不抬價。所以「投信連買」是必要條件(非零散)。
+- 吸籌 vs 追買 的分野 = 股價有沒有被推高(近5日漲<3%=吸籌,≥3%=追買),兩者都要投信連買。
+- 底部 vs 中段(用均線位置「顯示」判斷,不當篩選,以免退回技術面):
+  · 底部吸籌 = 季線下(跌深打底,左側抄底,稀有珍貴)
+  · 中段吸籌 = 月線季線間/站上均線(波段回檔整理,右側加碼,線圖難察靠籌碼)
+- 集中度用「相對比例」不用絕對張數(業界標準:買超÷成交量,≥10%才有意義)。
+  小型股買500張佔20%=強;台積電買5000張佔比極小=雜訊。
+- 純度:投信正+合計正=三大同買(共識強);投信正+合計負=外資倒投信接(底部吸籌典型)。
+
+■ 前端 chips.html(全市場籌碼雷達,獨立頁)
+--------------------------------------------------------------
+- 讀 chip_radar,八顆濾鏡:🟢中段吸籌(預設)/🔵底部吸籌/🔥利多追買/💧全部吸籌/
+  🤝雙主力/📈投信連買/🌊外資連買/全部
+- 前四顆用「有分類的」(chip_type非null,快);後三顆+全部延遲載全市場(wideRows)
+- 欄位:股票/投信連買/投信集中度/合計集中度/近5日%/位階(ma_pos)/自營商/外資連買/純度
+- 底部=ma_pos'季線下'、中段=其餘。每顆有常駐說明。權限白名單['tw','us','all','admin']
+- 首頁 index.html 卡片牆加了一張 🔑全市場籌碼雷達 → chips.html
+- 篩選頁 screener.html 頂端也有「🔑全市場籌碼雷達→」連結
+
+chip_push.py(投信吸籌榜推播,排程16:17,台股報報):
+  讀 chip_radar 的 chip_type=absorb,按 trust_conc 排前10,白話化+底部/中段標籤+回chips.html連結。
+
+■ 尚未做(改天):
+--------------------------------------------------------------
+- 定「投信集中度」門檻(需觀察幾天分布,單日樣本不足)
+- 修上櫃 TPEX 三大法人 index(fetch_tpex_institutional)
+- 清理 probe 工具:t86_probe / market_quote_probe / excess_probe / backfill(用完)
+- GitHub Pages CDN 快取:改版後要無痕視窗或加 ?v= 參數強制更新
