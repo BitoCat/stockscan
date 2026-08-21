@@ -657,3 +657,76 @@ chip_push.py(投信吸籌榜推播,排程16:17,台股報報):
 - 修上櫃 TPEX 三大法人 index(fetch_tpex_institutional)
 - 清理 probe 工具:t86_probe / market_quote_probe / excess_probe / backfill(用完)
 - GitHub Pages CDN 快取:改版後要無痕視窗或加 ?v= 參數強制更新
+
+═══════════════════════════════════════════════════════════════
+【健診籌碼面大改版 + Groq 模型下架修復 + 上櫃法人修復 + 收尾】(2026/08 更新)
+═══════════════════════════════════════════════════════════════
+
+■ Groq 模型下架修復(js/supabase.js)
+--------------------------------------------------------------
+- Groq 於 2026/06 淘汰 llama-3.3-70b-versatile，健診報「model does not exist」。
+- callGroq(第106行附近)模型字串改為 openai/gpt-oss-120b，並加 reasoning_effort:'low'
+  (gpt-oss 是推理模型，low 壓住推理 token 以免 2500 上限被吃掉截斷)。
+- callGroq 為共用函式，callAI(輪替池)也包它，改一處全站 AI 一起復活。
+- 模型寫死在函式內，與用戶自備 Key 無關；gpt-oss-120b 免費 Key 即可用。
+
+■ 健診籌碼面(diagnosis.html)新增三塊
+--------------------------------------------------------------
+- 容器：r-metrics 下方加 <div id="r-chips"> 與 <div id="r-holders">；
+  renderResult 內在 r-time 後呼叫 renderChips(sym); renderHolders(sym);
+- renderChips：讀 tw_institutional 近十日，畫投信/外資/自營「累積淨買賣」曲線
+  (投信金線為主角、自營淡化)，附連買天數與增持/減持結論。單位股，顯示除1000為張。
+- renderHolders：讀 tw_holder_dispersion，畫「大戶 vs 散戶」週線(兩線各自正規化以
+  顯示走勢方向)。資料<2筆時只顯示當週數字+「累積中」提示。
+- fetchChipContext：把投信/外資十日累積、連買、大戶/千張/散戶占比組成文字，
+  接在 prompt 的 priceContext 後(+ chipContext)，讓 healthScore 與【催化劑與風險】
+  真的納入籌碼。美股與無資料自動省略。
+- 三塊皆用 sb 客戶端讀表(與頁面既有 tw_fund_positions 讀法一致)，圖為手繪 SVG(無圖表庫)。
+
+■ 新資料源：集保股權分散表(大戶/散戶結構)
+--------------------------------------------------------------
+- 新表 tw_holder_dispersion：code/date/big400_pct/big1000_pct/small_pct/
+  big400_holders/small_holders/updated_at，PK(code,date)，RLS 開全體 SELECT。
+- 新爬蟲 tdcc_scanner.py(trading-bot)：抓 TDCC 總表
+  https://smart.tdcc.com.tw/opendata/getOD.ashx?id=1-5(UTF-8-sig)，
+  級距聚合後 upsert(REST on_conflict=code,date，用 SUPABASE_SERVICE_KEY)。只留四碼。
+- 級距對照(1張=1000股)：大戶(>400張)=級距12-15；千張大戶(>1000張)=級距15；
+  散戶(≤10張)=級距1-3。大戶定義隨股價：>50元看400張、<50元看1000張(故兩者都存)。
+- 新排程 tdcc_scanner.yml：每週六 cron '0 4 * * 6'(台灣12:00)，workflow_dispatch 可手動。
+- 需新增 GitHub Secret：SUPABASE_SERVICE_KEY(service_role，anon 會被 RLS 擋)。
+- ★限制：總表只有「當週」，歷史無法回補，從執行當週往後累積(約6-8週才成線)。
+
+■ 上櫃三大法人修復(taiwan_scanner.py / fetch_tpex_institutional)
+--------------------------------------------------------------
+- 舊端點 3itrade_hedge_result.php 已因 TPEX 網站改版失效(HTTP200 但資料0筆)。
+- 改用 OpenAPI(具名欄位，不再靠欄位位置)：
+  https://www.tpex.org.tw/openapi/v1/tpex_3insti_daily_trading
+- 欄位以名稱模糊比對(官方 key 名有多餘空白)：外資取「不含外資自營(Foreign Dealers
+  excluded)-Difference」(與 T86 定義一致)、投信=InvestmentTrust-Difference、
+  自營=Dealers-Difference(排除 foreign/investment)、合計=TotalDifference。
+  日期 ROC(1150821)轉西元(20260821)。
+- ★限制：OpenAPI 只給最新一日，無法回補歷史；請求歷史日期會自動 return []。
+  上櫃法人從修好起往後累積(上市 T86 仍可帶日期抓歷史)。
+- 驗證：5483 中美晶 外資+投信+自營=合計 完全自洽，投信不再整排0。
+
+■ tw_institutional 權證瘦身
+--------------------------------------------------------------
+- save_institutional_daily 寫入前加過濾 re.match(r"^\d{4}$", ticker)，只留四碼個股/ETF。
+  每天約 15,000 筆(多為權證)→ 約 1,868 筆(上市+上櫃個股)。需檔頂 import re。
+- 一次性清舊資料：delete from tw_institutional where ticker !~ '^[0-9]{4}$';
+- 副作用：5-6碼 ETF(如 00679B、00981A)也被濾掉，如需保留特定 ETF 再放寬規則。
+- tw_institutional 已補 RLS「read all」SELECT policy(前端 sb 讀取需要)。
+
+■ 其他收尾
+--------------------------------------------------------------
+- NaN% 修復(diagnosis.html)：changePct 計算改用 Number()+isFinite 逐層退回
+  (previousClose→closes[-2]→price→'0.00')，冷門股/previousClose 為 null 不再顯示 NaN%。
+- 清理殭屍檔：刪 tpex_probe / t86_probe / market_quote_probe / excess_probe /
+  backfill_institutional，刪 probe.yml，刪舊 scanner.yml(name: Stock Scanner，
+  cron 全註解、已被各獨立排程取代)。Actions 不再有紅 X 干擾。
+
+■ 尚未做(等資料養夠再一次到位)
+--------------------------------------------------------------
+- 股價疊大戶圖(像彥鈔機那種大股東持股比例+股價)：等 tw_holder_dispersion 養 6-8 週。
+- 大戶集中度進 chips.html 全市場榜(加「大戶持股週增最多」濾鏡)：同上等資料。
+- 幣圈版(比特聯盟)：把 chips/screener 邏輯搬去做幣圈版，另一較大工程。
