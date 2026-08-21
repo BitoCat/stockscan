@@ -524,6 +524,7 @@ function renderResult(sym, d) {
   document.getElementById('r-analysis').innerHTML = analysisHtml;
   document.getElementById('r-time').textContent = '診斷：' + new Date().toLocaleString('zh-TW');
   renderChips(sym);
+  renderHolders(sym);  
   document.getElementById('res-card').classList.add('show');
   document.getElementById('res-card').scrollIntoView({behavior:'smooth', block:'nearest'});
 }
@@ -684,6 +685,101 @@ async function renderChips(sym) {
   }
 }  
 
+async function renderHolders(sym) {
+  var box = document.getElementById('r-holders');
+  if (!box) return;
+  if (currentMkt !== 'tw') { box.innerHTML = ''; return; }
+  var code = (sym || '').replace(/[^0-9]/g, '');
+  if (!code || code.length < 4) { box.innerHTML = ''; return; }
+
+  var HEAD = '<div class="sec-head">🏦 大戶 vs 散戶(週)</div>';
+  box.innerHTML = HEAD + '<div style="color:var(--muted);font-size:13px;padding:4px 0">載入中...</div>';
+
+  try {
+    var res = await sb.from('tw_holder_dispersion')
+      .select('date,big400_pct,big1000_pct,small_pct,big400_holders,small_holders')
+      .eq('code', code)
+      .order('date', { ascending: false })
+      .limit(26);
+    var rows = res.data || [];
+    if (!rows.length) { box.innerHTML = ''; return; }
+    rows.reverse();
+
+    var last = rows[rows.length - 1];
+    var pct = function (v) { return (v == null ? '—' : (Math.round(Number(v) * 100) / 100) + '%'); };
+
+    var pill = function (label, val, color) {
+      return '<div style="flex:1;text-align:center;padding:6px 4px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px">' +
+        '<div style="font-size:11px;color:var(--muted)">' + label + '</div>' +
+        '<div style="font-family:monospace;font-size:15px;color:' + color + '">' + val + '</div></div>';
+    };
+    var pills = '<div style="display:flex;gap:8px;margin:6px 0 8px">' +
+      pill('大戶 >400張', pct(last.big400_pct), '#ffb020') +
+      pill('千張大戶', pct(last.big1000_pct), '#ff8c00') +
+      pill('散戶 ≤10張', pct(last.small_pct), '#00d4ff') +
+      '</div>';
+
+    if (rows.length < 2) {
+      box.innerHTML = HEAD + pills +
+        '<div style="font-size:12px;color:#4a6080;line-height:1.6">📈 資料每週累積中, 約 6~8 週後這裡會自動長出「大戶 vs 散戶」分岔線。目前為本週快照。</div>';
+      return;
+    }
+
+    var dates = rows.map(function (r) { return String(r.date); });
+    var big = rows.map(function (r) { return Number(r.big400_pct) || 0; });
+    var sml = rows.map(function (r) { return Number(r.small_pct) || 0; });
+
+    var bigChg = big[big.length - 1] - big[0];
+    var smlChg = sml[sml.length - 1] - sml[0];
+    var verdict, vcolor;
+    if (bigChg > 0 && smlChg <= 0) { vcolor = '#31d071'; verdict = '大戶增持、散戶退場 → 籌碼向大戶集中(偏多)'; }
+    else if (bigChg < 0 && smlChg >= 0) { vcolor = '#ff5470'; verdict = '大戶減持、散戶承接 → 籌碼流向散戶(偏空)'; }
+    else { vcolor = 'var(--muted)'; verdict = '大戶與散戶變動方向不一致 → 中性'; }
+    var arw = function (c) { return c > 0 ? '▲' : (c < 0 ? '▼' : '—'); };
+    var r2 = function (x) { return Math.round(x * 100) / 100; };
+    var chgLine = '大戶 ' + arw(bigChg) + ' ' + (bigChg >= 0 ? '+' : '') + r2(bigChg) +
+      ' pt · 散戶 ' + arw(smlChg) + ' ' + (smlChg >= 0 ? '+' : '') + r2(smlChg) + ' pt (期間)';
+
+    var W = 340, H = 180, padL = 10, padR = 10, padT = 14, padB = 26;
+    var plotW = W - padL - padR, plotH = H - padT - padB;
+    var n = rows.length;
+    var Xi = function (i) { return n <= 1 ? padL + plotW / 2 : padL + plotW * i / (n - 1); };
+    var norm = function (arr) {
+      var mx = Math.max.apply(null, arr), mn = Math.min.apply(null, arr);
+      if (mx === mn) { mx += 1; mn -= 1; }
+      return function (v) { return padT + (mx - v) / (mx - mn) * plotH; };
+    };
+    var yBig = norm(big), ySml = norm(sml);
+    var line = function (arr, yf) {
+      return arr.map(function (v, i) { return Xi(i).toFixed(1) + ',' + yf(v).toFixed(1); }).join(' ');
+    };
+
+    var mmdd = function (d) { return d.slice(4, 6) + '/' + d.slice(6, 8); };
+    var lblIdx = n <= 2 ? [0, n - 1] : [0, Math.floor((n - 1) / 2), n - 1];
+    var xlabels = lblIdx.map(function (i) {
+      var anchor = i === 0 ? 'start' : (i === n - 1 ? 'end' : 'middle');
+      return '<text x="' + Xi(i).toFixed(1) + '" y="' + (H - 8) + '" fill="#4a6080" font-size="9" text-anchor="' + anchor + '" font-family="Share Tech Mono">' + mmdd(dates[i]) + '</text>';
+    }).join('');
+
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block">' +
+      '<polyline fill="none" stroke="#00d4ff" stroke-width="2" points="' + line(sml, ySml) + '"/>' +
+      '<polyline fill="none" stroke="#ffb020" stroke-width="2.4" points="' + line(big, yBig) + '" style="filter:drop-shadow(0 0 3px rgba(255,176,32,.5))"/>' +
+      xlabels + '</svg>';
+
+    var legend = '<div style="display:flex;gap:16px;justify-content:center;margin-top:4px;font-size:11px;color:var(--muted)">' +
+      '<span><span style="color:#ffb020">━</span> 大戶(>400張)</span>' +
+      '<span><span style="color:#00d4ff">━</span> 散戶(≤10張)</span></div>';
+
+    box.innerHTML = HEAD + pills +
+      '<div style="color:' + vcolor + ';font-weight:700;font-size:14px;margin:2px 0 4px">' + verdict + '</div>' +
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">' + chgLine + '</div>' +
+      svg + legend +
+      '<div style="font-size:11px;color:#4a6080;margin-top:6px;line-height:1.5">兩線各自縮放以顯示走勢方向(非同刻度)。大戶上行、散戶下行=籌碼集中, 通常利於股價。資料每週六更新。</div>';
+  } catch (e) {
+    box.innerHTML = HEAD + '<div style="color:var(--muted):font-size:13px;padding:4px 0">大戶資料載入失敗, 稍後再試。</div>';
+  }
+}
+  
 </script>
 </body>
 </html>
