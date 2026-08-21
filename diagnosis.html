@@ -341,8 +341,8 @@ async function analyze() {
   const maStatus = (livePrice?.ma5 && livePrice?.ma20) ?
     (parseFloat(livePrice.ma5) > parseFloat(livePrice.ma20) ? 'MA5上穿MA20黃金交叉' : 'MA5下穿MA20死亡交叉') : '';
   const macdNote = livePrice?.macd ? (parseFloat(livePrice.macd) > 0 ? 'MACD正值偏多' : 'MACD負值偏空') : '';
-
-  const prompt = '你是頂級股票分析師，擁有20年實戰經驗。' + companyHint + '請對' + market + '股票代號「' + sym + '」進行專業分析。' + priceContext +
+  var chipContext = currentMkt === 'tw' ? await fetchChipContext(sym) : '';
+  const prompt = '你是頂級股票分析師，擁有20年實戰經驗。' + companyHint + '請對' + market + '股票代號「' + sym + '」進行專業分析。' + priceContext + chipContext +
     '\n\n技術指標解讀：RSI=' + (livePrice?.rsi||'N/A') + '(' + rsiNote + ')，' + maStatus + '，' + macdNote +
     '\n\n請輸出純JSON，格式如下（禁止使用markdown）：' +
     '{' +
@@ -778,6 +778,40 @@ async function renderHolders(sym) {
   } catch (e) {
     box.innerHTML = HEAD + '<div style="color:var(--muted):font-size:13px;padding:4px 0">大戶資料載入失敗, 稍後再試。</div>';
   }
+}
+
+async function fetchChipContext(sym) {
+  var code = (sym || '').replace(/[^0-9]/g, '');
+  if (!code || code.length < 4) return '';
+  var parts = [];
+  try {
+    var r1 = await sb.from('tw_institutional')
+      .select('date,foreign_net,trust_net,dealer_net')
+      .eq('ticker', code).order('date', { ascending: false }).limit(10);
+    var rows = r1.data || [];
+    if (rows.length) {
+      rows.reverse();
+      var sum = function (k) { var s = 0; rows.forEach(function (r) { s += (Number(r[k]) || 0); }); return Math.round(s / 1000); };
+      var streak = 0;
+      for (var i = rows.length - 1; i >= 0; i--) { if ((Number(rows[i].trust_net) || 0) > 0) streak++; else break; }
+      var sign = function (n) { return (n > 0 ? '+' : '') + n.toLocaleString('en-US'); };
+      parts.push('投信近十日累積淨買超: ' + sign(sum('trust_net')) + ' 張' + (streak >= 2 ? ' (連買 ' + streak + ' 日)' : ''));
+      parts.push('外資近十日累積淨買超: ' + sign(sum('foreign_net')) + ' 張');
+      parts.push('自營近十日累積: ' + sign(sum('dealer_net')) + ' 張 (多屬避險，參考)');
+    }
+  } catch (e) {}
+  try {
+    var r2 = await sb.from('tw_holder_dispersion')
+      .select('date,big400_pct,big1000_pct,small_pct')
+      .eq('code', code).order('date', { ascending: false }).limit(1);
+    var h = (r2.data || [])[0];
+    if (h) {
+      parts.push('大戶(>400張)持股: ' + h.big400_pct + '%  千張大戶: ' + h.big1000_pct + '%  散戶(<=10張): ' + h.small_pct + '%');
+    }
+  } catch (e) {}
+  if (!parts.length) return '';
+  return '\n\n[籌碼面實際數據 (務必納入健診評分與分析)]\n' + parts.join('\n') +
+    '\n[判讀提示: 投信為台股主力，投信連續買進代表法人佈局看好；大戶比例高且上升、散戶下降代表籌碼集中，通常利於股價。請把籌碼面納入 healthScore 及【催化劑與風險】的法人籌碼動向。]';
 }
   
 </script>
