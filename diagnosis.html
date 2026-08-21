@@ -276,8 +276,11 @@ async function analyze() {
       const support      = minArr(r20l), resistance   = maxArr(r20h);
       const support_l    = minArr(r60l), resistance_l = maxArr(r60h);
 
-      const prev = data.previousClose || closes[closes.length - 2] || data.price;
-      const changePct = ((data.price - prev) / prev * 100).toFixed(2);
+      var prevN = Number(data.previousClose);
+      if (!isFinite(prevN) || prevN === 0) prevN = Number(closes[closes.length - 2]);
+      if (!isFinite(prevN) || prevN === 0) prevN = Number(data.price);
+      const prev = prevN;
+      const changePct = (isFinite(prevN) && prevN !== 0) ? ((data.price - prevN) / prevN * 100).toFixed(2) : '0.00';
 
       const today = new Date();
       const dateStr = today.getFullYear() + '年' + (today.getMonth()+1) + '月' + today.getDate() + '日';
