@@ -730,3 +730,24 @@ chip_push.py(投信吸籌榜推播,排程16:17,台股報報):
 - 股價疊大戶圖(像彥鈔機那種大股東持股比例+股價)：等 tw_holder_dispersion 養 6-8 週。
 - 大戶集中度進 chips.html 全市場榜(加「大戶持股週增最多」濾鏡)：同上等資料。
 - 幣圈版(比特聯盟)：把 chips/screener 邏輯搬去做幣圈版，另一較大工程。
+
+═══════════════════════════════════════════════════════════════
+【貓咪隧道下軌掃描 → Telegram(繞過 TradingView 配額)】(2026/08)
+═══════════════════════════════════════════════════════════════
+- 目的:把 BitoAlliance 五貓咪隧道的「日線貓咪下軌」用在台股/美股,收盤後掃全池,
+  挑出今日最低觸及日貓咪下軌(跌深反轉做多候選)的股票,彙整一則推 台股報報/美股報報。
+  不再受 TradingView Premium「篩選器快訊只能掃兩個清單」的配額限制,擴標的=改股票池即可。
+- 檔案(trading-bot):cat_tunnel_scanner.py + .github/workflows/cat_tunnel_scanner.yml
+- 沿用 pattern_scanner 的 build_pool / fetch_quotes(同股票池、同 /screener-quote 資料源、
+  同 BOT_TOKEN/TW_CHANNEL_ID/US_CHANNEL_ID),不需新 Secret。
+- 演算法:高斯核回歸隧道下軌,精確移植自 Pine 五貓咪 f_get_bands_array(i=0 係數),
+  BW=14、DEV=1.5、closes 最新在前;下軌=加權平均 − 1.5×加權標準差。已用假資料+平盤驗證。
+- 觸發:當日最低 ≤ 下軌(用 /screener-quote 的 lows[-1],已確認有回 lows;無 lows 則退回收盤)。
+  RECOVER=False(純觸及,不要求站回)。
+- 排程:台股 15:45(cron 45 7)、美股 08:15 台灣(cron 15 0),收盤後各跑一次。
+  workflow_dispatch 可手動選市場。市場判斷:UTC 時 ≥5=tw 否則=us。
+- 踩雷:workflow 若寫了 RAILWAY_API 但沒建該 Secret,會變空字串→網址 https:///screener-quote
+  全批失敗。解法=移除 workflow 裡的 RAILWAY_API 那行,讓 pattern_scanner 用內建預設網址。
+- 待觀察:暴跌日可能一次觸及一二十檔洗版,屆時加收斂(距下軌 X% 內/成交量門檻)。
+- 未做:H1 貓咪下軌(回調即時進場點)需小時線資料源+盤中排程,另議。cat_touch_log 表
+  (盤中即時版的去重表)最後未採用,可 drop。
