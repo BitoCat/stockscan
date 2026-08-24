@@ -732,22 +732,31 @@ chip_push.py(投信吸籌榜推播,排程16:17,台股報報):
 - 幣圈版(比特聯盟)：把 chips/screener 邏輯搬去做幣圈版，另一較大工程。
 
 ═══════════════════════════════════════════════════════════════
-【貓咪隧道下軌掃描 → Telegram(繞過 TradingView 配額)】(2026/08)
+【貓咪隧道下軌掃描 → Telegram(盤中多時點+去重,最終版)】(2026/08)
 ═══════════════════════════════════════════════════════════════
-- 目的:把 BitoAlliance 五貓咪隧道的「日線貓咪下軌」用在台股/美股,收盤後掃全池,
-  挑出今日最低觸及日貓咪下軌(跌深反轉做多候選)的股票,彙整一則推 台股報報/美股報報。
-  不再受 TradingView Premium「篩選器快訊只能掃兩個清單」的配額限制,擴標的=改股票池即可。
+- 目的:把 BitoAlliance 五貓咪隧道的「日線貓咪下軌」用在台股/美股,盤中+收盤多時點掃全池,
+  挑出今日最低觸及日貓咪下軌(跌深反彈概念)的股票,推 台股報報/美股報報。
+  繞過 TradingView「篩選器快訊只能兩清單」配額;擴標的=改股票池即可。
 - 檔案(trading-bot):cat_tunnel_scanner.py + .github/workflows/cat_tunnel_scanner.yml
-- 沿用 pattern_scanner 的 build_pool / fetch_quotes(同股票池、同 /screener-quote 資料源、
-  同 BOT_TOKEN/TW_CHANNEL_ID/US_CHANNEL_ID),不需新 Secret。
-- 演算法:高斯核回歸隧道下軌,精確移植自 Pine 五貓咪 f_get_bands_array(i=0 係數),
-  BW=14、DEV=1.5、closes 最新在前;下軌=加權平均 − 1.5×加權標準差。已用假資料+平盤驗證。
-- 觸發:當日最低 ≤ 下軌(用 /screener-quote 的 lows[-1],已確認有回 lows;無 lows 則退回收盤)。
-  RECOVER=False(純觸及,不要求站回)。
-- 排程:台股 15:45(cron 45 7)、美股 08:15 台灣(cron 15 0),收盤後各跑一次。
-  workflow_dispatch 可手動選市場。市場判斷:UTC 時 ≥5=tw 否則=us。
-- 踩雷:workflow 若寫了 RAILWAY_API 但沒建該 Secret,會變空字串→網址 https:///screener-quote
-  全批失敗。解法=移除 workflow 裡的 RAILWAY_API 那行,讓 pattern_scanner 用內建預設網址。
-- 待觀察:暴跌日可能一次觸及一二十檔洗版,屆時加收斂(距下軌 X% 內/成交量門檻)。
-- 未做:H1 貓咪下軌(回調即時進場點)需小時線資料源+盤中排程,另議。cat_touch_log 表
-  (盤中即時版的去重表)最後未採用,可 drop。
+- 沿用 pattern_scanner 的 build_pool / fetch_quotes(同池、同 /screener-quote、同 BOT_TOKEN/
+  TW_CHANNEL_ID/US_CHANNEL_ID),不需新 Secret。
+- 演算法:高斯核回歸隧道下軌,精確移植自 Pine 五貓咪 f_get_bands_array(i=0),BW=14、DEV=1.5、
+  closes 最新在前,下軌=加權平均−1.5×加權標準差。已用假資料+平盤驗證。
+- 觸發:當日最低 ≤ 下軌(用 /screener-quote 的 lows[-1],已確認盤後有回 lows;無 lows 退回收盤)。
+  純觸及,不要求站回。
+- 去重:Supabase 表 cat_touch_log(market,code,touch_date PK;RLS for all using/​with check true)。
+  同一檔當天只推一次,盤中推過收盤那輪自動跳過;某輪無新觸及則不發訊息(不洗版)。
+- 掃描時點:
+  · 台股(固定 UTC,無日光節約):cron '0 2'(10:00 台灣 開盤後)、'35 5'(13:35 收盤後)。
+  · 美股(夏冬令自動):寬鬆撒 cron '0 14,15'、'30 17,18'、'5 20,21',程式用 zoneinfo
+    America/New_York 判斷是否落在美東 10:00/13:30/16:05(±20分)窗口,不在就 [skip]。
+    workflow 用 pip install requests tzdata。
+- workflow 市場判斷:UTC 時 <10=tw 否則=us;workflow_dispatch 手動會加 --force 略過美股窗口。
+- 推播格式(已簡化):標題「🐱 貓咪隧道｜{台股/美股} 觸及日貓咪隧道下軌 {時:分}」+「(跌深反彈概念)」,
+  每檔只列「• 代號 名稱  價 X」(下軌/漲跌幅仍計算但不顯示)。
+- 踩雷紀錄:workflow 若寫了 RAILWAY_API 但沒建該 Secret→變空字串→網址 https:///screener-quote
+  全批失敗。解法=workflow 不要放 RAILWAY_API 那行,讓 pattern_scanner 用內建預設網址。
+- 待驗證:盤中那輪要確認 /screener-quote 的 closes[-1] 是「當下即時價」而非昨收(log 有印
+  「最後收盤=X」);若是昨收代表後端盤中有快取,需改接即時源(/quote 或批次即時)。
+- 待觀察:暴跌日可能一次觸及很多檔,屆時加收斂(距下軌 X% 內/成交量門檻)。
+- 未做:H1 貓咪下軌(回調即時進場)需小時線資料源+盤中排程,另議。
