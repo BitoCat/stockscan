@@ -682,7 +682,7 @@ async function renderChips(sym) {
     var biasLine = '<div style="color:' + bias.color + ';font-weight:700;font-size:15px;margin:2px 0 8px">近5日籌碼: ' + bias.label +
       (bias.notes.length ? '<span style="font-weight:400;font-size:12px;color:var(--muted)"> · ' + bias.notes.join(' · ') + '</span>' : '') + '</div>';
 
-    var stg = trustStage(tr, (typeof lastResult !== 'undefined' && lastResult && lastResult.closes) ? lastResult.closes : []);
+    var stg = trustStage(tr, (typeof window !== 'undefined' && window.__lastCloses) ? window.__lastCloses : []);
     var stageLine = '<div style="color:' + stg.color + ';font-weight:600;font-size:13px;margin:0 0 8px">投信位階: ' + stg.label + '<span style="font-weight:400;color:var(--muted)"> · ' + stg.note + '</span></div>';
     
     var cell = function (v) {
