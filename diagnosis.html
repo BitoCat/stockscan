@@ -615,6 +615,17 @@ async function renderChips(sym) {
     }
     rows.reverse();
 
+    // 融資融券近5日
+    var mgRows = [];
+    try {
+      var mgRes = await sb.from('tw_margin')
+        .select('date,margin_chg,short_chg')
+        .eq('code', code)
+        .order('date', { ascending: false })
+        .limit(5);
+      mgRows = (mgRes.data || []).reverse();
+    } catch (e) {}
+
     var toLot = function (v) { return Math.round((Number(v) || 0) / 1000); };
     var dates = rows.map(function (r) { return String(r.date); });
     var tr = rows.map(function (r) { return toLot(r.trust_net); });
@@ -656,12 +667,29 @@ async function renderChips(sym) {
       trow('投信', tr, true) +
       trow('自營', de, false) +
       '</table>';
+
+    // 融資融券增減表
+    var mgArr = function (k) { return mgRows.map(function (r) { return Number(r[k]) || 0; }); };
+    var mgc = mgArr('margin_chg'), shc = mgArr('short_chg');
+    var mgTable = '';
+    if (mgRows.length) {
+      mgTable = '<table style="width:100%;border-collapse:collapse;font-size:13px;margin:0 0 10px">' +
+        '<tr style="color:var(--muted);font-size:11px">' +
+        '<th style="text-align:left;padding:3px 8px;font-weight:400">信用 增減(張)</th>' +
+        '<th style="text-align:right;padding:3px 8px;font-weight:400">當日</th>' +
+        '<th style="text-align:right;padding:3px 8px;font-weight:400">近3日</th>' +
+        '<th style="text-align:right;padding:3px 8px;font-weight:400">近5日</th></tr>' +
+        trow('融資', mgc, false) +
+        trow('融券', shc, false) +
+        '</table>';
+    }
+
     var K = 5;
     var trK = tr.slice(-K), foK = fo.slice(-K), deK = de.slice(-K);
     var datesK = dates.slice(-K);
     var cum = function (arr) { var s = 0; return arr.map(function (x) { s += x; return s; }); };
     var cTr = cum(trK), cFo = cum(foK), cDe = cum(deK);
-    
+
     var W = 340, H = 170, padL = 10, padR = 10, padT = 12, padB = 24;
     var plotW = W - padL - padR, plotH = H - padT - padB;
     var n = cTr.length;
@@ -690,13 +718,14 @@ async function renderChips(sym) {
       '<span><span style="color:#55708f">━</span> 自營</span></div>';
 
     box.innerHTML = '<div class="sec-head">🔑 三大法人籌碼</div>' +
-      biasLine + table + svg + legend +
-      '<div style="font-size:11px;color:#4a6080;margin-top:6px;line-height:1.5">上表為各區間淨買賣(張,綠買紅賣);下圖為近十日累積走勢。多空判讀以近5日、投信為主角。</div>';
+      biasLine + table + mgTable + svg + legend +
+      '<div style="font-size:11px;color:#4a6080;margin-top:6px;line-height:1.5">法人為淨買賣、信用為餘額增減(張,綠增紅減);下圖為近5日法人累積。融資增=散戶加碼、融券增=空方增,判讀仍以三大法人為主。</div>';
   } catch (e) {
     box.innerHTML = '<div class="sec-head">🔑 三大法人籌碼</div>' +
-      '<div style="color:var(--muted);font-size:13px;padding:4px 0">籌碼資料載入失敗, 稍後再試。</div>';
+      '<div style="color:var(--muted):font-size:13px;padding:4px 0">籌碼資料載入失敗, 稍後再試。</div>';
   }
 }
+  
 async function renderHolders(sym) {
   var box = document.getElementById('r-holders');
   if (!box) return;
