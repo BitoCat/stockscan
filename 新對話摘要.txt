@@ -760,3 +760,60 @@ chip_push.py(投信吸籌榜推播,排程16:17,台股報報):
   「最後收盤=X」);若是昨收代表後端盤中有快取,需改接即時源(/quote 或批次即時)。
 - 待觀察:暴跌日可能一次觸及很多檔,屆時加收斂(距下軌 X% 內/成交量門檻)。
 - 未做:H1 貓咪下軌(回調即時進場)需小時線資料源+盤中排程,另議。
+
+═══════════════════════════════════════════════════════════════
+【融資融券 + 投信位階 + AI 換模型】(2026/08 更新)
+═══════════════════════════════════════════════════════════════
+
+■ 融資融券(散戶槓桿)
+--------------------------------------------------------------
+- 新表 tw_margin：code/date/margin_bal/margin_chg/short_bal/short_chg/updated_at，
+  PK(code,date)，RLS read all(select using true)。增減=今日餘額−前日餘額，單位張。
+- 新爬蟲 margin_scanner.py(trading-bot)：
+  · 上市 TWSE：https://openapi.twse.com.tw/v1/exchangeReport/MI_MARGN(中文欄位名：
+    融資今日餘額/融資前日餘額/融券今日餘額/融券前日餘額)。
+  · 上櫃 TPEX：https://www.tpex.org.tw/openapi/v1/tpex_mainboard_margin_balance
+    (英文欄位：MarginPurchaseBalance / MarginPurchaseBalancePreviousDay /
+    ShortSaleBalance / ShortSaleBalancePreviousDay；日期 ROC 1150826→20260826)。
+  · 只留四碼個股，upsert 用 SUPABASE_SERVICE_KEY。實測上市1067+上櫃802=1869筆。
+- 排程 margin_scanner.yml：cron '0 8 * * 1-5'(台股16:00收盤後)。
+- TPEX 探端點踩雷：不存在的 openapi 路徑會回首頁 HTML(HTTP200、非404)。正解是
+  抓 swagger 規格檔 https://www.tpex.org.tw/openapi/swagger.json 撈 paths 找關鍵字。
+
+■ 健診籌碼卡(diagnosis.html / renderChips)最終結構
+--------------------------------------------------------------
+由上而下：近5日多空判讀(chipBias) → 投信位階(trustStage) → 三大法人表(當日/近3日/近5日)
+→ 信用增減表(融資/融券當日/近3日/近5日) → 近5日法人累積曲線。
+- 三大法人撈 tw_institutional limit(60)；融資融券撈 tw_margin limit(5)。
+- 表格區間用 sumLast(arr,1/3/5)；曲線只取 slice(-5) 與表格對齊(避免圖5日/數字不同窗誤讀)。
+- 綠買/增、紅賣/減；投信列金色標(主角)。
+
+■ 投信位階判讀(chipBias / trustStage 邏輯)—— 解「投信0是買滿還是不看好」
+--------------------------------------------------------------
+- chipBias(多空)：投信±2、外資±1、合計±1；≥3偏多/≤-3偏空/中間分級。
+  提示背離(外資買投信賣=追高留意 / 外資賣投信買=底部吸籌)。判讀以近5日、投信為核心。
+- trustStage(投信位階)：用近60日投信買賣超「累積線位階 pos(0~100)」+ 近5日動向 +
+  股價近60日位階(price_pos)：
+  · 近5日明顯買 → 投信加碼中
+  · pos≥70 且 price_pos≤40 → 低檔吸滿未發動(黃金訊號，最佳)
+  · pos≥70 且股價已高 → 已重壓，留意獲利了結
+  · pos≤30 → 手上少貨，近期0是觀望非布局(偏空)
+  · 需≥20筆才判，否則「資料不足，約60日後可判讀」(上櫃8/21才起，先資料不足)。
+
+■ AI 換模型(重要)
+--------------------------------------------------------------
+- 症狀：一路加籌碼資料把 prompt 養胖後，gpt-oss-120b 常「分析失敗：JSON Parse error
+  Expected ']'」= 推理吃光 max_tokens，JSON 被截斷；且120b免費層 TPM 僅8000易撞頂。
+- 解法：js/supabase.js callGroq 模型 gpt-oss-120b → gpt-oss-20b(免費層 TPM 20萬、最快、
+  較不吃推理 token)；diagnosis.html 健診呼叫 callGroq 的 max_tokens 2500 → 4000。
+
+■ 踩雷紀錄
+--------------------------------------------------------------
+- closes 作用域坑：報價的 closes 宣告在某個 try(224-320) 內，lastResult(393) 在另一個
+  try(368起)，跨 try 拿不到→「Can't find variable: closes」。解法：在算完 closes 後存
+  window.__lastCloses，renderChips 從 window 讀來算股價位階。
+
+■ 待養/待辦
+--------------------------------------------------------------
+- 上櫃投信位階、大戶結構、融資融券歷史都從8月下旬起往前養，約60日後判讀才完整。
+- 融券資尚未納入多空判讀(目前只顯示數字)。投信持股「成本區vs現價」為可選進階。
