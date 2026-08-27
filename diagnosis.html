@@ -366,7 +366,7 @@ async function analyze() {
     '\ngrade必須是：強力買進、買進、谷底反彈機會、觀察等待、持有、減碼、避開之一';
 
   try {
-    const raw = await callGroq(prompt, 2500, currentProfile.groq_key);
+    const raw = await callGroq(prompt, 2000, currentProfile.groq_key);
     const clean = raw.replace(/```json|```/g, '').trim();
     var obj;
     try { obj = JSON.parse(clean); } catch(e) { var m=clean.match(/\{[\s\S]*\}/); obj=JSON.parse(m[0]); }
