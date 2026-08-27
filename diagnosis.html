@@ -226,6 +226,7 @@ async function analyze() {
     const data = await fetchQuote(sym);
 
     const closes = (data.closes || []).filter(function(c){ return c != null && !isNaN(c); });
+    window.__lastCloses = closes;    
     const highs   = (data.highs  || []).filter(function(v){ return v != null && !isNaN(v); });
     const lows    = (data.lows   || []).filter(function(v){ return v != null && !isNaN(v); });
 
@@ -390,7 +391,7 @@ async function analyze() {
       obj.targetHighPrice = livePrice.targetHighPrice;
     }
 
-    lastResult = Object.assign({}, obj, {symbol: sym, market: currentMkt, closes: closes});
+    lastResult = Object.assign({}, obj, {symbol: sym, market: currentMkt});
     await deductPoint(currentUser.id, 'AI 健診：' + sym);
     const newPts = await getPoints(currentUser.id);
     document.getElementById('pts-display').textContent = newPts + ' 點';
