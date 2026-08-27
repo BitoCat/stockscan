@@ -656,12 +656,15 @@ async function renderChips(sym) {
       trow('投信', tr, true) +
       trow('自營', de, false) +
       '</table>';
-
+    var K = 5;
+    var trK = tr.slice(-K), foK = fo.slice(-K), deK = de.slice(-K);
+    var datesK = dates.slice(-K);
     var cum = function (arr) { var s = 0; return arr.map(function (x) { s += x; return s; }); };
-    var cTr = cum(tr), cFo = cum(fo), cDe = cum(de);
+    var cTr = cum(trK), cFo = cum(foK), cDe = cum(deK);
+    
     var W = 340, H = 170, padL = 10, padR = 10, padT = 12, padB = 24;
     var plotW = W - padL - padR, plotH = H - padT - padB;
-    var n = rows.length;
+    var n = cTr.length;
     var all = cTr.concat(cFo).concat(cDe); all.push(0);
     var maxV = Math.max.apply(null, all), minV = Math.min.apply(null, all);
     if (maxV === minV) { maxV += 1; minV -= 1; }
@@ -673,7 +676,7 @@ async function renderChips(sym) {
     var lblIdx = n <= 2 ? [0, n - 1] : [0, Math.floor((n - 1) / 2), n - 1];
     var xlabels = lblIdx.map(function (i) {
       var anchor = i === 0 ? 'start' : (i === n - 1 ? 'end' : 'middle');
-      return '<text x="' + X(i).toFixed(1) + '" y="' + (H - 8) + '" fill="#4a6080" font-size="9" text-anchor="' + anchor + '" font-family="Share Tech Mono">' + mmdd(dates[i]) + '</text>';
+      return '<text x="' + X(i).toFixed(1) + '" y="' + (H - 8) + '" fill="#4a6080" font-size="9" text-anchor="' + anchor + '" font-family="Share Tech Mono">' + mmdd(datesK[i]) + '</text>';
     }).join('');
     var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block">' +
       '<line x1="' + padL + '" y1="' + zeroY + '" x2="' + (W - padR) + '" y2="' + zeroY + '" stroke="#33507d" stroke-width="1" stroke-dasharray="3 3"/>' +
