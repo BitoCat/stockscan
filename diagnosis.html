@@ -573,6 +573,24 @@ async function saveToWatchlist() {
   }
 })();
 
+function chipBias(total, foreign, trust, dealer) {
+  var score = 0;
+  if (trust > 0) score += 2; else if (trust < 0) score -= 2;   // 投信為主角,權重最高
+  if (foreign > 0) score += 1; else if (foreign < 0) score -= 1;
+  if (total > 0) score += 1; else if (total < 0) score -= 1;
+  var notes = [];
+  if (foreign > 0 && trust < 0) notes.push('外資買、投信不追(背離,追高留意)');
+  else if (foreign < 0 && trust > 0) notes.push('投信逆勢接(底部吸籌型態)');
+  if (Math.abs(dealer) > Math.abs(total) && dealer !== 0) notes.push('自營佔比大(多屬避險)');
+  var label, color;
+  if (score >= 3) { label = '偏多'; color = '#31d071'; }
+  else if (score >= 1) { label = '中性偏多'; color = '#8fd0a0'; }
+  else if (score <= -3) { label = '偏空'; color = '#ff5470'; }
+  else if (score <= -1) { label = '中性偏空'; color = '#e0908c'; }
+  else { label = '中性'; color = '#7a90b0'; }
+  return { label: label, color: color, notes: notes };
+}
+
 async function renderChips(sym) {
   var box = document.getElementById('r-chips');
   if (!box) return;
@@ -580,7 +598,7 @@ async function renderChips(sym) {
   var code = (sym || '').replace(/[^0-9]/g, '');
   if (!code || code.length < 4) { box.innerHTML = ''; return; }
 
-  box.innerHTML = '<div class="sec-head">🔑 三大法人十日籌碼</div>' +
+  box.innerHTML = '<div class="sec-head">🔑 三大法人籌碼</div>' +
     '<div style="color:var(--muted);font-size:13px;padding:4px 0">載入中...</div>';
 
   try {
@@ -591,8 +609,8 @@ async function renderChips(sym) {
       .limit(10);
     var rows = res.data || [];
     if (!rows.length) {
-      box.innerHTML = '<div class="sec-head">🔑 三大法人十日籌碼</div>' +
-        '<div style="color:var(--muted);font-size:13px;padding:4px 0">本檔近十日無三大法人資料(可能為上櫃或無交易紀錄)。</div>';
+      box.innerHTML = '<div class="sec-head">🔑 三大法人籌碼</div>' +
+        '<div style="color:var(--muted);font-size:13px;padding:4px 0">本檔近期無三大法人資料(可能為上櫃或無交易紀錄)。</div>';
       return;
     }
     rows.reverse();
@@ -602,92 +620,80 @@ async function renderChips(sym) {
     var tr = rows.map(function (r) { return toLot(r.trust_net); });
     var fo = rows.map(function (r) { return toLot(r.foreign_net); });
     var de = rows.map(function (r) { return toLot(r.dealer_net); });
-
-    var cum = function (arr) { var s = 0; return arr.map(function (x) { s += x; return s; }); };
-    var cTr = cum(tr), cFo = cum(fo), cDe = cum(de);
-
-    var streak = 0;
-    for (var i = rows.length - 1; i >= 0; i--) {
-      if ((Number(rows[i].trust_net) || 0) > 0) streak++; else break;
-    }
-
-    var trustSum = cTr[cTr.length - 1];
-    var foreignSum = cFo[cFo.length - 1];
-    var dealerSum = cDe[cDe.length - 1];
+    var to = rows.map(function (r) { return toLot(r.total_net); });
 
     var fmt = function (x) {
       var nn = Math.round(x);
-      var s = Math.abs(nn).toLocaleString('en-US');
-      return (nn > 0 ? '+' : (nn < 0 ? '-' : '')) + s;
+      return (nn > 0 ? '+' : (nn < 0 ? '-' : '')) + Math.abs(nn).toLocaleString('en-US');
+    };
+    var sumLast = function (arr, k) {
+      var s = 0;
+      for (var i = Math.max(0, arr.length - k); i < arr.length; i++) s += arr[i];
+      return s;
     };
 
-    var verdict, vcolor;
-    if (trustSum > 0) {
-      vcolor = '#31d071';
-      verdict = '投信近十日淨吸籌 ' + fmt(trustSum) + ' 張';
-      verdict += streak >= 3 ? (', 連買 ' + streak + ' 日 → 增持中') : ' → 偏買';
-    } else if (trustSum < 0) {
-      vcolor = '#ff5470';
-      verdict = '投信近十日淨調節 ' + fmt(trustSum) + ' 張 → 減持中';
-    } else {
-      vcolor = 'var(--muted)';
-      verdict = '投信近十日進出平衡 → 中性';
-    }
+    var bias = chipBias(sumLast(to, 5), sumLast(fo, 5), sumLast(tr, 5), sumLast(de, 5));
+    var biasLine = '<div style="color:' + bias.color + ';font-weight:700;font-size:15px;margin:2px 0 8px">近5日籌碼: ' + bias.label +
+      (bias.notes.length ? '<span style="font-weight:400;font-size:12px;color:var(--muted)"> · ' + bias.notes.join(' · ') + '</span>' : '') + '</div>';
 
-    var W = 340, H = 180, padL = 10, padR = 10, padT = 14, padB = 26;
+    var cell = function (v) {
+      var c = v > 0 ? '#31d071' : (v < 0 ? '#ff5470' : '#7a90b0');
+      return '<td style="text-align:right;font-family:monospace;color:' + c + ';padding:3px 8px">' + fmt(v) + '</td>';
+    };
+    var trow = function (label, arr, hl) {
+      return '<tr>' +
+        '<td style="padding:3px 8px;color:' + (hl ? '#ffb020' : 'var(--muted)') + ';font-weight:' + (hl ? '700' : '400') + '">' + label + '</td>' +
+        cell(sumLast(arr, 1)) + cell(sumLast(arr, 3)) + cell(sumLast(arr, 5)) + '</tr>';
+    };
+    var table = '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px">' +
+      '<tr style="color:var(--muted);font-size:11px">' +
+      '<th style="text-align:left;padding:3px 8px;font-weight:400">法人 (張)</th>' +
+      '<th style="text-align:right;padding:3px 8px;font-weight:400">當日</th>' +
+      '<th style="text-align:right;padding:3px 8px;font-weight:400">近3日</th>' +
+      '<th style="text-align:right;padding:3px 8px;font-weight:400">近5日</th></tr>' +
+      trow('合計', to, false) +
+      trow('外資', fo, false) +
+      trow('投信', tr, true) +
+      trow('自營', de, false) +
+      '</table>';
+
+    var cum = function (arr) { var s = 0; return arr.map(function (x) { s += x; return s; }); };
+    var cTr = cum(tr), cFo = cum(fo), cDe = cum(de);
+    var W = 340, H = 170, padL = 10, padR = 10, padT = 12, padB = 24;
     var plotW = W - padL - padR, plotH = H - padT - padB;
     var n = rows.length;
-    var all = cTr.concat(cFo).concat(cDe);
-    all.push(0);
+    var all = cTr.concat(cFo).concat(cDe); all.push(0);
     var maxV = Math.max.apply(null, all), minV = Math.min.apply(null, all);
     if (maxV === minV) { maxV += 1; minV -= 1; }
     var X = function (i) { return n <= 1 ? padL + plotW / 2 : padL + plotW * i / (n - 1); };
     var Y = function (v) { return padT + (maxV - v) / (maxV - minV) * plotH; };
-    var pts = function (arr) {
-      return arr.map(function (v, i) { return X(i).toFixed(1) + ',' + Y(v).toFixed(1); }).join(' ');
-    };
+    var pts = function (arr) { return arr.map(function (v, i) { return X(i).toFixed(1) + ',' + Y(v).toFixed(1); }).join(' '); };
     var zeroY = Y(0).toFixed(1);
-
     var mmdd = function (d) { return d.slice(4, 6) + '/' + d.slice(6, 8); };
     var lblIdx = n <= 2 ? [0, n - 1] : [0, Math.floor((n - 1) / 2), n - 1];
     var xlabels = lblIdx.map(function (i) {
       var anchor = i === 0 ? 'start' : (i === n - 1 ? 'end' : 'middle');
       return '<text x="' + X(i).toFixed(1) + '" y="' + (H - 8) + '" fill="#4a6080" font-size="9" text-anchor="' + anchor + '" font-family="Share Tech Mono">' + mmdd(dates[i]) + '</text>';
     }).join('');
-
     var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block">' +
       '<line x1="' + padL + '" y1="' + zeroY + '" x2="' + (W - padR) + '" y2="' + zeroY + '" stroke="#33507d" stroke-width="1" stroke-dasharray="3 3"/>' +
       '<polyline fill="none" stroke="#55708f" stroke-width="1.2" opacity="0.55" points="' + pts(cDe) + '"/>' +
       '<polyline fill="none" stroke="#00d4ff" stroke-width="1.6" points="' + pts(cFo) + '"/>' +
       '<polyline fill="none" stroke="#ffb020" stroke-width="2.4" points="' + pts(cTr) + '" style="filter:drop-shadow(0 0 3px rgba(255,176,32,.5))"/>' +
-      xlabels +
-      '</svg>';
-
-    var pill = function (label, val, color) {
-      return '<div style="flex:1;text-align:center;padding:6px 4px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px">' +
-        '<div style="font-size:11px;color:var(--muted)">' + label + '</div>' +
-        '<div style="font-family:monospace;font-size:15px;color:' + color + '">' + val + '</div></div>';
-    };
-
+      xlabels + '</svg>';
     var legend = '<div style="display:flex;gap:14px;justify-content:center;margin-top:4px;font-size:11px;color:var(--muted)">' +
       '<span><span style="color:#ffb020">━</span> 投信</span>' +
       '<span><span style="color:#00d4ff">━</span> 外資</span>' +
-      '<span><span style="color:#55708f">━</span> 自營(避險雜訊)</span></div>';
+      '<span><span style="color:#55708f">━</span> 自營</span></div>';
 
-    box.innerHTML = '<div class="sec-head">🔑 三大法人十日籌碼</div>' +
-      '<div style="color:' + vcolor + ';font-weight:700;font-size:14px;margin:2px 0 8px">' + verdict + '</div>' +
-      '<div style="display:flex;gap:8px;margin-bottom:8px">' +
-      pill('投信十日', fmt(trustSum) + ' 張', '#ffb020') +
-      pill('外資十日', fmt(foreignSum) + ' 張', '#00d4ff') +
-      pill('自營十日', fmt(dealerSum) + ' 張', '#7a90b0') +
-      '</div>' + svg + legend +
-      '<div style="font-size:11px;color:#4a6080;margin-top:6px;line-height:1.5">曲線為累積淨買賣(張), 往上=法人持續買進。投信為主角, 自營多屬避險雜訊僅供參考。</div>';
+    box.innerHTML = '<div class="sec-head">🔑 三大法人籌碼</div>' +
+      biasLine + table + svg + legend +
+      '<div style="font-size:11px;color:#4a6080;margin-top:6px;line-height:1.5">上表為各區間淨買賣(張,綠買紅賣);下圖為近十日累積走勢。多空判讀以近5日、投信為主角。</div>';
   } catch (e) {
-    box.innerHTML = '<div class="sec-head">🔑 三大法人十日籌碼</div>' +
+    box.innerHTML = '<div class="sec-head">🔑 三大法人籌碼</div>' +
       '<div style="color:var(--muted);font-size:13px;padding:4px 0">籌碼資料載入失敗, 稍後再試。</div>';
   }
-}  
-
+}
 async function renderHolders(sym) {
   var box = document.getElementById('r-holders');
   if (!box) return;
