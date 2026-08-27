@@ -103,7 +103,7 @@ async function callGroq(prompt, maxTokens, key) {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-    body: JSON.stringify({ model: 'openai/gpt-oss-120b', reasoning_effort: 'low', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model: 'openai/gpt-oss-20b', reasoning_effort: 'low', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
   });
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
