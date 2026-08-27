@@ -591,6 +591,40 @@ function chipBias(total, foreign, trust, dealer) {
   return { label: label, color: color, notes: notes };
 }
 
+function trustStage(trustDaily, closes) {
+  var n = trustDaily.length;
+  if (n < 20) return { label: '資料不足', color: '#7a90b0', note: '投信歷史不足,約60日後可判讀' };
+  var cum = [], s = 0;
+  for (var i = 0; i < n; i++) { s += trustDaily[i]; cum.push(s); }
+  var cur = cum[n - 1];
+  var lo = Math.min.apply(null, cum), hi = Math.max.apply(null, cum);
+  var rng = hi > lo ? hi - lo : 1;
+  var pos = (cur - lo) / rng * 100;
+  var recent5 = 0;
+  for (var j = Math.max(0, n - 5); j < n; j++) recent5 += trustDaily[j];
+  var pp = null;
+  var pc = (closes || []).filter(function (c) { return c != null && !isNaN(c); }).slice(-60);
+  if (pc.length >= 20) {
+    var plo = Math.min.apply(null, pc), phi = Math.max.apply(null, pc);
+    var prng = phi > plo ? phi - plo : 1;
+    pp = (pc[pc.length - 1] - plo) / prng * 100;
+  }
+  var label, color, note;
+  if (recent5 > 0 && Math.abs(recent5) >= rng * 0.05) {
+    label = '投信加碼中'; color = '#31d071'; note = '近5日持續買進,布局進行式';
+  } else if (pos >= 70) {
+    label = '投信高持股'; color = '#31d071';
+    if (pp != null && pp <= 40) note = '累積在高檔、股價仍低 → 低檔吸滿未發動(黃金訊號)';
+    else if (pp != null && pp >= 60) note = '已重壓且股價已漲,留意獲利了結';
+    else note = '已重壓,布局大致完成';
+  } else if (pos <= 30) {
+    label = '投信低持股'; color = '#ff5470'; note = '累積在低檔 → 手上少貨,近期靜止是觀望非布局';
+  } else {
+    label = '投信中性'; color = '#7a90b0'; note = '持股中等,方向不明';
+  }
+  return { label: label, color: color, note: note };
+}  
+  
 async function renderChips(sym) {
   var box = document.getElementById('r-chips');
   if (!box) return;
@@ -606,7 +640,7 @@ async function renderChips(sym) {
       .select('date,foreign_net,trust_net,dealer_net,total_net')
       .eq('ticker', code)
       .order('date', { ascending: false })
-      .limit(10);
+      .limit(60);
     var rows = res.data || [];
     if (!rows.length) {
       box.innerHTML = '<div class="sec-head">🔑 三大法人籌碼</div>' +
@@ -647,6 +681,9 @@ async function renderChips(sym) {
     var biasLine = '<div style="color:' + bias.color + ';font-weight:700;font-size:15px;margin:2px 0 8px">近5日籌碼: ' + bias.label +
       (bias.notes.length ? '<span style="font-weight:400;font-size:12px;color:var(--muted)"> · ' + bias.notes.join(' · ') + '</span>' : '') + '</div>';
 
+    var stg = trustStage(tr, (typeof lastResult !== 'undefined' && lastResult && lastResult.closes) ? lastResult.closes : []);
+    var stageLine = '<div style="color:' + stg.color + ';font-weight:600;font-size:13px;margin:0 0 8px">投信位階: ' + stg.label + '<span style="font-weight:400;color:var(--muted)"> · ' + stg.note + '</span></div>';
+    
     var cell = function (v) {
       var c = v > 0 ? '#31d071' : (v < 0 ? '#ff5470' : '#7a90b0');
       return '<td style="text-align:right;font-family:monospace;color:' + c + ';padding:3px 8px">' + fmt(v) + '</td>';
