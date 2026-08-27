@@ -390,7 +390,7 @@ async function analyze() {
       obj.targetHighPrice = livePrice.targetHighPrice;
     }
 
-    lastResult = Object.assign({}, obj, {symbol: sym, market: currentMkt});
+    lastResult = Object.assign({}, obj, {symbol: sym, market: currentMkt, closes: closes});
     await deductPoint(currentUser.id, 'AI 健診：' + sym);
     const newPts = await getPoints(currentUser.id);
     document.getElementById('pts-display').textContent = newPts + ' 點';
