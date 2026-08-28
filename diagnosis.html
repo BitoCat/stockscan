@@ -531,7 +531,8 @@ function renderResult(sym, d) {
   document.getElementById('r-time').textContent = '診斷：' + new Date().toLocaleString('zh-TW');
   renderChips(sym);
   renderHolders(sym);  
-  renderInsider(sym);  
+  renderInsider(sym); 
+  renderWhale(sym);  
   document.getElementById('res-card').classList.add('show');
   document.getElementById('res-card').scrollIntoView({behavior:'smooth', block:'nearest'});
 }
@@ -641,6 +642,96 @@ function trustStage(trustDaily, closes) {
     return { label: '內部人淨賣出', color: '#e0908c', note: '內部人淨賣,常為例行減持,參考即可' };
   return { label: '買賣互見', color: '#c9a94e', note: '內部人有買有賣,方向不明' };
 }
+
+function summarize13F(rows) {
+  var cnt = { New: 0, Add: 0, Reduce: 0, Sold: 0 };
+  var newFilers = [];
+  rows.forEach(function (r) {
+    var t = (r.position_change_type || '').trim();
+    if (cnt[t] !== undefined) cnt[t]++;
+    if (t === 'New') newFilers.push(r.filer_name);
+  });
+  var bulls = cnt.New + cnt.Add, bears = cnt.Reduce + cnt.Sold;
+  var label, color, note;
+  if (rows.length === 0) {
+    label = '無機構持倉資料'; color = '#7a90b0'; note = '本季無 13F 資料';
+  } else if (bulls > bears * 1.5) {
+    label = '機構加碼'; color = '#31d071';
+    note = cnt.New + '家新建倉、' + cnt.Add + '家加碼';
+  } else if (bears > bulls * 1.5) {
+    label = '機構減持'; color = '#ff5470';
+    note = bears + '家減碼/清倉 vs ' + bulls + '家加碼';
+  } else {
+    label = '機構持平'; color = '#c9a94e';
+    note = bulls + '家加碼 / ' + bears + '家減持,分歧';
+  }
+  return { label: label, color: color, note: note, cnt: cnt,
+           filers: rows.length, newFilers: newFilers.slice(0, 3) };
+}
+
+async function renderWhale(sym) {
+  var box = document.getElementById('r-whale');
+  if (!box) return;
+  if (currentMkt !== 'us') { box.innerHTML = ''; return; }
+  var tk = (sym || '').toUpperCase().replace(/[^A-Z0-9.]/g, '');
+  if (!tk) { box.innerHTML = ''; return; }
+
+  box.innerHTML = '<div class="sec-head">🏦 機構持股 (13F)</div>' +
+    '<div style="color:var(--muted);font-size:13px;padding:4px 0">載入中...</div>';
+
+  try {
+    var res = await sb.from('whale_positions')
+      .select('filer_name,position_change_type,market_value,pct_of_portfolio,quarter')
+      .eq('ticker', tk)
+      .order('market_value', { ascending: false })
+      .limit(200);
+    var rows = res.data || [];
+    if (!rows.length) {
+      box.innerHTML = '<div class="sec-head">🏦 機構持股 (13F)</div>' +
+        '<div style="color:var(--muted);font-size:13px;padding:4px 0">本檔近期無 13F 機構持倉資料。</div>';
+      return;
+    }
+    var s = summarize13F(rows);
+    var q = rows[0].quarter ? ('<span style="font-size:11px;color:var(--muted)"> · ' + rows[0].quarter + '</span>') : '';
+    var verdict = '<div style="color:' + s.color + ';font-weight:700;font-size:15px;margin:2px 0 6px">' + s.label + q +
+      '<span style="font-weight:400;font-size:12px;color:var(--muted)"> · ' + s.note + '</span></div>';
+
+    var pill = function (lbl, n, color) {
+      return '<span style="display:inline-block;margin:2px 6px 2px 0;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.05);font-size:12px;color:' + color + '">' + lbl + ' ' + n + '</span>';
+    };
+    var pills = '<div style="margin:4px 0">' +
+      pill('新建倉', s.cnt.New, '#31d071') +
+      pill('加碼', s.cnt.Add, '#8fd0a0') +
+      pill('減碼', s.cnt.Reduce, '#e0908c') +
+      pill('清倉', s.cnt.Sold, '#ff5470') +
+      '</div>';
+
+    var topRows = rows.slice(0, 5).map(function (r) {
+      var t = (r.position_change_type || '').trim();
+      var tc = (t === 'New' || t === 'Add') ? '#31d071' : ((t === 'Reduce' || t === 'Sold') ? '#ff5470' : '#7a90b0');
+      var tzh = { New: '新建倉', Add: '加碼', Reduce: '減碼', Sold: '清倉' }[t] || t;
+      var mv = Number(r.market_value) || 0;
+      var mvs = mv >= 1e9 ? (mv / 1e9).toFixed(1) + 'B' : (mv >= 1e6 ? (mv / 1e6).toFixed(0) + 'M' : mv);
+      return '<tr>' +
+        '<td style="padding:3px 8px;color:var(--fg);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px">' + (r.filer_name || '?') + '</td>' +
+        '<td style="padding:3px 8px;text-align:right;color:' + tc + ';font-size:12px">' + tzh + '</td>' +
+        '<td style="padding:3px 8px;text-align:right;font-family:monospace;color:var(--muted);font-size:12px">$' + mvs + '</td></tr>';
+    }).join('');
+    var table = '<table style="width:100%;border-collapse:collapse;margin:4px 0">' +
+      '<tr style="color:var(--muted);font-size:11px">' +
+      '<th style="text-align:left;padding:3px 8px;font-weight:400">主要機構</th>' +
+      '<th style="text-align:right;padding:3px 8px;font-weight:400">動作</th>' +
+      '<th style="text-align:right;padding:3px 8px;font-weight:400">市值</th></tr>' +
+      topRows + '</table>';
+
+    box.innerHTML = '<div class="sec-head">🏦 機構持股 (13F)</div>' +
+      verdict + pills + table +
+      '<div style="font-size:11px;color:#4a6080;margin-top:6px;line-height:1.5">共 ' + s.filers + ' 家機構持有(依市值前5大)。13F 為季報、延遲約45天,反映大方向而非即時。New=新建倉 Add=加碼 Reduce=減碼 Sold=清倉。</div>';
+  } catch (e) {
+    box.innerHTML = '<div class="sec-head">🏦 機構持股 (13F)</div>' +
+      '<div style="color:var(--muted);font-size:13px;padding:4px 0">機構持股資料載入失敗, 稍後再試。</div>';
+  }
+}  
 
 async function renderInsider(sym) {
   var box = document.getElementById('r-insider');
