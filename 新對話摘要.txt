@@ -817,3 +817,29 @@ chip_push.py(投信吸籌榜推播,排程16:17,台股報報):
 --------------------------------------------------------------
 - 上櫃投信位階、大戶結構、融資融券歷史都從8月下旬起往前養，約60日後判讀才完整。
 - 融券資尚未納入多空判讀(目前只顯示數字)。投信持股「成本區vs現價」為可選進階。
+
+═══════════════════════════════════════════════════════════════
+【美股內部人交易(SEC Form 4)→ 健診籌碼面第一層】(2026/08)
+═══════════════════════════════════════════════════════════════
+- 目的:美股沒有台股那種法人/融資融券資料,改用內部人交易(Form 4)當籌碼面。
+  「內部人自掏腰包買進」是少見且強的看多訊號,尤其 CEO/CFO。
+- 資料源:SEC EDGAR 官方免費 API,GitHub Actions 直接抓(不需 Railway;
+  whale_scanner 抓 13F 也是這樣,備忘「EDGAR 要走 Railway」是誤記已更正)。
+  User-Agent 需帶 email(SEC_HEADERS),SEC 限每秒10次(delay 0.11)。
+- 流程:company_tickers.json 查 CIK → data.sec.gov/submissions/CIK{10碼}.json
+  篩 form=="4" → 每檔最多 MAX_F4=25 筆最近的 → 抓各筆 XML(經 index.json 找檔名)
+  → 解析 nonDerivativeTransaction。
+- 只計代碼 P(公開市場買進)/S(賣出),排除 M/F/A/X(選擇權行權/扣稅/配股)——
+  這是關鍵,否則被例行配股雜訊淹沒。P 很稀有,多數股票近90天淨賣屬正常。
+- 檔案(trading-bot):insider_scanner.py + .github/workflows/insider_scanner.yml
+  (cron '0 22 * * 2-6' 美股收盤後隔天早上台灣06:00)。
+- 表 us_insider:ticker(PK)/buy_shares/sell_shares/net_shares/buyers/sellers/
+  ceo_cfo_buy/last_buy_date,RLS read all。upsert 用 SERVICE_KEY。
+- 前端 diagnosis.html:容器 r-insider(僅 currentMkt==='us' 顯示),
+  函式 insiderRead + renderInsider,接在 renderChips/renderHolders 後呼叫。
+  判讀:CEO/CFO買(強多)/淨買進(多)/淨賣出(參考)/無主動買賣(僅配股)/買賣互見。
+- 效能:149檔逐檔解析,加 MAX_F4=25 + delay0.11 後約 7-8 分(原17分)。
+- 實測亮點:GS 淨買+479K、TSM CEO/CFO買、MSTR/SOFI/VST CEO買但整體淨賣、
+  多數大型股淨賣(高管例行減持)、CRM 全配股顯示「無主動買賣」。
+- 待做:第二層 13F 機構持股(whale_scanner 資料已有,可接進健診)。
+
