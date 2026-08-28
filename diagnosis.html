@@ -734,7 +734,7 @@ async function renderWhale(sym) {
       pill('清倉', s.cnt.Sold, '#ff5470') +
       '</div>';
 
-    var topRows = rows.slice(0, 5).map(function (r) {
+    var topRows = s.merged.slice(0, 5).map(function (r) {
       var t = (r.position_change_type || '').trim();
       var tc = (t === 'New' || t === 'Add') ? '#31d071' : ((t === 'Reduce' || t === 'Sold') ? '#ff5470' : '#7a90b0');
       var tzh = { New: '新建倉', Add: '加碼', Reduce: '減碼', Sold: '清倉' }[t] || t;
