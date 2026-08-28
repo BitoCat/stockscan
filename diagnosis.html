@@ -652,16 +652,36 @@ function trustStage(trustDaily, closes) {
 }
 
 function summarize13F(rows) {
+  // 按 filer_name 去重合併(同機構多筆 → 市值相加,動作取市值最大那筆)
+  var byFiler = {};
+  rows.forEach(function (r) {
+    var name = (r.filer_name || '?').trim();
+    var mv = Number(r.market_value) || 0;
+    if (!byFiler[name]) {
+      byFiler[name] = { filer_name: name, market_value: mv,
+                        position_change_type: (r.position_change_type || '').trim(),
+                        _maxmv: mv };
+    } else {
+      byFiler[name].market_value += mv;
+      if (mv > byFiler[name]._maxmv) {
+        byFiler[name].position_change_type = (r.position_change_type || '').trim();
+        byFiler[name]._maxmv = mv;
+      }
+    }
+  });
+  var merged = Object.keys(byFiler).map(function (k) { return byFiler[k]; });
+  merged.sort(function (a, b) { return b.market_value - a.market_value; });
+
   var cnt = { New: 0, Add: 0, Reduce: 0, Sold: 0 };
   var newFilers = [];
-  rows.forEach(function (r) {
-    var t = (r.position_change_type || '').trim();
+  merged.forEach(function (r) {
+    var t = r.position_change_type;
     if (cnt[t] !== undefined) cnt[t]++;
     if (t === 'New') newFilers.push(r.filer_name);
   });
   var bulls = cnt.New + cnt.Add, bears = cnt.Reduce + cnt.Sold;
   var label, color, note;
-  if (rows.length === 0) {
+  if (merged.length === 0) {
     label = '無機構持倉資料'; color = '#7a90b0'; note = '本季無 13F 資料';
   } else if (bulls > bears * 1.5) {
     label = '機構加碼'; color = '#31d071';
@@ -674,9 +694,9 @@ function summarize13F(rows) {
     note = bulls + '家加碼 / ' + bears + '家減持,分歧';
   }
   return { label: label, color: color, note: note, cnt: cnt,
-           filers: rows.length, newFilers: newFilers.slice(0, 3) };
+           filers: merged.length, newFilers: newFilers.slice(0, 3), merged: merged };
 }
-
+  
 async function renderWhale(sym) {
   var box = document.getElementById('r-whale');
   if (!box) return;
