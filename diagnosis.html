@@ -131,7 +131,8 @@
     </div>
     <div class="metrics-grid" id="r-metrics"></div>
     <div id="r-chips" style="margin-top:12px"></div>
-    <div id="r-insider" style="margin-top:12px"></div> 
+    <div id="r-insider" style="margin-top:12px"></div>
+    <div id="r-ownership" style="margin-top:12px"></div>
     <div id="r-whale" style="margin-top:12px"></div>    
     <div id="r-holders" style="margin-top:12px"></div>
     <div class="analysis-section">
@@ -391,6 +392,9 @@ async function analyze() {
       obj.targetMeanPrice = livePrice.targetMeanPrice;
       obj.targetLowPrice  = livePrice.targetLowPrice;
       obj.targetHighPrice = livePrice.targetHighPrice;
+      obj.heldPercentInstitutions = livePrice.heldPercentInstitutions;
+      obj.shortPercentOfFloat = livePrice.shortPercentOfFloat;
+      obj.shortRatio = livePrice.shortRatio;      
     }
 
     lastResult = Object.assign({}, obj, {symbol: sym, market: currentMkt});
@@ -531,7 +535,8 @@ function renderResult(sym, d) {
   document.getElementById('r-time').textContent = '診斷：' + new Date().toLocaleString('zh-TW');
   renderChips(sym);
   renderHolders(sym);  
-  renderInsider(sym); 
+  renderInsider(sym);
+  renderOwnership(sym);
   renderWhale(sym);  
   document.getElementById('res-card').classList.add('show');
   document.getElementById('res-card').scrollIntoView({behavior:'smooth', block:'nearest'});
@@ -733,6 +738,48 @@ async function renderWhale(sym) {
   }
 }  
 
+function renderOwnership(sym) {
+  var box = document.getElementById('r-ownership');
+  if (!box) return;
+  if (currentMkt !== 'us') { box.innerHTML = ''; return; }
+  var d = (typeof lastResult !== 'undefined' && lastResult) ? lastResult : {};
+  var inst = (d.heldPercentInstitutions != null) ? d.heldPercentInstitutions * 100 : null;
+  var shortF = (d.shortPercentOfFloat != null) ? d.shortPercentOfFloat * 100 : null;
+  if (inst == null && shortF == null) { box.innerHTML = ''; return; }
+
+  var rows = '';
+  if (inst != null) {
+    var ic, inote;
+    if (inst >= 70) { ic = '#31d071'; inote = '籌碼集中法人,相對穩定'; }
+    else if (inst >= 40) { ic = '#c9a94e'; inote = '法人參與中等'; }
+    else { ic = '#e0908c'; inote = '法人參與低,散戶主導、波動較大'; }
+    rows += '<tr>' +
+      '<td style="padding:3px 8px;color:var(--muted)">機構持股</td>' +
+      '<td style="padding:3px 8px;text-align:right;font-family:monospace;color:' + ic + '">' + inst.toFixed(0) + '%</td>' +
+      '<td style="padding:3px 8px;color:var(--muted);font-size:11px">' + inote + '</td></tr>';
+  }
+  if (shortF != null) {
+    var sc, snote;
+    if (shortF >= 20) { sc = '#ff5470'; snote = '空方沉重,過高有軋空可能'; }
+    else if (shortF >= 10) { sc = '#e0908c'; snote = '空方壓力偏高'; }
+    else { sc = '#8fd0a0'; snote = '空方壓力小'; }
+    rows += '<tr>' +
+      '<td style="padding:3px 8px;color:var(--muted)">做空比例</td>' +
+      '<td style="padding:3px 8px;text-align:right;font-family:monospace;color:' + sc + '">' + shortF.toFixed(1) + '%</td>' +
+      '<td style="padding:3px 8px;color:var(--muted);font-size:11px">' + snote + '</td></tr>';
+  }
+  if (d.shortRatio != null) {
+    rows += '<tr>' +
+      '<td style="padding:3px 8px;color:var(--muted)">回補天數</td>' +
+      '<td style="padding:3px 8px;text-align:right;font-family:monospace;color:var(--muted)">' + Number(d.shortRatio).toFixed(1) + '</td>' +
+      '<td style="padding:3px 8px;color:var(--muted);font-size:11px">空單回補所需天數</td></tr>';
+  }
+
+  box.innerHTML = '<div class="sec-head">📊 持股結構</div>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:13px;margin:4px 0">' + rows + '</table>' +
+    '<div style="font-size:11px;color:#4a6080;margin-top:4px;line-height:1.5">機構持股高=籌碼穩;做空比高=空方重(過高可能軋空)。資料來源:yfinance。</div>';
+}  
+  
 async function renderInsider(sym) {
   var box = document.getElementById('r-insider');
   if (!box) return;
