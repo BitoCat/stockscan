@@ -862,5 +862,46 @@ chip_push.py(投信吸籌榜推播,排程16:17,台股報報):
   暫緩):第三層 機構持股%(heldPercentInstitutions)+ 做空比(shortPercentOfFloat)
   ——yfinance info 就有,但要改 _resolve 這個所有功能共用的抓資料函式。
 
+═══════════════════════════════════════════════════════════════
+【美股籌碼面 三層 完整版】(2026/08)
+═══════════════════════════════════════════════════════════════
+美股無台股式法人/融資融券資料,改用三層:
+
+■ 第1層 內部人交易(Form 4)
+- 表 us_insider,爬蟲 insider_scanner.py + insider_scanner.yml(GitHub Actions,
+  cron '0 22 * * 2-6')。SEC EDGAR 官方 API,GitHub Actions 直抓(不需 Railway)。
+- 只計代碼 P(公開市場買進)/S(賣出),排除 M/F/A/X(配股/行權/扣稅)。
+- 加速:每檔最多 MAX_F4=25 筆、delay 0.11 → 約7-8分(原17分)。
+- 前端容器 r-insider / renderInsider:判讀 CEO/CFO買/淨買進/淨賣出/無主動買賣。
+
+■ 第2層 持股結構(機構持股% + 做空比)—— 需動核心後端
+- 資料源:bot.py 的 /quote 端點(部署在 Railway splendid-prosperity)。
+  健診頁打的是 /quote(不是 /screener-quote 也不是 concept_analysis.analyze_one)。
+- 後端加 3 欄位:heldPercentInstitutions / shortPercentOfFloat / shortRatio
+  (full_info.get(...),已有 full_info 不多打 API)。改完需 Railway 重新部署;
+  回滾=Railway Deployments 選舊部署 Redeploy。
+- 前端要三段接線才會顯示:①/quote回 →②livePrice物件(292行)要撿欄位 →
+  ③obj(395行)→④lastResult(400行)→⑤renderOwnership 讀 lastResult。
+  容器 r-ownership。踩雷:livePrice 是手挑欄位組的,新欄位一定要在292行補進去,
+  否則整條鏈斷、畫面不顯示(不報錯,靜默隱藏)。
+- 判讀:機構持股≥70高/40-70中/<40低;做空比≥20高(可能軋空)/10-20中/<10低;
+  回補天數=shortRatio。yfinance 回小數(0.66=66%)。
+
+■ 第3層 機構持股 13F
+- 資料源:whale_scanner 已抓的 whale_positions(每列=一機構持一股票)。前端直讀,零後端。
+- 欄位:ticker/filer_name/position_change_type(New/Add/Reduce/Sold)/market_value/
+  pct_of_portfolio/quarter。
+- 前端容器 r-whale / summarize13F + renderWhale。判讀 New+Add vs Reduce+Sold。
+- 去重:同機構同股票常有多筆申報(子帳/修正),summarize13F 按 filer_name 合併
+  (市值相加、動作取市值最大筆、家數只算一次),renderWhale 表改用 s.merged。
+  否則「X家新建倉」會灌水。
+
+■ 合併解讀範例(會員教學)
+- 內部人淨賣 + 機構(巴菲特/索羅斯)大額新建倉 → 內部人多為個人套現(級別小、雜訊),
+  機構大額布局權重更高 → 中長線偏多。衝突時以機構大手筆為準。
+
+■ AI 偶發 JSON 截斷
+- gpt-oss-20b + max_tokens 4000 仍偶爾「JSON Parse error Expected ']'」,多為偶發,
+  重按即成功。若連續失敗才拉 max_tokens 到 6000(20b TPM 20萬吃得下)。
 
 
