@@ -131,6 +131,7 @@
     </div>
     <div class="metrics-grid" id="r-metrics"></div>
     <div id="r-chips" style="margin-top:12px"></div>
+    <div id="r-insider" style="margin-top:12px"></div>    
     <div id="r-holders" style="margin-top:12px"></div>
     <div class="analysis-section">
       <div class="sec-head">📡 關鍵信號</div>
@@ -529,6 +530,7 @@ function renderResult(sym, d) {
   document.getElementById('r-time').textContent = '診斷：' + new Date().toLocaleString('zh-TW');
   renderChips(sym);
   renderHolders(sym);  
+  renderInsider(sym);  
   document.getElementById('res-card').classList.add('show');
   document.getElementById('res-card').scrollIntoView({behavior:'smooth', block:'nearest'});
 }
@@ -625,6 +627,74 @@ function trustStage(trustDaily, closes) {
   }
   return { label: label, color: color, note: note };
 }  
+
+  function insiderRead(d) {
+  var b = d.buy_shares || 0, s = d.sell_shares || 0;
+  if (b === 0 && s === 0)
+    return { label: '無主動買賣', color: '#7a90b0', note: '近90天僅例行配股,無內部人主動進出' };
+  if (b > 0 && d.ceo_cfo_buy)
+    return { label: 'CEO/CFO 買進', color: '#31d071', note: '高階主管自掏腰包買進,強力看多訊號' };
+  if (b > s * 2 && b > 0)
+    return { label: '內部人淨買進', color: '#31d071', note: '內部人近90天明顯買超,看多' };
+  if (s > b * 2 && s > 0)
+    return { label: '內部人淨賣出', color: '#e0908c', note: '內部人淨賣,常為例行減持,參考即可' };
+  return { label: '買賣互見', color: '#c9a94e', note: '內部人有買有賣,方向不明' };
+}
+
+async function renderInsider(sym) {
+  var box = document.getElementById('r-insider');
+  if (!box) return;
+  if (currentMkt !== 'us') { box.innerHTML = ''; return; }
+  var tk = (sym || '').toUpperCase().replace(/[^A-Z0-9.]/g, '');
+  if (!tk) { box.innerHTML = ''; return; }
+
+  box.innerHTML = '<div class="sec-head">🔑 內部人交易</div>' +
+    '<div style="color:var(--muted);font-size:13px;padding:4px 0">載入中...</div>';
+
+  try {
+    var res = await sb.from('us_insider').select('*').eq('ticker', tk).limit(1);
+    var row = (res.data && res.data[0]) || null;
+    if (!row) {
+      box.innerHTML = '<div class="sec-head">🔑 內部人交易</div>' +
+        '<div style="color:var(--muted);font-size:13px;padding:4px 0">本檔近90天無內部人交易資料。</div>';
+      return;
+    }
+    var r = insiderRead(row);
+    var fmtSh = function (n) {
+      n = Number(n) || 0; var neg = n < 0; n = Math.abs(n); var s;
+      if (n >= 1e6) s = (n / 1e6).toFixed(1) + 'M';
+      else if (n >= 1e3) s = (n / 1e3).toFixed(0) + 'K';
+      else s = String(n);
+      return (neg ? '-' : '') + s;
+    };
+    var cellC = function (v, color) {
+      return '<td style="text-align:right;font-family:monospace;color:' + color + ';padding:3px 8px">' + v + '</td>';
+    };
+    var table = '<table style="width:100%;border-collapse:collapse;font-size:13px;margin:6px 0 4px">' +
+      '<tr style="color:var(--muted);font-size:11px">' +
+      '<th style="text-align:left;padding:3px 8px;font-weight:400">近90天</th>' +
+      '<th style="text-align:right;padding:3px 8px;font-weight:400">股數</th>' +
+      '<th style="text-align:right;padding:3px 8px;font-weight:400">人數</th></tr>' +
+      '<tr><td style="padding:3px 8px;color:var(--muted)">買進 (P)</td>' +
+      cellC(fmtSh(row.buy_shares), '#31d071') + cellC(row.buyers || 0, 'var(--muted)') + '</tr>' +
+      '<tr><td style="padding:3px 8px;color:var(--muted)">賣出 (S)</td>' +
+      cellC(fmtSh(row.sell_shares), '#ff5470') + cellC(row.sellers || 0, 'var(--muted)') + '</tr>' +
+      '<tr><td style="padding:3px 8px;color:#ffb020;font-weight:700">淨額</td>' +
+      cellC(fmtSh(row.net_shares), (row.net_shares >= 0 ? '#31d071' : '#ff5470')) +
+      '<td></td></tr>' +
+      '</table>';
+    var lastBuy = row.last_buy_date ? '<div style="font-size:11px;color:var(--muted);margin-top:2px">最近買進日: ' + row.last_buy_date + '</div>' : '';
+    var verdict = '<div style="color:' + r.color + ';font-weight:700;font-size:15px;margin:2px 0 4px">' + r.label +
+      '<span style="font-weight:400;font-size:12px;color:var(--muted)"> · ' + r.note + '</span></div>';
+
+    box.innerHTML = '<div class="sec-head">🔑 內部人交易</div>' +
+      verdict + table + lastBuy +
+      '<div style="font-size:11px;color:#4a6080;margin-top:6px;line-height:1.5">僅計公開市場買賣(P買/S賣),已排除配股/選擇權行權/扣稅。內部人自掏腰包買進(尤其CEO/CFO)是少見且較強的看多訊號;淨賣多為例行減持,參考即可。資料來源:SEC EDGAR Form 4。</div>';
+  } catch (e) {
+    box.innerHTML = '<div class="sec-head">🔑 內部人交易</div>' +
+      '<div style="color:var(--muted);font-size:13px;padding:4px 0">內部人資料載入失敗, 稍後再試。</div>';
+  }
+}
   
 async function renderChips(sym) {
   var box = document.getElementById('r-chips');
