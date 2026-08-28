@@ -843,3 +843,24 @@ chip_push.py(投信吸籌榜推播,排程16:17,台股報報):
   多數大型股淨賣(高管例行減持)、CRM 全配股顯示「無主動買賣」。
 - 待做:第二層 13F 機構持股(whale_scanner 資料已有,可接進健診)。
 
+═══════════════════════════════════════════════════════════════
+【美股籌碼面第二層:13F 機構持股 → 健診】(2026/08)
+═══════════════════════════════════════════════════════════════
+- 資料源:whale_scanner.py 已在抓的 SEC 13F,寫入 Supabase whale_positions
+  (每列=一機構持一股票)。前端直接讀,零後端改動。
+- whale_positions 關鍵欄位:ticker/stock_name/filer_name/shares/market_value/
+  position_change_type(New/Add/Reduce/Sold)/change_percent/pct_of_portfolio/
+  quarter/quarter_end_date。
+- 前端 diagnosis.html:容器 r-whale(僅 us),函式 summarize13F + renderWhale,
+  接在 renderInsider 後呼叫。
+  判讀:New+Add vs Reduce+Sold 比較 → 機構加碼/減持/持平;顯示四類 pill 數量 +
+  依市值前5大機構表(機構名/動作/市值)。
+- 提醒:13F 季報、延遲約45天,反映大方向非即時。冷門股可能無資料(whale 只收
+  知名機構主要持倉),顯示「無 13F 資料」屬正常。
+- 美股健診籌碼面現為兩層:內部人(Form 4)+ 機構(13F)。
+- 待做(需動核心後端 concept_analysis._resolve + 重新部署 Railway,風險較高,
+  暫緩):第三層 機構持股%(heldPercentInstitutions)+ 做空比(shortPercentOfFloat)
+  ——yfinance info 就有,但要改 _resolve 這個所有功能共用的抓資料函式。
+
+
+
