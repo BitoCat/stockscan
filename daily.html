@@ -243,6 +243,7 @@ let cu = null, cp = null, allData = [], currentMkt = "all";
   document.getElementById("nav-plan").textContent = planLabel(cp?.plan || "free");
   document.getElementById("nav-plan").className = "plan-badge " + planBadge(cp?.plan || "free");
   loadDaily();
+  switchMainTab('us');
 })();
 
 function setMkt(mkt) {
