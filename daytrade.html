@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>當沖雷達</title>
+<style>
+  /* ---- 設定值:填你的 Supabase URL 與 anon key ---- */
+  /* （在下方 <script> 最上面）*/
+
+  :root{
+    --bg:#0e1218; --panel:#161c25; --panel-2:#1c2530; --border:#28323f;
+    --text:#e7edf4; --muted:#8593a4; --dim:#5b6875;
+    --up:#f6465d;    /* 台股:漲/買超=紅 */
+    --down:#0ecb81;  /* 台股:跌/賣超=綠 */
+    --brand:#3fb6e8; --brand-dim:#1d4a5e;
+    --warn:#e8a33d;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    font-feature-settings:"tnum" 1; line-height:1.4; padding-bottom:40px;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:0 12px}
+
+  /* 頁首 */
+  header{padding:18px 12px 12px; max-width:920px;margin:0 auto;}
+  .brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .brand h1{font-size:20px;font-weight:800;letter-spacing:.06em}
+  .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--brand);
+    display:inline-block;box-shadow:0 0 10px var(--brand);animation:pulse 2.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+  .meta{color:var(--muted);font-size:12.5px;margin-top:4px}
+  .meta b{color:var(--text);font-weight:600}
+
+  /* 多空切換 */
+  .tabs{display:flex;gap:6px;margin:14px 12px 0;max-width:920px}
+  .tabs>*{margin:0 auto}
+  .tabrow{display:flex;gap:6px;width:100%;max-width:920px;margin:14px auto 0;padding:0 12px}
+  .tab{flex:1;padding:11px 8px;border:1px solid var(--border);background:var(--panel);
+    color:var(--muted);border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;
+    text-align:center;transition:background .12s,color .12s,border-color .12s}
+  .tab .n{font-size:11px;font-weight:500;display:block;color:var(--dim);margin-top:2px}
+  .tab.on-long{border-color:var(--up);background:rgba(246,70,93,.12);color:var(--up)}
+  .tab.on-short{border-color:var(--down);background:rgba(14,203,129,.12);color:var(--down)}
+
+  /* 表格 */
+  .scroller{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
+  thead th{position:sticky;top:0;background:var(--bg);color:var(--muted);
+    font-weight:600;text-align:right;padding:9px 10px;white-space:nowrap;
+    border-bottom:1px solid var(--border);cursor:pointer;user-select:none}
+  thead th.l{text-align:left}
+  thead th .ar{color:var(--brand);font-size:10px;margin-left:2px}
+  tbody td{padding:10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--panel-2)}
+  tbody tr:hover{background:var(--panel)}
+  td.l{text-align:left}
+  .rank{color:var(--dim);font-variant-numeric:tabular-nums;width:30px}
+  .rank.top{color:var(--brand);font-weight:700}
+  .nm{font-weight:600}
+  .cd{color:var(--dim);font-size:11.5px;margin-left:5px}
+  .score{font-weight:800;font-size:14px}
+  .bar{height:4px;border-radius:2px;background:var(--panel-2);margin-top:4px;overflow:hidden}
+  .bar>i{display:block;height:100%}
+  .up{color:var(--up)} .down{color:var(--down)} .mut{color:var(--dim)}
+  .chip{display:inline-block;font-size:11px;padding:2px 7px;border-radius:11px;white-space:nowrap}
+  .chip.good{background:rgba(246,70,93,.14);color:var(--up)}
+  .chip.bad{background:rgba(14,203,129,.14);color:var(--down)}
+  .chip.warn{background:rgba(232,163,61,.16);color:var(--warn)}
+  .chip.neu{background:var(--panel-2);color:var(--muted)}
+
+  /* 狀態 */
+  .state{padding:48px 16px;text-align:center;color:var(--muted);font-size:14px}
+  .state b{color:var(--text)}
+  .foot{max-width:920px;margin:16px auto 0;padding:0 14px;color:var(--dim);font-size:11.5px;line-height:1.6}
+  .foot .risk{color:var(--warn)}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="dot"></span><h1>當沖雷達</h1></div>
+  <div class="meta" id="meta">載入中…</div>
+</header>
+
+<div class="tabrow">
+  <button class="tab on-long" id="tabLong" onclick="setSide('long')">
+    做多 · 多方強勢<span class="n" id="nLong">—</span></button>
+  <button class="tab" id="tabShort" onclick="setSide('short')">
+    做空 · 空方弱勢<span class="n" id="nShort">—</span></button>
+</div>
+
+<div class="wrap">
+  <div class="scroller">
+    <table id="tbl">
+      <thead id="thead"></thead>
+      <tbody id="tbody"><tr><td colspan="9" class="state">載入中…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="foot">
+  <div>依前一交易日盤後資料篩選,每日開盤前更新。「相對」= 個股漲跌% − 大盤漲跌%;「背離」比較法人(主力)與融資(散戶)方向。</div>
+  <div class="risk">⚠️ 系統評分,非投資建議。當沖為信用交易,風險高,請自行評估。</div>
+</div>
+
+<script>
+  /* ================== 設定 ================== */
+  const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";   // ← 換成你的
+  const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";                 // ← 換成 anon key(公開可讀)
+  const TOP_N = 40;
+  /* ========================================= */
+
+  let side = "long";          // long | short
+  let rows = { long: [], short: [] };
+  let dataDate = "";
+  let sortKey = null, sortDir = -1;
+
+  const COLS = [
+    { k:"rank", t:"#", cls:"l", get:(d)=>d._rank, fmt:(v,d)=>rankCell(v) },
+    { k:"name", t:"股票", cls:"l", get:(d)=>d.name||"", fmt:(v,d)=>`<span class="nm">${v}</span><span class="cd">${d.code}</span>` },
+    { k:"close", t:"現價", get:(d)=>num(d.close), fmt:(v,d)=>priceCell(d) },
+    { k:"_score", t:"綜合分", get:(d)=>d._score, fmt:(v,d)=>scoreCell(d) },
+    { k:"amplitude_pct", t:"振幅%", get:(d)=>num(d.amplitude_pct), fmt:(v)=>v==null?"–":v.toFixed(1) },
+    { k:"rel_strength", t:"相對", get:(d)=>num(d.rel_strength), fmt:(v)=>signed(v,1) },
+    { k:"inst_net_lots", t:"法人張", get:(d)=>num(d.inst_net_lots), fmt:(v)=>lots(v) },
+    { k:"margin_net_lots", t:"融資張", get:(d)=>num(d.margin_net_lots), fmt:(v)=>lots(v) },
+    { k:"divergence", t:"背離", get:(d)=>d.divergence||"", fmt:(v)=>divChip(v) },
+  ];
+
+  function num(x){ return (x===null||x===undefined||x==="")?null:Number(x); }
+  function rankCell(r){ return `<span class="rank ${r<=5?"top":""}">${r}</span>`; }
+  function priceCell(d){
+    const c=num(d.close), ch=num(d.change_pct);
+    if(c==null) return "–";
+    const cls = ch==null?"mut":(ch>0?"up":ch<0?"down":"mut");
+    const chs = ch==null?"":`<span class="cd ${cls}">${signed(ch,1)}%</span>`;
+    return `<span>${c.toFixed(2)}</span>${chs}`;
+  }
+  function scoreCell(d){
+    const s = d._score==null?0:d._score;
+    const col = side==="long"?"var(--up)":"var(--down)";
+    return `<span class="score">${s.toFixed(0)}</span>`+
+           `<div class="bar"><i style="width:${Math.max(0,Math.min(100,s))}%;background:${col}"></i></div>`;
+  }
+  function signed(v,dp){ if(v==null) return "–"; const s=v.toFixed(dp); const cls=v>0?"up":v<0?"down":"mut";
+    return `<span class="${cls}">${v>0?"+":""}${s}</span>`; }
+  function lots(v){ if(v==null) return "–";
+    const cls=v>0?"up":v<0?"down":"mut"; let t;
+    if(Math.abs(v)>=10000) t=(v/10000).toFixed(1)+"萬"; else t=Math.round(v).toLocaleString();
+    return `<span class="${cls}">${v>0?"+":""}${t}</span>`; }
+  function divChip(v){
+    if(!v) return `<span class="chip neu">–</span>`;
+    if(v.indexOf("主力進散戶退")>=0) return `<span class="chip good">主力進散戶退</span>`;
+    if(v.indexOf("接刀")>=0) return `<span class="chip warn">${v}</span>`;
+    if(v==="同買") return `<span class="chip good">同買</span>`;
+    if(v==="同賣") return `<span class="chip bad">同賣</span>`;
+    return `<span class="chip neu">${v}</span>`;
+  }
+
+  function headers(){ return { apikey:SUPABASE_ANON_KEY, Authorization:"Bearer "+SUPABASE_ANON_KEY }; }
+  async function api(qs){
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/tw_daytrade_pool?${qs}`, { headers:headers() });
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    return r.json();
+  }
+
+  async function load(){
+    if(SUPABASE_URL.indexOf("YOUR-PROJECT")>=0){
+      showState("尚未設定 Supabase 連線。請在 <b>daytrade.html</b> 的 SUPABASE_URL 與 SUPABASE_ANON_KEY 填入你的專案資訊。");
+      return;
+    }
+    try{
+      const latest = await api("select=trade_date&order=trade_date.desc&limit=1");
+      if(!latest.length){ showState("資料庫還沒有資料。先跑一次盤前掃描產生候選池。"); return; }
+      dataDate = latest[0].trade_date;
+      const [L,S] = await Promise.all([
+        api(`select=*&trade_date=eq.${dataDate}&order=rank.asc&limit=${TOP_N}`),
+        api(`select=*&trade_date=eq.${dataDate}&order=short_rank.asc&limit=${TOP_N}`),
+      ]);
+      rows.long = L.map(d=>({ ...d, _rank:d.rank, _score:num(d.score) }));
+      rows.short = S.map(d=>({ ...d, _rank:d.short_rank, _score:num(d.short_score) }));
+      document.getElementById("nLong").textContent = rows.long.length+" 檔";
+      document.getElementById("nShort").textContent = rows.short.length+" 檔";
+      document.getElementById("meta").innerHTML =
+        `資料日 <b>${dataDate}</b> · 開盤前更新 · 多方 ${rows.long.length} / 空方 ${rows.short.length}`;
+      render();
+    }catch(e){
+      showState("讀取失敗:"+e.message+"。請確認 Supabase 網址、anon key,以及資料表的讀取權限(RLS)。");
+    }
+  }
+
+  function showState(msg){
+    document.getElementById("tbody").innerHTML =
+      `<tr><td colspan="9" class="state">${msg}</td></tr>`;
+  }
+
+  function setSide(s){
+    side = s; sortKey=null; sortDir=-1;
+    document.getElementById("tabLong").className = "tab"+(s==="long"?" on-long":"");
+    document.getElementById("tabShort").className = "tab"+(s==="short"?" on-short":"");
+    render();
+  }
+
+  function sortBy(k){
+    if(sortKey===k){ sortDir*=-1; } else { sortKey=k; sortDir=-1; }
+    render();
+  }
+
+  function render(){
+    const th = COLS.map(c=>{
+      const ar = sortKey===c.k ? `<span class="ar">${sortDir<0?"▼":"▲"}</span>` : "";
+      return `<th class="${c.cls||""}" onclick="sortBy('${c.k}')">${c.t}${ar}</th>`;
+    }).join("");
+    document.getElementById("thead").innerHTML = "<tr>"+th+"</tr>";
+
+    let data = rows[side].slice();
+    if(sortKey){
+      const col = COLS.find(c=>c.k===sortKey);
+      data.sort((a,b)=>{
+        let x=col.get(a), y=col.get(b);
+        if(typeof x==="string"||typeof y==="string"){ x=""+x; y=""+y; return sortDir*x.localeCompare(y); }
+        if(x==null)x=-Infinity; if(y==null)y=-Infinity;
+        return sortDir*(x-y);
+      });
+    }
+    if(!data.length){ showState("這個方向今天沒有名單。"); return; }
+    document.getElementById("tbody").innerHTML = data.map(d=>{
+      return "<tr>"+COLS.map(c=>{
+        const v=c.get(d);
+        return `<td class="${c.cls||""}">${c.fmt(v,d)}</td>`;
+      }).join("")+"</tr>";
+    }).join("");
+  }
+
+  load();
+</script>
+</body>
+</html>
