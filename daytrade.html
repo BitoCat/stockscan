@@ -208,16 +208,37 @@
   function headers(){ return { apikey:SUPABASE_ANON_KEY, Authorization:"Bearer "+SUPABASE_ANON_KEY }; }
   async function api(qs, table){
     const t = table || "tw_daytrade_pool";
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/${t}?${qs}`, { headers:headers() });
-    if(!r.ok) throw new Error("HTTP "+r.status);
+    const url = `${SUPABASE_URL}/rest/v1/${t}?${qs}`;
+    const ctl = new AbortController();
+    const timer = setTimeout(()=>ctl.abort(), 15000);
+    let r;
+    try{
+      r = await fetch(url, { headers:headers(), signal:ctl.signal });
+    }catch(err){
+      clearTimeout(timer);
+      console.error("[daytrade] fetch 失敗", url, err);
+      if(err.name==="AbortError") throw new Error("連線逾時(15秒無回應),請確認 SUPABASE_URL 是否正確");
+      throw new Error("無法連線(可能是網址錯誤或 CORS):"+err.message);
+    }
+    clearTimeout(timer);
+    if(!r.ok){
+      const body = await r.text().catch(()=>"" );
+      console.error("[daytrade] HTTP", r.status, url, body);
+      if(r.status===401||r.status===403) throw new Error(`權限不足 (${r.status}):請確認 anon key 正確、且資料表已開放 anon 讀取 (RLS policy)`);
+      if(r.status===404) throw new Error(`找不到資料表 ${t} (404):請確認表格名稱與 SUPABASE_URL`);
+      throw new Error(`HTTP ${r.status}｜${body.slice(0,120)}`);
+    }
     return r.json();
   }
 
   async function load(){
-    if(SUPABASE_URL.indexOf("YOUR-PROJECT")>=0){
+    if(SUPABASE_URL.indexOf("YOUR-PROJECT")>=0 || SUPABASE_ANON_KEY.indexOf("YOUR_ANON")>=0
+       || !SUPABASE_URL || !SUPABASE_ANON_KEY){
+      document.getElementById("meta").textContent = "尚未設定連線";
       showState("尚未設定 Supabase 連線。請在 <b>daytrade.html</b> 的 SUPABASE_URL 與 SUPABASE_ANON_KEY 填入你的專案資訊。");
       return;
     }
+    document.getElementById("meta").textContent = "連線中…";
     try{
       const latest = await api("select=trade_date&order=trade_date.desc&limit=1");
       if(!latest.length){ showState("資料庫還沒有資料。先跑一次盤前掃描產生候選池。"); return; }
@@ -235,7 +256,9 @@
       render();
       loadIntraday();   // 盤中資料另外載入,失敗不影響多空榜
     }catch(e){
-      showState("讀取失敗:"+e.message+"。請確認 Supabase 網址、anon key,以及資料表的讀取權限(RLS)。");
+      console.error("[daytrade] load 失敗", e);
+      document.getElementById("meta").textContent = "讀取失敗";
+      showState("讀取失敗:"+e.message+"<br><span style=\'color:var(--dim)\'>按 F12 開啟 Console 可看到完整錯誤。</span>");
     }
   }
 
