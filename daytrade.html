@@ -74,6 +74,9 @@
   .chip.bad{background:rgba(14,203,129,.14);color:var(--down)}
   .chip.warn{background:rgba(232,163,61,.16);color:var(--warn)}
   .chip.neu{background:var(--panel-2);color:var(--muted)}
+  .chip.pre{background:rgba(232,163,61,.2);color:#ffc65c;font-weight:700;
+    box-shadow:0 0 0 1px rgba(232,163,61,.35)}
+  .chip.blown{background:var(--panel-2);color:var(--dim);text-decoration:line-through}
 
   /* 狀態 */
   .state{padding:48px 16px;text-align:center;color:var(--muted);font-size:14px}
@@ -114,8 +117,8 @@
 
 <script>
   /* ================== 設定 ================== */
-  const SUPABASE_URL = "https://kldumnxdlgovaxtiszyn.supabase.co";   // ← 換成你的
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI";                 // ← 換成 anon key(公開可讀)
+  const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";   // ← 換成你的
+  const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";                 // ← 換成 anon key(公開可讀)
   const TOP_N = 40;
   /* ========================================= */
 
@@ -192,8 +195,11 @@
   }
   function stateChip(s){
     if(!s) return `<span class="chip neu">–</span>`;
-    if(s.indexOf("空方延續")>=0) return `<span class="chip bad">空方延續✅</span>`;
-    if(s.indexOf("延續")>=0) return `<span class="chip good">延續✅</span>`;
+    const short = s.indexOf("空方")>=0;
+    if(s.indexOf("蓄勢")>=0) return `<span class="chip pre">${s}</span>`;      // 最早,最醒目
+    if(s.indexOf("啟動")>=0) return `<span class="chip ${short?"bad":"good"}">${s}</span>`;
+    if(s.indexOf("已噴出")>=0) return `<span class="chip blown">${s}</span>`;  // 追不上,弱化
+    if(s.indexOf("延續")>=0) return `<span class="chip ${short?"bad":"good"}">${s}</span>`;
     if(s.indexOf("反轉")>=0) return `<span class="chip warn">${s}</span>`;
     if(s.indexOf("熄火")>=0) return `<span class="chip neu">熄火⏸</span>`;
     return `<span class="chip neu">${s}</span>`;
@@ -269,14 +275,23 @@
       snapAt = last[0].snapshot_at;
       const data = await api(`select=*&snapshot_at=eq.${encodeURIComponent(snapAt)}`, "tw_daytrade_intraday");
       // 依狀態優先序排:延續 → 反轉 → 觀望 → 熄火
-      const ord = (s)=> s&&s.indexOf("空方延續")>=0?1 : s&&s.indexOf("延續")>=0?0 :
-                        s&&s.indexOf("反轉")>=0?2 : s&&s.indexOf("熄火")>=0?4 : 3;
+      const ord = (d)=>{
+        const t=d.tier, s=d.state||"";
+        if(t==="pre") return 0;
+        if(t==="go") return 1;
+        if(t==="cont") return 2;
+        if(s.indexOf("反轉")>=0) return 3;
+        if(t==="blown") return 5;
+        if(s.indexOf("熄火")>=0) return 6;
+        return 4;
+      };
       rows.intra = data.sort((a,b)=>{
-        const d0=ord(a.state)-ord(b.state); if(d0) return d0;
+        const d0=ord(a)-ord(b); if(d0) return d0;
         return (num(b.vol_multiple)||0)-(num(a.vol_multiple)||0);
       });
-      const cont = data.filter(d=>(d.state||"").indexOf("延續")>=0).length;
-      document.getElementById("nIntra").textContent = `${cont} 檔延續 / ${data.length}`;
+      const npre = data.filter(d=>d.tier==="pre").length;
+      const ngo  = data.filter(d=>d.tier==="go").length;
+      document.getElementById("nIntra").textContent = `蓄勢${npre} 啟動${ngo} / ${data.length}`;
       updateSnapLabel();
       if(side==="intra") render();
     }catch(e){
