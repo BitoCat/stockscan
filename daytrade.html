@@ -45,6 +45,10 @@
   .tab .n{font-size:11px;font-weight:500;display:block;color:var(--dim);margin-top:2px}
   .tab.on-long{border-color:var(--up);background:rgba(246,70,93,.12);color:var(--up)}
   .tab.on-short{border-color:var(--down);background:rgba(14,203,129,.12);color:var(--down)}
+  .tab.on-intra{border-color:var(--brand);background:rgba(63,182,232,.12);color:var(--brand)}
+  .snapline{margin-top:12px;padding:8px 11px;background:var(--panel);border:1px solid var(--border);
+    border-radius:8px;color:var(--muted);font-size:12.5px}
+  .snapline b{color:var(--brand);font-weight:700}
 
   /* 表格 */
   .scroller{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:12px}
@@ -89,9 +93,12 @@
     做多 · 多方強勢<span class="n" id="nLong">—</span></button>
   <button class="tab" id="tabShort" onclick="setSide('short')">
     做空 · 空方弱勢<span class="n" id="nShort">—</span></button>
+  <button class="tab" id="tabIntra" onclick="setSide('intra')">
+    盤中狀態<span class="n" id="nIntra">—</span></button>
 </div>
 
 <div class="wrap">
+  <div id="snapwrap" style="display:none"><div class="snapline" id="snapline"></div></div>
   <div class="scroller">
     <table id="tbl">
       <thead id="thead"></thead>
@@ -107,14 +114,15 @@
 
 <script>
   /* ================== 設定 ================== */
-  const SUPABASE_URL = "https://kldumnxdlgovaxtiszyn.supabase.co";   // ← 換成你的
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI";                 // ← 換成 anon key(公開可讀)
+  const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";   // ← 換成你的
+  const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";                 // ← 換成 anon key(公開可讀)
   const TOP_N = 40;
   /* ========================================= */
 
   let side = "long";          // long | short
-  let rows = { long: [], short: [] };
+  let rows = { long: [], short: [], intra: [] };
   let dataDate = "";
+  let snapAt = "";
   let sortKey = null, sortDir = -1;
 
   const COLS = [
@@ -159,9 +167,48 @@
     return `<span class="chip neu">${v}</span>`;
   }
 
+  const COLS_INTRA = [
+    { k:"state", t:"狀態", cls:"l", get:(d)=>d.state||"", fmt:(v)=>stateChip(v) },
+    { k:"name", t:"股票", cls:"l", get:(d)=>d.name||"", fmt:(v,d)=>`<span class="nm">${v}</span><span class="cd">${d.code}</span>` },
+    { k:"sides", t:"方向", cls:"l", get:(d)=>d.sides||"", fmt:(v)=>`<span class="chip neu">${v||"–"}</span>` },
+    { k:"price", t:"現價", get:(d)=>num(d.price), fmt:(v,d)=>intraPrice(d) },
+    { k:"gap_pct", t:"缺口%", get:(d)=>num(d.gap_pct), fmt:(v)=>signed(v,1) },
+    { k:"rel_strength", t:"相對", get:(d)=>num(d.rel_strength), fmt:(v)=>signed(v,1) },
+    { k:"vol_multiple", t:"量倍", get:(d)=>num(d.vol_multiple), fmt:(v)=>volCell(v) },
+    { k:"bid_ask_tag", t:"內外盤", get:(d)=>d.bid_ask_tag||"", fmt:(v)=>ioChip(v) },
+    { k:"note", t:"備註", cls:"l", get:(d)=>d.note||"", fmt:(v)=>`<span class="mut">${v||""}</span>` },
+  ];
+
+  function intraPrice(d){
+    const p=num(d.price), ch=num(d.change_pct);
+    if(p==null) return "–";
+    const cls = ch==null?"mut":(ch>0?"up":ch<0?"down":"mut");
+    return `<span>${p.toFixed(2)}</span>`+(ch==null?"":`<span class="cd ${cls}">${ch>0?"+":""}${ch.toFixed(1)}%</span>`);
+  }
+  function volCell(v){
+    if(v==null) return "–";
+    const cls = v>=2?"up":(v<=0.7?"down":"mut");
+    return `<span class="${cls}">${v.toFixed(2)}×</span>`;
+  }
+  function stateChip(s){
+    if(!s) return `<span class="chip neu">–</span>`;
+    if(s.indexOf("空方延續")>=0) return `<span class="chip bad">空方延續✅</span>`;
+    if(s.indexOf("延續")>=0) return `<span class="chip good">延續✅</span>`;
+    if(s.indexOf("反轉")>=0) return `<span class="chip warn">${s}</span>`;
+    if(s.indexOf("熄火")>=0) return `<span class="chip neu">熄火⏸</span>`;
+    return `<span class="chip neu">${s}</span>`;
+  }
+  function ioChip(v){
+    if(!v) return "–";
+    if(v==="外盤") return `<span class="chip good">外盤</span>`;
+    if(v==="內盤") return `<span class="chip bad">內盤</span>`;
+    return `<span class="chip neu">${v}</span>`;
+  }
+
   function headers(){ return { apikey:SUPABASE_ANON_KEY, Authorization:"Bearer "+SUPABASE_ANON_KEY }; }
-  async function api(qs){
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/tw_daytrade_pool?${qs}`, { headers:headers() });
+  async function api(qs, table){
+    const t = table || "tw_daytrade_pool";
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${t}?${qs}`, { headers:headers() });
     if(!r.ok) throw new Error("HTTP "+r.status);
     return r.json();
   }
@@ -186,9 +233,42 @@
       document.getElementById("meta").innerHTML =
         `資料日 <b>${dataDate}</b> · 開盤前更新 · 多方 ${rows.long.length} / 空方 ${rows.short.length}`;
       render();
+      loadIntraday();   // 盤中資料另外載入,失敗不影響多空榜
     }catch(e){
       showState("讀取失敗:"+e.message+"。請確認 Supabase 網址、anon key,以及資料表的讀取權限(RLS)。");
     }
+  }
+
+  async function loadIntraday(){
+    try{
+      const last = await api("select=snapshot_at&order=snapshot_at.desc&limit=1", "tw_daytrade_intraday");
+      if(!last.length){ document.getElementById("nIntra").textContent="尚無"; return; }
+      snapAt = last[0].snapshot_at;
+      const data = await api(`select=*&snapshot_at=eq.${encodeURIComponent(snapAt)}`, "tw_daytrade_intraday");
+      // 依狀態優先序排:延續 → 反轉 → 觀望 → 熄火
+      const ord = (s)=> s&&s.indexOf("空方延續")>=0?1 : s&&s.indexOf("延續")>=0?0 :
+                        s&&s.indexOf("反轉")>=0?2 : s&&s.indexOf("熄火")>=0?4 : 3;
+      rows.intra = data.sort((a,b)=>{
+        const d0=ord(a.state)-ord(b.state); if(d0) return d0;
+        return (num(b.vol_multiple)||0)-(num(a.vol_multiple)||0);
+      });
+      const cont = data.filter(d=>(d.state||"").indexOf("延續")>=0).length;
+      document.getElementById("nIntra").textContent = `${cont} 檔延續 / ${data.length}`;
+      updateSnapLabel();
+      if(side==="intra") render();
+    }catch(e){
+      document.getElementById("nIntra").textContent = "讀取失敗";
+    }
+  }
+
+  function updateSnapLabel(){
+    const el = document.getElementById("snapline");
+    if(!el) return;
+    if(!snapAt){ el.textContent=""; return; }
+    const t = new Date(snapAt);
+    const hh = String(t.getHours()).padStart(2,"0"), mm = String(t.getMinutes()).padStart(2,"0");
+    const mo = String(t.getMonth()+1).padStart(2,"0"), dd = String(t.getDate()).padStart(2,"0");
+    el.innerHTML = `盤中掃描時間 <b>${mo}/${dd} ${hh}:${mm}</b>`;
   }
 
   function showState(msg){
@@ -198,8 +278,10 @@
 
   function setSide(s){
     side = s; sortKey=null; sortDir=-1;
-    document.getElementById("tabLong").className = "tab"+(s==="long"?" on-long":"");
+    document.getElementById("tabLong").className  = "tab"+(s==="long"?" on-long":"");
     document.getElementById("tabShort").className = "tab"+(s==="short"?" on-short":"");
+    document.getElementById("tabIntra").className = "tab"+(s==="intra"?" on-intra":"");
+    document.getElementById("snapwrap").style.display = (s==="intra")?"block":"none";
     render();
   }
 
@@ -209,7 +291,8 @@
   }
 
   function render(){
-    const th = COLS.map(c=>{
+    const COLSET = (side==="intra") ? COLS_INTRA : COLS;
+    const th = COLSET.map(c=>{
       const ar = sortKey===c.k ? `<span class="ar">${sortDir<0?"▼":"▲"}</span>` : "";
       return `<th class="${c.cls||""}" onclick="sortBy('${c.k}')">${c.t}${ar}</th>`;
     }).join("");
@@ -217,7 +300,7 @@
 
     let data = rows[side].slice();
     if(sortKey){
-      const col = COLS.find(c=>c.k===sortKey);
+      const col = COLSET.find(c=>c.k===sortKey);
       data.sort((a,b)=>{
         let x=col.get(a), y=col.get(b);
         if(typeof x==="string"||typeof y==="string"){ x=""+x; y=""+y; return sortDir*x.localeCompare(y); }
@@ -225,9 +308,14 @@
         return sortDir*(x-y);
       });
     }
-    if(!data.length){ showState("這個方向今天沒有名單。"); return; }
+    if(!data.length){
+      showState(side==="intra"
+        ? "尚無盤中快照。盤中執行 <b>daytrade_intraday.py</b> 後就會顯示。"
+        : "這個方向今天沒有名單。");
+      return;
+    }
     document.getElementById("tbody").innerHTML = data.map(d=>{
-      return "<tr>"+COLS.map(c=>{
+      return "<tr>"+COLSET.map(c=>{
         const v=c.get(d);
         return `<td class="${c.cls||""}">${c.fmt(v,d)}</td>`;
       }).join("")+"</tr>";
