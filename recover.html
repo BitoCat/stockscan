@@ -28,6 +28,18 @@
   }
   .cp-stab.active { background: #f0a500; color: #111; border-color: #f0a500; font-weight: 700; }
 
+  /* 關卡篩選 */
+  .cp-stage-tabs { display: flex; gap: 6px; margin: 2px 0 4px; flex-wrap: wrap; }
+  .cp-gtab { padding: 5px 12px; border-radius: 20px; border: 1px solid #3a3a4a;
+    background: #191922; color: #bbb; cursor: pointer; font-size: 0.86em; }
+  .cp-gtab.active { background: #2a2a3a; border-color: #f0a500; color: #f0a500; font-weight: 700; }
+  /* 關卡徽章 */
+  .stg { font-size: 0.85em; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+  .stg0 { background: rgba(255,255,255,.06); color: #888; }
+  .stg1 { background: rgba(205,127,50,.18); color: #cd7f32; }
+  .stg2 { background: rgba(160,160,180,.18); color: #c0c0d0; }
+  .stg3 { background: rgba(240,165,0,.18); color: #f0a500; font-weight: 700; }
+
   .cp-table-box { margin-top: 14px; max-height: 78vh; overflow: auto; }
   table.cp-table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
   .cp-table th, .cp-table td { padding: 9px 8px; border-bottom: 1px solid #333; text-align: right; white-space: nowrap; }
@@ -89,8 +101,14 @@
     <div class="cp-status-tabs">
       <button class="cp-stab active" data-status="追蹤中">追蹤中</button>
       <button class="cp-stab" data-status="已畢業">已畢業</button>
-      <button class="cp-stab" data-status="失敗">失敗</button>
       <button class="cp-stab" data-status="過期">過期</button>
+    </div>
+
+    <div class="cp-stage-tabs" id="stageTabs">
+      <button class="cp-gtab active" data-stage="0">全部</button>
+      <button class="cp-gtab" data-stage="1">🥉 脫離</button>
+      <button class="cp-gtab" data-stage="2">🥈 站穩</button>
+      <button class="cp-gtab" data-stage="3">🥇 轉強</button>
     </div>
 
     <div class="cp-table-box">
@@ -102,6 +120,7 @@
         <thead>
           <tr>
             <th data-key="code">股票</th>
+            <th data-key="stage">關卡</th>
             <th data-key="base_lower">基準(下軌)</th>
             <th data-key="price">現價</th>
             <th data-key="recover_pct">回漲%▲</th>
@@ -121,10 +140,13 @@
     </div>
 
     <div class="cp-note">
-      <b>進榜條件：</b>個股觸及貓咪隧道下軌後，某日「整根日 K 完全站上下軌」（當日最低價高於下軌）即確認回漲、收進清單。<br>
-      <b>基準(下軌)</b>＝觸及當天的下軌價；<b>回漲%</b>＝(現價−基準)/基準；<b>目標</b>＝目前上軌；<b>距上軌%</b>＝到目標還有多少獲利空間。<br>
-      <b>移除規則（會標明原因）：</b>碰到中線 → <span class="tag tag-grad">已畢業</span>（已脫離底部）；跌回碰下軌 → <span class="tag tag-fail">失敗</span>；10 個交易日未畢業 → <span class="tag tag-exp">過期</span>。<br>
-      <b>籌碼欄（僅台股）：</b>投信/外資連買天數、投信純度%（投信買超佔成交量比）、法人近5日合計（張，紅買綠賣）— 在已確認回漲的股票中，再找有法人籌碼加持的。<br>
+      <b>三關（純價格結構，一關比一關站得高）：</b>
+      <span class="stg stg1">🥉 脫離</span> 整根站上下軌的第一根上漲K（脫離K）；
+      <span class="stg stg2">🥈 站穩</span> 收盤站回脫離K之上；
+      <span class="stg stg3">🥇 轉強</span> 收盤再突破站穩K。關卡越高越確定，但已漲一段、獲利空間越小；<b>第一關最早、空間最大，但可能假突破，請自行斟酌風險。</b><br>
+      <b>中途轉弱：</b>收盤跌破脫離K → 脫離資格取消、退回等待（仍留清單），再看往上重新脫離或往下觸及下軌。<b>基準始終以當前下軌為準。</b><br>
+      <b>移除：</b>當日最高碰到中線 → <span class="tag tag-grad">已畢業</span>（到中線該獲利，不論哪根K）；脫離K一出現就碰中線＝隧道太窄、無進場意義，不收；停在第一關 10 個交易日未進展 → <span class="tag tag-exp">過期</span>。<br>
+      <b>籌碼欄（僅台股，獨立參考）：</b>投信/外資連買、投信純度%、法人近5日合計（張，紅買綠賣）。籌碼是附加品質，任何關卡都可能有——「剛脫離就有投信大買」正是最佳組合。<br>
       本頁為每日收盤結算資料，非即時報價；即時狀態請以您的券商工具為準。本頁僅供研究參考，非投資建議。
     </div>
   </div>
@@ -147,6 +169,7 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 
 let currentMarket = 'tw';
 let currentStatus = '追蹤中';
+let currentStage = 0;   // 0=全部, 1/2/3=只看該關
 let currentRows = [];
 let sortKey = 'recover_pct';
 let sortAsc = true;   // 追蹤中預設：回漲% 小→大（最靠下軌的在上）
@@ -243,10 +266,19 @@ function fmtNet5d(v) {
   const cls = lots > 0 ? 'up' : (lots < 0 ? 'down' : '');
   return '<span class="' + cls + '">' + (lots > 0 ? '+' : '') + lots.toLocaleString() + '</span>';
 }
+function stageBadge(s) {
+  s = s == null ? 1 : s;
+  if (s >= 3) return '<span class="stg stg3">🥇 轉強</span>';
+  if (s === 2) return '<span class="stg stg2">🥈 站穩</span>';
+  if (s === 1) return '<span class="stg stg1">🥉 脫離</span>';
+  return '<span class="stg stg0">⏳ 等待</span>';
+}
 
 function renderTable() {
   const showReason = currentStatus !== '追蹤中';
-  const sorted = [...currentRows].sort((a, b) => {
+  let base = currentRows;
+  if (currentStage > 0) base = base.filter(r => (r.stage == null ? 1 : r.stage) === currentStage);
+  const sorted = [...base].sort((a, b) => {
     let av = a[sortKey], bv = b[sortKey];
     if (av === null || av === undefined) return 1;
     if (bv === null || bv === undefined) return -1;
@@ -259,6 +291,7 @@ function renderTable() {
     html += '<tr>' +
       '<td><a class="cp-stock-link" href="diagnosis.html?symbol=' + r.code + '">' +
         r.code + ' ' + (r.name || '') + '</a></td>' +
+      '<td>' + stageBadge(r.stage) + '</td>' +
       '<td>' + fmtP(r.base_lower) + '</td>' +
       '<td>' + fmt(r.price) + '</td>' +
       '<td class="' + pctClass(r.recover_pct) + '"><b>' + fmt(r.recover_pct, '%') + '</b></td>' +
@@ -286,6 +319,16 @@ document.querySelectorAll('.cp-table th').forEach(th => {
       h.textContent = h.textContent.replace(/[▼▲]/g, '');
     });
     th.textContent = th.textContent + (sortAsc ? '▲' : '▼');
+    renderTable();
+  });
+});
+
+// ── 關卡篩選 ─────────────────────────────────────
+document.querySelectorAll('.cp-gtab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    currentStage = parseInt(tab.dataset.stage);
+    document.querySelectorAll('.cp-gtab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
     renderTable();
   });
 });
@@ -325,5 +368,4 @@ document.querySelectorAll('.cp-stab').forEach(tab => {
 </script>
 </body>
 </html>
-
 
