@@ -121,7 +121,8 @@
     </div>
 
     <div class="cp-stage-tabs" id="stageTabs">
-      <button class="cp-gtab active" data-stage="0">全部</button>
+      <button class="cp-gtab active" data-stage="-1">全部</button>
+      <button class="cp-gtab" data-stage="0">⏳ 觸軌</button>
       <button class="cp-gtab" data-stage="1">🥉 脫離</button>
       <button class="cp-gtab" data-stage="2">🥈 站穩</button>
       <button class="cp-gtab" data-stage="3">🥇 轉強</button>
@@ -157,14 +158,21 @@
     </div>
 
     <div class="cp-note">
-      <b>三關（純價格結構，一關比一關站得高）：</b>
-      <span class="stg stg1">🥉 脫離</span> 整根站上下軌的第一根上漲K（脫離K）；
-      <span class="stg stg2">🥈 站穩</span> 收盤站回脫離K之上；
-      <span class="stg stg3">🥇 轉強</span> 收盤再突破站穩K。關卡越高越確定，但已漲一段、獲利空間越小；<b>第一關最早、空間最大，但可能假突破，請自行斟酌風險。</b><br>
-      <b>中途轉弱：</b>收盤跌破脫離K → 脫離資格取消、退回等待（仍留清單），再看往上重新脫離或往下觸及下軌。<b>基準始終以當前下軌為準。</b><br>
-      <b>移除：</b>當日最高碰到中線 → <span class="tag tag-grad">已畢業</span>（到中線該獲利，不論哪根K）；脫離K一出現就碰中線＝隧道太窄、無進場意義，不收；停在第一關 10 個交易日未進展 → <span class="tag tag-exp">過期</span>。<br>
-      <b>籌碼欄（僅台股，獨立參考）：</b>投信/外資連買、投信純度%、法人近5日合計（張，紅買綠賣）。籌碼是附加品質，任何關卡都可能有——「剛脫離就有投信大買」正是最佳組合。<br>
+      <b>四關（貓咪隧道底部反轉做多，多方確立程度遞增）：</b>
+      <span class="stg stg0">⏳ 觸軌</span> 觸及下軌（關鍵K）＝跌夠深、<b>等待出方向</b>，約 7 成反轉向上、3 成續跌，<b>尚未確認漲跌方向，最早進場但風險最高</b>；
+      <span class="stg stg1">🥉 脫離</span> 整根站上下軌的第一根上漲K（脫離K）＝<b>多方形成</b>；
+      <span class="stg stg2">🥈 站穩</span> 收盤站回脫離K之上＝<b>多方站穩</b>；
+      <span class="stg stg3">🥇 轉強</span> 收盤再突破站穩K＝<b>多方無疑</b>。<b>關卡越前面越早、空間越大、但越不確定；越後面越確定、但已漲一段、空間越小。用戶自行按風險偏好選擇進場關卡。</b><br>
+      <b>中途轉弱：</b>收盤跌破脫離K → 脫離資格取消、退回觸軌等待（仍留清單），再看往上重新脫離或往下觸及下軌。<b>基準始終以當前下軌為準。</b><br>
+      <b>移除：</b>當日最高碰到中線 → <span class="tag tag-grad">已畢業</span>（到中線該獲利，不論哪根K）；脫離K一出現就碰中線＝隧道太窄、無進場意義，不收；停在觸軌／脫離 10 個交易日未進展 → <span class="tag tag-exp">過期</span>。<br>
+      <b>籌碼欄（僅台股，獨立參考）：</b>投信/外資連買、投信純度%、法人近5日合計（張，紅買綠賣）。籌碼是附加品質、任何關卡都可能有——「觸軌／剛脫離就有投信大買」正是最佳組合；點「📊 查籌碼」看完整法人與融資融券。<br>
       本頁為每日收盤結算資料，非即時報價；即時狀態請以您的券商工具為準。本頁僅供研究參考，非投資建議。
+
+      <div style="margin-top:18px;text-align:center">
+        <img src="img/recover-k-guide.jpg" alt="關鍵K/脫離K/站穩K/轉強K 示意圖"
+             style="max-width:100%;width:560px;border-radius:10px;border:1px solid #2a2a2a"
+             onerror="this.style.display='none'">
+      </div>
     </div>
   </div>
 </div>
@@ -186,7 +194,7 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 
 let currentMarket = 'tw';
 let currentStatus = '追蹤中';
-let currentStage = 0;   // 0=全部, 1/2/3=只看該關
+let currentStage = -1;   // -1=全部, 0觸軌/1脫離/2站穩/3轉強
 let currentRows = [];
 let sortKey = 'recover_pct';
 let sortAsc = true;   // 追蹤中預設：回漲% 小→大（最靠下軌的在上）
@@ -284,17 +292,17 @@ function fmtNet5d(v) {
   return '<span class="' + cls + '">' + (lots > 0 ? '+' : '') + lots.toLocaleString() + '</span>';
 }
 function stageBadge(s) {
-  s = s == null ? 1 : s;
-  if (s >= 3) return '<span class="stg stg3">🥇 轉強</span>';
-  if (s === 2) return '<span class="stg stg2">🥈 站穩</span>';
-  if (s === 1) return '<span class="stg stg1">🥉 脫離</span>';
-  return '<span class="stg stg0">⏳ 等待</span>';
+  s = s == null ? 0 : s;
+  if (s >= 3) return '<span class="stg stg3" title="多方無疑">🥇 轉強</span>';
+  if (s === 2) return '<span class="stg stg2" title="多方站穩">🥈 站穩</span>';
+  if (s === 1) return '<span class="stg stg1" title="多方形成">🥉 脫離</span>';
+  return '<span class="stg stg0" title="等待出方向（約7成反轉、3成續跌）">⏳ 觸軌</span>';
 }
 
 function renderTable() {
   const showReason = currentStatus !== '追蹤中';
   let base = currentRows;
-  if (currentStage > 0) base = base.filter(r => (r.stage == null ? 1 : r.stage) === currentStage);
+  if (currentStage >= 0) base = base.filter(r => (r.stage == null ? 0 : r.stage) === currentStage);
   const sorted = [...base].sort((a, b) => {
     let av = a[sortKey], bv = b[sortKey];
     if (av === null || av === undefined) return 1;
