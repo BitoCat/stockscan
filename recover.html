@@ -28,10 +28,10 @@
   }
   .cp-stab.active { background: #f0a500; color: #111; border-color: #f0a500; font-weight: 700; }
 
-  .cp-table-box { margin-top: 14px; overflow-x: auto; }
+  .cp-table-box { margin-top: 14px; max-height: 78vh; overflow: auto; }
   table.cp-table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
   .cp-table th, .cp-table td { padding: 9px 8px; border-bottom: 1px solid #333; text-align: right; white-space: nowrap; }
-  .cp-table th { color: #aaa; cursor: pointer; user-select: none; position: sticky; top: 0; background: #15151f; }
+  .cp-table th { color: #aaa; cursor: pointer; user-select: none; position: sticky; top: 0; z-index: 2; background: #15151f; }
   .cp-table th:hover { color: #f0a500; }
   .cp-table td:first-child, .cp-table th:first-child {
     text-align: left;
@@ -218,6 +218,10 @@ function fmt(v, suffix) {
   if (v === null || v === undefined || v === '') return '<span class="muted">-</span>';
   return v + (suffix || '');
 }
+function fmtP(v) {   // 價格：四捨五入到 2 位（修現有長小數）
+  if (v === null || v === undefined || v === '') return '<span class="muted">-</span>';
+  return Math.round(v * 100) / 100;
+}
 function pctClass(v) {
   if (v === null || v === undefined) return '';
   return v > 0 ? 'up' : (v < 0 ? 'down' : '');
@@ -255,10 +259,10 @@ function renderTable() {
     html += '<tr>' +
       '<td><a class="cp-stock-link" href="diagnosis.html?symbol=' + r.code + '">' +
         r.code + ' ' + (r.name || '') + '</a></td>' +
-      '<td>' + fmt(r.base_lower) + '</td>' +
+      '<td>' + fmtP(r.base_lower) + '</td>' +
       '<td>' + fmt(r.price) + '</td>' +
       '<td class="' + pctClass(r.recover_pct) + '"><b>' + fmt(r.recover_pct, '%') + '</b></td>' +
-      '<td>' + fmt(r.upper) + '</td>' +
+      '<td>' + fmtP(r.upper) + '</td>' +
       '<td class="' + (r.tp_gap_pct >= 0 ? 'up' : 'down') + '">' + fmt(r.tp_gap_pct, '%') + '</td>' +
       '<td>' + fmt(r.days_held) + '</td>' +
       '<td>' + fmt(r.confirm_date) + '</td>' +
@@ -321,3 +325,5 @@ document.querySelectorAll('.cp-stab').forEach(tab => {
 </script>
 </body>
 </html>
+
+
