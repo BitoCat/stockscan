@@ -40,6 +40,22 @@
   .stg2 { background: rgba(160,160,180,.18); color: #c0c0d0; }
   .stg3 { background: rgba(240,165,0,.18); color: #f0a500; font-weight: 700; }
 
+  /* 查籌碼按鈕與就地展開面板 */
+  .chip-btn { padding: 4px 10px; border-radius: 8px; border: 1px solid #3a3a4a;
+    background: #191922; color: #cdb; cursor: pointer; font-size: 0.82em; white-space: nowrap; }
+  .chip-btn:hover { border-color: #f0a500; color: #f0a500; }
+  .chip-detail td { background: #14141c; padding: 14px 16px; white-space: normal; }
+  .chip-verdict { font-weight: 700; font-size: 1.02em; margin-bottom: 8px; }
+  .chip-note-line { color: #999; font-size: 0.85em; margin-bottom: 10px; }
+  .chip-tbl { border-collapse: collapse; font-size: 0.9em; margin-bottom: 12px; min-width: 320px; }
+  .chip-tbl th { color: #888; font-weight: 400; font-size: 0.85em; text-align: right; padding: 3px 12px; }
+  .chip-tbl th:first-child { text-align: left; }
+  .chip-tbl td { text-align: right; font-family: monospace; padding: 3px 12px; }
+  .chip-tbl td:first-child { text-align: left; font-family: inherit; color: #aaa; }
+  .v-clap { color: #2ecc71; }
+  .v-neutral { color: #9aa; }
+  .v-absorb { color: #f0a500; }
+
   .cp-table-box { margin-top: 14px; max-height: 78vh; overflow: auto; }
   table.cp-table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
   .cp-table th, .cp-table td { padding: 9px 8px; border-bottom: 1px solid #333; text-align: right; white-space: nowrap; }
@@ -120,6 +136,7 @@
         <thead>
           <tr>
             <th data-key="code">股票</th>
+            <th>籌碼</th>
             <th data-key="stage">關卡</th>
             <th data-key="base_lower">基準(下軌)</th>
             <th data-key="price">現價</th>
@@ -288,9 +305,13 @@ function renderTable() {
 
   let html = '';
   sorted.forEach(r => {
+    const st = (r.stage == null ? 1 : r.stage);
     html += '<tr>' +
       '<td><a class="cp-stock-link" href="diagnosis.html?symbol=' + r.code + '">' +
         r.code + ' ' + (r.name || '') + '</a></td>' +
+      (currentMarket === 'tw'
+        ? '<td><button class="chip-btn" data-code="' + r.code + '" data-stage="' + st + '">📊 查籌碼</button></td>'
+        : '<td><span class="muted">-</span></td>') +
       '<td>' + stageBadge(r.stage) + '</td>' +
       '<td>' + fmtP(r.base_lower) + '</td>' +
       '<td>' + fmt(r.price) + '</td>' +
@@ -304,15 +325,91 @@ function renderTable() {
       '<td class="chipCol">' + fmt(r.trust_conc, '%') + '</td>' +
       '<td class="chipCol">' + fmtNet5d(r.inst_net_5d) + '</td>' +
       (showReason ? '<td class="reasonCol">' + reasonTag(r.remove_reason, r.status) + '</td>' : '') +
-      '</tr>';
+      '</tr>' +
+      (currentMarket === 'tw'
+        ? '<tr class="chip-detail" style="display:none"><td colspan="20"><div class="chip-body muted">載入中…</div></td></tr>'
+        : '');
   });
   document.getElementById('resultBody').innerHTML = html;
 }
+
+// ── 就地展開：查籌碼 ───────────────────────────────
+async function sbQuery(path) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON, 'Range': '0-999' }
+  });
+  return await res.json();
+}
+function sumLast(arr, k) { let s = 0; for (let i = Math.max(0, arr.length - k); i < arr.length; i++) s += arr[i]; return s; }
+function nfmt(x) { const n = Math.round(x); return (n > 0 ? '+' : (n < 0 ? '−' : '')) + Math.abs(n).toLocaleString('en-US'); }
+function cellHtml(v) { const c = v > 0 ? 'up' : (v < 0 ? 'down' : 'muted'); return '<td class="' + c + '">' + nfmt(v) + '</td>'; }
+
+async function loadChipPanel(code, stage, box) {
+  try {
+    const inst = await sbQuery('tw_institutional?select=date,foreign_net,trust_net,dealer_net,total_net&ticker=eq.' + code + '&order=date.desc&limit=60');
+    if (!inst.length) { box.innerHTML = '<span class="muted">本檔近期無三大法人資料（可能上櫃或無交易紀錄）。</span>'; return; }
+    inst.reverse();
+    const toLot = v => Math.round((Number(v) || 0) / 1000);
+    const fo = inst.map(r => toLot(r.foreign_net)), tr = inst.map(r => toLot(r.trust_net)),
+          de = inst.map(r => toLot(r.dealer_net)), to = inst.map(r => toLot(r.total_net));
+    let mg = [];
+    try { mg = (await sbQuery('tw_margin?select=date,margin_chg,short_chg&code=eq.' + code + '&order=date.desc&limit=5')).reverse(); } catch (e) {}
+    const mc = mg.map(r => Number(r.margin_chg) || 0), sh = mg.map(r => Number(r.short_chg) || 0);
+
+    const t5 = sumLast(tr, 5), to5 = sumLast(to, 5), fo5 = sumLast(fo, 5);
+    // 判讀原則：有籌碼就鼓掌、沒籌碼中性不唱衰、底部吸籌標成另一種選擇
+    let vcls, vtxt, note = '';
+    if (stage === 0 && t5 > 0) {
+      // 底部吸籌：尚在等待/貼下軌卻見投信買 → 另一種機會（先判，別被下面攔截）
+      vcls = 'v-absorb'; vtxt = '💎 底部吸籌未漲 — 另一種機會';
+      note = '尚未脫離但投信在買，或為長線布局跡象，適合做長線心態者留意。';
+    } else if (t5 > 0 || (to5 > 0 && fo5 > 0)) {
+      vcls = 'v-clap'; vtxt = '👏 籌碼進駐 — 法人同步進場';
+      if (stage <= 1 && t5 > 0) note = '難得：早期就見投信買進。';
+    } else if (to5 < 0 || fo5 < 0) {
+      vcls = 'v-neutral'; vtxt = '法人暫時調節';
+      note = '早期位置法人多在接近中線才進場，尚屬正常。';
+    } else {
+      vcls = 'v-neutral'; vtxt = '尚無籌碼進駐 · 法人觀望';
+      note = '方向已站上，籌碼未進駐屬正常——投信通常在接近中線才進場。';
+    }
+
+    const trow = (lbl, arr) => '<tr><td>' + lbl + '</td>' + cellHtml(sumLast(arr, 1)) + cellHtml(sumLast(arr, 3)) + cellHtml(sumLast(arr, 5)) + '</tr>';
+    const instTbl = '<table class="chip-tbl"><tr><th>法人 (張)</th><th>當日</th><th>近3日</th><th>近5日</th></tr>' +
+      trow('合計', to) + trow('外資', fo) + trow('投信', tr) + trow('自營', de) + '</table>';
+    let mgTbl = '';
+    if (mg.length) mgTbl = '<table class="chip-tbl"><tr><th>信用 增減(張)</th><th>當日</th><th>近3日</th><th>近5日</th></tr>' +
+      trow('融資(散戶多)', mc) + trow('融券(散戶空)', sh) + '</table>';
+
+    box.innerHTML = '<div class="chip-verdict ' + vcls + '">' + vtxt + '</div>' +
+      (note ? '<div class="chip-note-line">' + note + '</div>' : '') +
+      instTbl + mgTbl +
+      '<div class="chip-note-line">法人為淨買賣、信用為餘額增減（張，紅買綠賣／紅增綠減）。籌碼是加分項——有進駐叫好、尚無進駐屬早期正常，不代表看壞。</div>';
+  } catch (e) {
+    box.innerHTML = '<span class="muted">籌碼載入失敗，稍後再試。</span>';
+  }
+}
+
+document.getElementById('resultBody').addEventListener('click', e => {
+  const btn = e.target.closest('.chip-btn');
+  if (!btn) return;
+  const detail = btn.closest('tr').nextElementSibling;
+  if (!detail || !detail.classList.contains('chip-detail')) return;
+  if (detail.style.display !== 'none') { detail.style.display = 'none'; btn.textContent = '📊 查籌碼'; return; }
+  detail.style.display = 'table-row';
+  btn.textContent = '📊 收起';
+  const box = detail.querySelector('.chip-body');
+  if (!box.dataset.filled) {
+    box.dataset.filled = '1'; box.classList.remove('muted');
+    loadChipPanel(btn.dataset.code, parseInt(btn.dataset.stage), box);
+  }
+});
 
 // ── 排序 ─────────────────────────────────────────
 document.querySelectorAll('.cp-table th').forEach(th => {
   th.addEventListener('click', () => {
     const key = th.dataset.key;
+    if (!key) return;                              // 籌碼欄無 data-key，不排序
     if (sortKey === key) { sortAsc = !sortAsc; }
     else { sortKey = key; sortAsc = (key === 'recover_pct'); }
     document.querySelectorAll('.cp-table th').forEach(h => {
@@ -368,4 +465,3 @@ document.querySelectorAll('.cp-stab').forEach(tab => {
 </script>
 </body>
 </html>
-
