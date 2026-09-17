@@ -100,6 +100,10 @@
             <th data-key="tp_gap_pct">距上軌%</th>
             <th data-key="days_held">持有天</th>
             <th data-key="confirm_date">確認日</th>
+            <th data-key="trust_streak" class="chipCol">投信連買</th>
+            <th data-key="foreign_streak" class="chipCol">外資連買</th>
+            <th data-key="trust_conc" class="chipCol">投信純度%</th>
+            <th data-key="inst_net_5d" class="chipCol">法人5日(張)</th>
             <th data-key="remove_reason" class="reasonCol" style="display:none">移除原因</th>
           </tr>
         </thead>
@@ -111,6 +115,7 @@
       <b>進榜條件：</b>個股觸及貓咪隧道下軌後，某日「整根日 K 完全站上下軌」（當日最低價高於下軌）即確認回漲、收進清單。<br>
       <b>基準(下軌)</b>＝觸及當天的下軌價；<b>回漲%</b>＝(現價−基準)/基準；<b>目標</b>＝目前上軌；<b>距上軌%</b>＝到目標還有多少獲利空間。<br>
       <b>移除規則（會標明原因）：</b>碰到中線 → <span class="tag tag-grad">已畢業</span>（已脫離底部）；跌回碰下軌 → <span class="tag tag-fail">失敗</span>；10 個交易日未畢業 → <span class="tag tag-exp">過期</span>。<br>
+      <b>籌碼欄（僅台股）：</b>投信/外資連買天數、投信純度%（投信買超佔成交量比）、法人近5日合計（張，紅買綠賣）— 在已確認回漲的股票中，再找有法人籌碼加持的。<br>
       本頁為每日收盤結算資料，非即時報價；即時狀態請以您的券商工具為準。本頁僅供研究參考，非投資建議。
     </div>
   </div>
@@ -179,10 +184,16 @@ async function loadList() {
 
   loading.style.display = 'none';
 
-  // 顯示資料日期（取最新 updated_at）
+  // 顯示資料日期（收盤結算日 + 籌碼日）
   const latest = currentRows.reduce((m, r) => (r.updated_at > m ? r.updated_at : m), '');
-  document.getElementById('updatedBox').textContent =
-    latest ? ('資料為 ' + latest + ' 收盤結算（每日更新）') : '';
+  const chipLatest = currentRows.reduce((m, r) => (r.chip_date && r.chip_date > m ? r.chip_date : m), '');
+  let dateMsg = latest ? ('資料為 ' + latest + ' 收盤結算') : '';
+  if (currentMarket === 'tw' && chipLatest) dateMsg += '　籌碼為 ' + chipLatest;
+  if (dateMsg) dateMsg += '（每日更新）';
+  document.getElementById('updatedBox').textContent = dateMsg;
+
+  // 籌碼欄：只有台股顯示
+  document.querySelectorAll('.chipCol').forEach(el => el.style.display = currentMarket === 'tw' ? '' : 'none');
 
   // 移除原因欄：只有非「追蹤中」才顯示
   const showReason = currentStatus !== '追蹤中';
@@ -207,6 +218,18 @@ function reasonTag(reason, status) {
   const cls = status === '已畢業' ? 'tag-grad' : (status === '失敗' ? 'tag-fail' : 'tag-exp');
   return '<span class="tag ' + cls + '">' + reason + '</span>';
 }
+function fmtStreak(v) {
+  if (v === null || v === undefined) return '<span class="muted">-</span>';
+  if (v > 0) return '<span class="up">連買' + v + '</span>';
+  if (v < 0) return '<span class="down">連賣' + (-v) + '</span>';
+  return '<span class="muted">0</span>';
+}
+function fmtNet5d(v) {
+  if (v === null || v === undefined) return '<span class="muted">-</span>';
+  const lots = Math.round(v / 1000);   // 股 → 張
+  const cls = lots > 0 ? 'up' : (lots < 0 ? 'down' : '');
+  return '<span class="' + cls + '">' + (lots > 0 ? '+' : '') + lots.toLocaleString() + '</span>';
+}
 
 function renderTable() {
   const showReason = currentStatus !== '追蹤中';
@@ -230,6 +253,10 @@ function renderTable() {
       '<td class="' + (r.tp_gap_pct >= 0 ? 'up' : 'down') + '">' + fmt(r.tp_gap_pct, '%') + '</td>' +
       '<td>' + fmt(r.days_held) + '</td>' +
       '<td>' + fmt(r.confirm_date) + '</td>' +
+      '<td class="chipCol">' + fmtStreak(r.trust_streak) + '</td>' +
+      '<td class="chipCol">' + fmtStreak(r.foreign_streak) + '</td>' +
+      '<td class="chipCol">' + fmt(r.trust_conc, '%') + '</td>' +
+      '<td class="chipCol">' + fmtNet5d(r.inst_net_5d) + '</td>' +
       (showReason ? '<td class="reasonCol">' + reasonTag(r.remove_reason, r.status) + '</td>' : '') +
       '</tr>';
   });
@@ -285,3 +312,4 @@ document.querySelectorAll('.cp-stab').forEach(tab => {
 </script>
 </body>
 </html>
+
