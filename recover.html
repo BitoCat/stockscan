@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>回漲雷達 - 交易大師 ProTrader</title>
+<link rel="stylesheet" href="css/base.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
+<style>
+  body { padding-bottom: 90px; }
+  .cp-wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  .cp-title { font-size: 1.5em; font-weight: 700; margin: 12px 0 4px; }
+  .cp-sub { color: #888; font-size: 0.9em; margin-bottom: 8px; }
+  .cp-updated { color: #f0a500; font-size: 0.82em; margin-bottom: 14px; }
+
+  .cp-tabs { display: flex; gap: 8px; margin: 4px 0 10px; flex-wrap: wrap; }
+  .cp-tab {
+    padding: 8px 18px; border-radius: 8px; border: 1px solid #444;
+    background: #1e1e2a; color: #ddd; cursor: pointer; font-size: 1em; font-weight: 700;
+  }
+  .cp-tab.active { background: #2a2a3a; border-color: #f0a500; color: #f0a500; }
+
+  /* 狀態切換（追蹤中 / 已畢業 / 失敗 / 過期）*/
+  .cp-status-tabs { display: flex; gap: 6px; margin: 6px 0 4px; flex-wrap: wrap; }
+  .cp-stab {
+    padding: 6px 14px; border-radius: 20px; border: 1px solid #444;
+    background: #1e1e2a; color: #ccc; cursor: pointer; font-size: 0.9em;
+  }
+  .cp-stab.active { background: #f0a500; color: #111; border-color: #f0a500; font-weight: 700; }
+
+  .cp-table-box { margin-top: 14px; overflow-x: auto; }
+  table.cp-table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
+  .cp-table th, .cp-table td { padding: 9px 8px; border-bottom: 1px solid #333; text-align: right; white-space: nowrap; }
+  .cp-table th { color: #aaa; cursor: pointer; user-select: none; position: sticky; top: 0; background: #15151f; }
+  .cp-table th:hover { color: #f0a500; }
+  .cp-table td:first-child, .cp-table th:first-child { text-align: left; }
+  .cp-stock-link { color: #4da3ff; cursor: pointer; text-decoration: none; }
+  .cp-stock-link:hover { text-decoration: underline; }
+  .up { color: #ff4d4d; }     /* 台股慣例：紅漲 */
+  .down { color: #2ecc71; }   /* 綠跌 */
+  .muted { color: #666; }
+  .tag { font-size: 0.8em; padding: 2px 8px; border-radius: 10px; }
+  .tag-grad { background: rgba(46,204,113,.15); color: #2ecc71; }
+  .tag-fail { background: rgba(231,76,60,.15); color: #ff6b6b; }
+  .tag-exp  { background: rgba(255,255,255,.08); color: #999; }
+
+  .cp-loading { text-align: center; padding: 30px; color: #aaa; }
+  .cp-spinner { display: inline-block; width: 22px; height: 22px; border: 3px solid #444;
+    border-top-color: #f0a500; border-radius: 50%; animation: cpspin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
+  @keyframes cpspin { to { transform: rotate(360deg); } }
+  .cp-empty { text-align: center; padding: 40px; color: #777; }
+
+  .cp-locked { text-align: center; padding: 60px 20px; }
+  .cp-locked h2 { color: #f0a500; }
+  .cp-locked a { color: #4da3ff; }
+
+  .cp-note { color: #888; font-size: 0.85em; margin-top: 18px; line-height: 1.8;
+    border-top: 1px solid #2a2a2a; padding-top: 14px; }
+  .cp-note b { color: #f0a500; }
+</style>
+</head>
+<body>
+
+<div class="cp-wrap">
+  <div class="cp-title">📈 回漲雷達</div>
+  <div class="cp-sub">觸及貓咪隧道下軌後，整根日 K 站上下軌 → 底部確認回漲，目標鎖定上軌</div>
+  <div id="updatedBox" class="cp-updated"></div>
+
+  <div id="lockedBox" class="cp-locked" style="display:none">
+    <h2>🔒 此功能為付費會員專屬</h2>
+    <p>請至 <a href="profile.html">我的帳號</a> 聯繫管理員升級方案</p>
+  </div>
+
+  <div id="mainBox" style="display:none">
+    <div class="cp-tabs">
+      <button class="cp-tab active" data-market="tw">🇹🇼 台股</button>
+      <button class="cp-tab" data-market="us">🇺🇸 美股</button>
+    </div>
+
+    <div class="cp-status-tabs">
+      <button class="cp-stab active" data-status="追蹤中">追蹤中</button>
+      <button class="cp-stab" data-status="已畢業">已畢業</button>
+      <button class="cp-stab" data-status="失敗">失敗</button>
+      <button class="cp-stab" data-status="過期">過期</button>
+    </div>
+
+    <div class="cp-table-box">
+      <div id="loadingBox" class="cp-loading" style="display:none">
+        <span class="cp-spinner"></span>載入中...
+      </div>
+      <div id="emptyBox" class="cp-empty" style="display:none">此分類目前沒有資料</div>
+      <table class="cp-table" id="resultTable" style="display:none">
+        <thead>
+          <tr>
+            <th data-key="code">股票</th>
+            <th data-key="base_lower">基準(下軌)</th>
+            <th data-key="price">現價</th>
+            <th data-key="recover_pct">回漲%▲</th>
+            <th data-key="upper">目標(上軌)</th>
+            <th data-key="tp_gap_pct">距上軌%</th>
+            <th data-key="days_held">持有天</th>
+            <th data-key="confirm_date">確認日</th>
+            <th data-key="remove_reason" class="reasonCol" style="display:none">移除原因</th>
+          </tr>
+        </thead>
+        <tbody id="resultBody"></tbody>
+      </table>
+    </div>
+
+    <div class="cp-note">
+      <b>進榜條件：</b>個股觸及貓咪隧道下軌後，某日「整根日 K 完全站上下軌」（當日最低價高於下軌）即確認回漲、收進清單。<br>
+      <b>基準(下軌)</b>＝觸及當天的下軌價；<b>回漲%</b>＝(現價−基準)/基準；<b>目標</b>＝目前上軌；<b>距上軌%</b>＝到目標還有多少獲利空間。<br>
+      <b>移除規則（會標明原因）：</b>碰到中線 → <span class="tag tag-grad">已畢業</span>（已脫離底部）；跌回碰下軌 → <span class="tag tag-fail">失敗</span>；10 個交易日未畢業 → <span class="tag tag-exp">過期</span>。<br>
+      本頁為每日收盤結算資料，非即時報價；即時狀態請以您的券商工具為準。本頁僅供研究參考，非投資建議。
+    </div>
+  </div>
+</div>
+
+<nav class="tabbar">
+  <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
+  <a class="tb" href="watchlist.html"><span class="ti">⭐</span>名單</a>
+  <a class="tb" href="daily.html"><span class="ti">📊</span>盤面</a>
+  <a class="tb" href="tracker.html"><span class="ti">🔭</span>追蹤</a>
+  <a class="tb" href="tutorial.html"><span class="ti">📈</span>圖表</a>
+  <a class="tb" href="concepts.html"><span class="ti">🧩</span>概念</a>
+  <a class="tb" href="screener.html"><span class="ti">🎯</span>篩選</a>
+  <a class="tb" href="profile.html"><span class="ti">👤</span>我的</a>
+</nav>
+
+<script>
+const SUPABASE_URL = 'https://kldumnxdlgovaxtiszyn.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI';
+
+let currentMarket = 'tw';
+let currentStatus = '追蹤中';
+let currentRows = [];
+let sortKey = 'recover_pct';
+let sortAsc = true;   // 追蹤中預設：回漲% 小→大（最靠下軌的在上）
+
+// ── 權限檢查（free 鎖定）──────────────────────────
+async function checkAccess() {
+  try {
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    const sessRes = await sb.auth.getSession();
+    const session = sessRes.data ? sessRes.data.session : null;
+    if (!session) { location.href = 'login.html'; return false; }
+    const res = await fetch(SUPABASE_URL + '/rest/v1/profiles?id=eq.' + session.user.id + '&select=plan', {
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + session.access_token }
+    });
+    const rows = await res.json();
+    const plan = (rows && rows[0]) ? rows[0].plan : 'free';
+    return ['tw', 'us', 'all', 'admin'].indexOf(plan) !== -1;
+  } catch (e) {
+    console.error('auth check failed', e);
+    return false;
+  }
+}
+
+// ── 讀取清單 ─────────────────────────────────────
+async function loadList() {
+  const table = document.getElementById('resultTable');
+  const loading = document.getElementById('loadingBox');
+  const empty = document.getElementById('emptyBox');
+  table.style.display = 'none'; empty.style.display = 'none';
+  loading.style.display = 'block';
+
+  try {
+    const url = SUPABASE_URL + '/rest/v1/cat_recover_list'
+      + '?select=*&market=eq.' + currentMarket
+      + '&status=eq.' + encodeURIComponent(currentStatus)
+      + '&order=updated_at.desc';
+    const res = await fetch(url, {
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON, 'Range': '0-9999' }
+    });
+    currentRows = await res.json();
+  } catch (e) {
+    console.error(e); currentRows = [];
+  }
+
+  loading.style.display = 'none';
+
+  // 顯示資料日期（取最新 updated_at）
+  const latest = currentRows.reduce((m, r) => (r.updated_at > m ? r.updated_at : m), '');
+  document.getElementById('updatedBox').textContent =
+    latest ? ('資料為 ' + latest + ' 收盤結算（每日更新）') : '';
+
+  // 移除原因欄：只有非「追蹤中」才顯示
+  const showReason = currentStatus !== '追蹤中';
+  document.querySelectorAll('.reasonCol').forEach(el => el.style.display = showReason ? '' : 'none');
+
+  if (!currentRows.length) { empty.style.display = 'block'; return; }
+  renderTable();
+  table.style.display = 'table';
+}
+
+// ── 渲染 ─────────────────────────────────────────
+function fmt(v, suffix) {
+  if (v === null || v === undefined || v === '') return '<span class="muted">-</span>';
+  return v + (suffix || '');
+}
+function pctClass(v) {
+  if (v === null || v === undefined) return '';
+  return v > 0 ? 'up' : (v < 0 ? 'down' : '');
+}
+function reasonTag(reason, status) {
+  if (!reason) return '<span class="muted">-</span>';
+  const cls = status === '已畢業' ? 'tag-grad' : (status === '失敗' ? 'tag-fail' : 'tag-exp');
+  return '<span class="tag ' + cls + '">' + reason + '</span>';
+}
+
+function renderTable() {
+  const showReason = currentStatus !== '追蹤中';
+  const sorted = [...currentRows].sort((a, b) => {
+    let av = a[sortKey], bv = b[sortKey];
+    if (av === null || av === undefined) return 1;
+    if (bv === null || bv === undefined) return -1;
+    if (typeof av === 'string' && isNaN(av)) return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    return sortAsc ? av - bv : bv - av;
+  });
+
+  let html = '';
+  sorted.forEach(r => {
+    html += '<tr>' +
+      '<td><a class="cp-stock-link" href="diagnosis.html?symbol=' + r.code + '">' +
+        r.code + ' ' + (r.name || '') + '</a></td>' +
+      '<td>' + fmt(r.base_lower) + '</td>' +
+      '<td>' + fmt(r.price) + '</td>' +
+      '<td class="' + pctClass(r.recover_pct) + '"><b>' + fmt(r.recover_pct, '%') + '</b></td>' +
+      '<td>' + fmt(r.upper) + '</td>' +
+      '<td class="' + (r.tp_gap_pct >= 0 ? 'up' : 'down') + '">' + fmt(r.tp_gap_pct, '%') + '</td>' +
+      '<td>' + fmt(r.days_held) + '</td>' +
+      '<td>' + fmt(r.confirm_date) + '</td>' +
+      (showReason ? '<td class="reasonCol">' + reasonTag(r.remove_reason, r.status) + '</td>' : '') +
+      '</tr>';
+  });
+  document.getElementById('resultBody').innerHTML = html;
+}
+
+// ── 排序 ─────────────────────────────────────────
+document.querySelectorAll('.cp-table th').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.key;
+    if (sortKey === key) { sortAsc = !sortAsc; }
+    else { sortKey = key; sortAsc = (key === 'recover_pct'); }
+    document.querySelectorAll('.cp-table th').forEach(h => {
+      h.textContent = h.textContent.replace(/[▼▲]/g, '');
+    });
+    th.textContent = th.textContent + (sortAsc ? '▲' : '▼');
+    renderTable();
+  });
+});
+
+// ── 市場切換 ─────────────────────────────────────
+document.querySelectorAll('.cp-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    if (tab.dataset.market === currentMarket) return;
+    currentMarket = tab.dataset.market;
+    document.querySelectorAll('.cp-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    loadList();
+  });
+});
+
+// ── 狀態切換 ─────────────────────────────────────
+document.querySelectorAll('.cp-stab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    if (tab.dataset.status === currentStatus) return;
+    currentStatus = tab.dataset.status;
+    document.querySelectorAll('.cp-stab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    // 追蹤中預設回漲%小→大；其他分類預設更新日新→舊
+    if (currentStatus === '追蹤中') { sortKey = 'recover_pct'; sortAsc = true; }
+    else { sortKey = 'updated_at'; sortAsc = false; }
+    loadList();
+  });
+});
+
+// ── 初始化 ───────────────────────────────────────
+(async function init() {
+  const ok = await checkAccess();
+  if (!ok) { document.getElementById('lockedBox').style.display = 'block'; return; }
+  document.getElementById('mainBox').style.display = 'block';
+  loadList();
+})();
+</script>
+</body>
+</html>
