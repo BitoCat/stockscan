@@ -33,12 +33,12 @@
   .cp-gtab { padding: 5px 12px; border-radius: 20px; border: 1px solid #3a3a4a;
     background: #191922; color: #bbb; cursor: pointer; font-size: 0.86em; }
   .cp-gtab.active { background: #2a2a3a; border-color: #f0a500; color: #f0a500; font-weight: 700; }
-  /* 關卡徽章 */
-  .stg { font-size: 0.85em; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
-  .stg0 { background: rgba(255,255,255,.06); color: #888; }
-  .stg1 { background: rgba(205,127,50,.18); color: #cd7f32; }
-  .stg2 { background: rgba(160,160,180,.18); color: #c0c0d0; }
-  .stg3 { background: rgba(240,165,0,.18); color: #f0a500; font-weight: 700; }
+  /* 關卡徽章（藍灰→銅→青綠→金：由早到晚、由弱到強，四色明顯區隔）*/
+  .stg { font-size: 0.85em; padding: 2px 8px; border-radius: 10px; white-space: nowrap; font-weight: 700; }
+  .stg0 { background: rgba(96,125,170,.22); color: #7fa8d8; border: 1px solid rgba(96,125,170,.45); }   /* 觸軌 藍灰 */
+  .stg1 { background: rgba(205,110,45,.22);  color: #e08a3c; border: 1px solid rgba(205,110,45,.5); }    /* 脫離 銅橘 */
+  .stg2 { background: rgba(38,180,130,.20);  color: #2ecc8f; border: 1px solid rgba(38,180,130,.5); }    /* 站穩 青綠 */
+  .stg3 { background: rgba(240,180,20,.24);  color: #ffc107; border: 1px solid rgba(240,180,20,.6); }    /* 轉強 金黃 */
 
   /* 查籌碼按鈕與就地展開面板 */
   .chip-btn { padding: 4px 10px; border-radius: 8px; border: 1px solid #3a3a4a;
@@ -473,4 +473,3 @@ document.querySelectorAll('.cp-stab').forEach(tab => {
 </script>
 </body>
 </html>
-
