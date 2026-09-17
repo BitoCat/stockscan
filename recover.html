@@ -33,8 +33,17 @@
   .cp-table th, .cp-table td { padding: 9px 8px; border-bottom: 1px solid #333; text-align: right; white-space: nowrap; }
   .cp-table th { color: #aaa; cursor: pointer; user-select: none; position: sticky; top: 0; background: #15151f; }
   .cp-table th:hover { color: #f0a500; }
-  .cp-table td:first-child, .cp-table th:first-child { text-align: left; }
-  .cp-stock-link { color: #4da3ff; cursor: pointer; text-decoration: none; }
+  .cp-table td:first-child, .cp-table th:first-child {
+    text-align: left;
+    position: sticky; left: 0; z-index: 1;
+    width: 140px; min-width: 140px; max-width: 140px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    background: #15151f;
+  }
+  .cp-table th:first-child { z-index: 3; }   /* 左上角蓋住捲動內容 */
+  .cp-stock-link { display: inline-block; max-width: 100%; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom;
+    color: #4da3ff; cursor: pointer; text-decoration: none; }
   .cp-stock-link:hover { text-decoration: underline; }
   .up { color: #ff4d4d; }     /* 台股慣例：紅漲 */
   .down { color: #2ecc71; }   /* 綠跌 */
@@ -312,4 +321,3 @@ document.querySelectorAll('.cp-stab').forEach(tab => {
 </script>
 </body>
 </html>
-
