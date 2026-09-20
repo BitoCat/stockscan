@@ -78,7 +78,28 @@
         { "code": "3317", "name": "尼克森" },
         { "code": "6435", "name": "大中" }
       ]
-    },    {
+    },    
+
+     {
+      "id": "Sic/Cowas",
+      "name": "ASIC概念股",
+      "category": "AI與半導體",
+      "stocks": [
+        { "code": "3443", "name": "創意" },
+        { "code": "3661", "name": "世芯-KY" },
+        { "code": "3035", "name": "智原" },
+        { "code": "2454", "name": "聯發科" },
+        { "code": "2401", "name": "凌陽" },
+        { "code": "3034", "name": "聯詠" },
+        { "code": "6435", "name": "大中" }
+        { "code": "6695", "name": "芯鼎" }
+        { "code": "2363", "name": "矽統" }
+        { "code": "8054", "name": "安國" }  
+        { "code": "2388", "name": "威盛" } 
+      ]
+    }, 
+    
+    {
       "id": "ai_server",
       "name": "AI伺服器概念股",
       "category": "AI與半導體",
