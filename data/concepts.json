@@ -79,9 +79,8 @@
         { "code": "6435", "name": "大中" }
       ]
     },    
-
      {
-      "id": "Sic/Cowas",
+      "id": "ASIC",
       "name": "ASIC概念股",
       "category": "AI與半導體",
       "stocks": [
@@ -98,7 +97,6 @@
         { "code": "2388", "name": "威盛" } 
       ]
     }, 
-    
     {
       "id": "ai_server",
       "name": "AI伺服器概念股",
