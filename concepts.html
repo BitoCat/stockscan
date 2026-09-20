@@ -108,7 +108,9 @@
       籌碼分數（0-100）加權：投信5日買超 28%、外資5日 22%、三大法人20日 18%、法人連買天數 12%、軋空 20%。
       買賣超皆正規化為「佔股本%」以跨股票可比。軋空分＝券資比 × 55% ＋ 回補天數 × 45%，
       回補天數＝(融券＋借券賣出餘額)÷當日成交量；借券為外資/避險放空，通常遠大於融券。
-      標籤：投信認養（投信連買且吃貨明顯）、外資回補（20日賣、近5日轉買）、軋空候選（軋空分≥70）。
+      投信/外資連買＝有號連買天數（買N/賣N）。集中度＝法人5日買超佔近似5日量（今日量×5）%，
+      跨股票可比；合計集中度為負代表法人整體倒貨。純度＝外資/投信/自營5日方向組合
+      （三大同買 / 外資倒投信接 ...）。標籤：投信認養、外資回補、軋空候選（軋空分≥70）。
       資料為前一交易日盤後，僅供研究參考，非投資建議。
     </div>
     <div id="noteUS" class="cp-note" style="display:none">
@@ -149,12 +151,14 @@ const TW_COLS = [
   { key: 'close', label: '現價' },
   { key: 'change_pct', label: '漲跌%' },
   { key: 'chip_score', label: '籌碼分數' },
-  { key: 'foreign_5d', label: '外資5日' },
-  { key: 'trust_5d', label: '投信5日' },
-  { key: 'inst_20d', label: '法人20日' },
+  { key: 'trust_streak', label: '投信連買' },
+  { key: 'foreign_streak', label: '外資連買' },
+  { key: 'trust_conc', label: '投信集中度' },
+  { key: 'inst_conc', label: '合計集中度' },
   { key: 'short_margin_ratio', label: '券資比%' },
   { key: 'days_to_cover', label: '回補天數' },
   { key: 'squeeze_score', label: '軋空分' },
+  { key: 'purity', label: '純度' },
   { key: 'tags', label: '標籤' }
 ];
 
@@ -246,7 +250,8 @@ async function selectConceptTW(concept) {
     const codes = extractCodes(concept.stocks);
     const select = 'code,name,close,change_pct,chip_score,squeeze_score,' +
       'foreign_1d,foreign_5d,foreign_20d,trust_5d,trust_20d,inst_20d,' +
-      'foreign_streak,trust_streak,margin_bal,short_bal,sbl_short_bal,' +
+      'foreign_streak,trust_streak,dealer_5d,trust_conc,inst_conc,purity,' +
+      'margin_bal,short_bal,sbl_short_bal,' +
       'short_margin_ratio,days_to_cover,tags,market';
     let url = SUPABASE_URL + '/rest/v1/tw_chip_daily?select=' + select +
       '&code=in.(' + codes.join(',') + ')';
@@ -293,6 +298,24 @@ function renderTags(tags) {
   return tags.map(t => '<span class="pill ' + (cls[t] || '') + '">' + t + '</span>').join('');
 }
 
+function renderStreak(v) {
+  if (v === null || v === undefined || v === 0) return '<span class="muted">-</span>';
+  if (v > 0) return '<span class="up">買' + v + '</span>';
+  return '<span class="down">賣' + (-v) + '</span>';
+}
+function renderConc(v) {
+  if (v === null || v === undefined) return '<span class="muted">-</span>';
+  const cls = v > 0 ? 'up' : (v < 0 ? 'down' : '');
+  return '<span class="' + cls + '">' + v + '%</span>';
+}
+function renderPurity(p) {
+  if (!p) return '<span class="muted">-</span>';
+  let cls = 'score-mid';
+  if (['三大同買', '外資投信同買', '外資獨買', '投信認養'].indexOf(p) !== -1) cls = 'up';
+  else if (['三大同賣', '外資投信同賣'].indexOf(p) !== -1) cls = 'down';
+  return '<span class="' + cls + '">' + p + '</span>';
+}
+
 function renderTableTW() {
   // 表頭
   let head = '<tr>';
@@ -319,12 +342,14 @@ function renderTableTW() {
       '<td>' + fmt(r.close) + '</td>' +
       '<td class="' + pctClass(r.change_pct) + '">' + fmt(r.change_pct, '%') + '</td>' +
       '<td class="' + scoreClass(r.chip_score) + '">' + fmt(r.chip_score) + '</td>' +
-      '<td>' + fmtLot(r.foreign_5d) + '</td>' +
-      '<td>' + fmtLot(r.trust_5d) + '</td>' +
-      '<td>' + fmtLot(r.inst_20d) + '</td>' +
+      '<td>' + renderStreak(r.trust_streak) + '</td>' +
+      '<td>' + renderStreak(r.foreign_streak) + '</td>' +
+      '<td>' + renderConc(r.trust_conc) + '</td>' +
+      '<td>' + renderConc(r.inst_conc) + '</td>' +
       '<td>' + fmt(r.short_margin_ratio, '%') + '</td>' +
       '<td>' + fmt(r.days_to_cover) + '</td>' +
       '<td>' + fmt(r.squeeze_score) + '</td>' +
+      '<td class="tagcell">' + renderPurity(r.purity) + '</td>' +
       '<td class="tagcell">' + renderTags(r.tags) + '</td>' +
       '</tr>';
     html += '<tr class="cp-detail" style="display:none"><td colspan="' + TW_COLS.length + '">' +
@@ -357,9 +382,13 @@ function renderDetailTW(r) {
        '<div class="line"><span>投信 20日</span><span>' + fmtLot(r.trust_20d) + '</span></div>' +
        '<div class="line"><span>三大法人 20日</span><span>' + fmtLot(r.inst_20d) + '</span></div>' +
        '</div>';
-  h += '<div class="cp-method"><h4>🔗 連買天數</h4>' +
-       '<div class="line"><span>外資連買</span><span>' + fmt(r.foreign_streak, ' 天') + '</span></div>' +
-       '<div class="line"><span>投信連買</span><span>' + fmt(r.trust_streak, ' 天') + '</span></div>' +
+  h += '<div class="cp-method"><h4>🔗 連買 / 集中度 / 純度</h4>' +
+       '<div class="line"><span>外資連買</span><span>' + renderStreak(r.foreign_streak) + '</span></div>' +
+       '<div class="line"><span>投信連買</span><span>' + renderStreak(r.trust_streak) + '</span></div>' +
+       '<div class="line"><span>自營5日</span><span>' + fmtLot(r.dealer_5d) + '</span></div>' +
+       '<div class="line"><span>投信集中度</span><span>' + renderConc(r.trust_conc) + '</span></div>' +
+       '<div class="line"><span>合計集中度</span><span>' + renderConc(r.inst_conc) + '</span></div>' +
+       '<div class="line"><span>純度</span><span>' + renderPurity(r.purity) + '</span></div>' +
        '</div>';
   h += '<div class="cp-method"><h4>💳 信用與軋空</h4>' +
        '<div class="line"><span>融資餘額</span><span>' + fmt(r.margin_bal ? Math.round(r.margin_bal).toLocaleString('en-US') : null, ' 張') + '</span></div>' +
@@ -488,4 +517,5 @@ document.querySelectorAll('.cp-tab').forEach(tab => {
 </script>
 </body>
 </html>
+
 
