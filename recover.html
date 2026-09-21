@@ -195,6 +195,8 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 let currentMarket = 'tw';
 let currentStatus = '追蹤中';
 let currentStage = -1;   // -1=全部, 0觸軌/1脫離/2站穩/3轉強
+let chipMap = {};        // code → chip_radar 最新一天籌碼
+let chipDate = '';       // chip_radar 最新一天日期（下午昨日、晚上今日）
 let currentRows = [];
 let sortKey = 'recover_pct';
 let sortAsc = true;   // 追蹤中預設：回漲% 小→大（最靠下軌的在上）
@@ -241,12 +243,14 @@ async function loadList() {
 
   loading.style.display = 'none';
 
-  // 顯示資料日期（收盤結算日 + 籌碼日）
+  // 台股：即時撈 chip_radar 最新一天籌碼（下午為昨日、晚上22:00後為今日，永遠不空）
+  if (currentMarket === 'tw') { await loadChipRadar(); }
+  else { chipMap = {}; chipDate = ''; }
+
+  // 顯示資料日期（隧道四關日 + 籌碼日，各自標明）
   const latest = currentRows.reduce((m, r) => (r.updated_at > m ? r.updated_at : m), '');
-  const chipLatest = currentRows.reduce((m, r) => (r.chip_date && r.chip_date > m ? r.chip_date : m), '');
-  let dateMsg = latest ? ('資料為 ' + latest + ' 收盤結算') : '';
-  if (currentMarket === 'tw' && chipLatest) dateMsg += '　籌碼為 ' + chipLatest;
-  if (dateMsg) dateMsg += '（每日更新）';
+  let dateMsg = latest ? ('隧道資料 ' + latest + ' 收盤結算') : '';
+  if (currentMarket === 'tw') dateMsg += chipDate ? ('　籌碼 ' + chipDate) : '　籌碼晚上約22:00更新';
   document.getElementById('updatedBox').textContent = dateMsg;
 
   // 籌碼欄：只有台股顯示
@@ -328,10 +332,10 @@ function renderTable() {
       '<td class="' + (r.tp_gap_pct >= 0 ? 'up' : 'down') + '">' + fmt(r.tp_gap_pct, '%') + '</td>' +
       '<td>' + fmt(r.days_held) + '</td>' +
       '<td>' + fmt(r.confirm_date) + '</td>' +
-      '<td class="chipCol">' + fmtStreak(r.trust_streak) + '</td>' +
-      '<td class="chipCol">' + fmtStreak(r.foreign_streak) + '</td>' +
-      '<td class="chipCol">' + fmt(r.trust_conc, '%') + '</td>' +
-      '<td class="chipCol">' + fmtNet5d(r.inst_net_5d) + '</td>' +
+      '<td class="chipCol">' + fmtStreak((chipMap[r.code] || {}).trust_streak) + '</td>' +
+      '<td class="chipCol">' + fmtStreak((chipMap[r.code] || {}).foreign_streak) + '</td>' +
+      '<td class="chipCol">' + fmt((chipMap[r.code] || {}).trust_conc, '%') + '</td>' +
+      '<td class="chipCol">' + fmtNet5d((chipMap[r.code] || {}).total_net_5d) + '</td>' +
       (showReason ? '<td class="reasonCol">' + reasonTag(r.remove_reason, r.status) + '</td>' : '') +
       '</tr>' +
       (currentMarket === 'tw'
@@ -344,9 +348,19 @@ function renderTable() {
 // ── 就地展開：查籌碼 ───────────────────────────────
 async function sbQuery(path) {
   const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
-    headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON, 'Range': '0-999' }
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON, 'Range': '0-99999' }
   });
   return await res.json();
+}
+async function loadChipRadar() {
+  chipMap = {}; chipDate = '';
+  try {
+    const d = await sbQuery('chip_radar?select=date&order=date.desc&limit=1');
+    if (!d.length) return;
+    chipDate = d[0].date;
+    const rows = await sbQuery('chip_radar?select=code,trust_streak,foreign_streak,trust_conc,total_net_5d&date=eq.' + chipDate);
+    rows.forEach(r => { chipMap[String(r.code)] = r; });
+  } catch (e) { console.error('chip_radar 載入失敗', e); }
 }
 function sumLast(arr, k) { let s = 0; for (let i = Math.max(0, arr.length - k); i < arr.length; i++) s += arr[i]; return s; }
 function nfmt(x) { const n = Math.round(x); return (n > 0 ? '+' : (n < 0 ? '−' : '')) + Math.abs(n).toLocaleString('en-US'); }
@@ -473,3 +487,5 @@ document.querySelectorAll('.cp-stab').forEach(tab => {
 </script>
 </body>
 </html>
+
+
