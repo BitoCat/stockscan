@@ -19,6 +19,10 @@
     background: #1e1e2a; color: #ddd; cursor: pointer; font-size: 1em; font-weight: 700;
   }
   .cp-tab.active { background: #2a2a3a; border-color: #f0a500; color: #f0a500; }
+  .cp-side { padding: 8px 18px; border-radius: 8px; border: 1px solid #444;
+    background: #1e1e2a; color: #ddd; cursor: pointer; font-size: 0.95em; font-weight: 700; }
+  .cp-side.active[data-side="long"]  { background: rgba(255,77,77,.12); border-color: #ff4d4d; color: #ff6b6b; }
+  .cp-side.active[data-side="short"] { background: rgba(46,204,113,.12); border-color: #2ecc71; color: #2ecc71; }
 
   /* 狀態切換（追蹤中 / 已畢業 / 失敗 / 過期）*/
   .cp-status-tabs { display: flex; gap: 6px; margin: 6px 0 4px; flex-wrap: wrap; }
@@ -113,6 +117,10 @@
       <button class="cp-tab active" data-market="tw">🇹🇼 台股</button>
       <button class="cp-tab" data-market="us">🇺🇸 美股</button>
     </div>
+    <div class="cp-tabs">
+      <button class="cp-side active" data-side="long">📈 做多（底部回漲）</button>
+      <button class="cp-side" data-side="short">📉 做空（頂部轉空）</button>
+    </div>
 
     <div class="cp-status-tabs">
       <button class="cp-stab active" data-status="追蹤中">追蹤中</button>
@@ -139,11 +147,11 @@
             <th data-key="code">股票</th>
             <th>籌碼</th>
             <th data-key="stage">關卡</th>
-            <th data-key="base_lower">基準(下軌)</th>
+            <th data-key="base_lower" id="thBase">基準(下軌)</th>
             <th data-key="price">現價</th>
-            <th data-key="recover_pct">回漲%▲</th>
-            <th data-key="upper">目標(上軌)</th>
-            <th data-key="tp_gap_pct">距上軌%</th>
+            <th data-key="recover_pct" id="thMove">回漲%▲</th>
+            <th data-key="upper" id="thTarget">目標(上軌)</th>
+            <th data-key="tp_gap_pct" id="thGap">距上軌%</th>
             <th data-key="days_held">持有天</th>
             <th data-key="confirm_date">確認日</th>
             <th data-key="trust_streak" class="chipCol">投信連買</th>
@@ -195,6 +203,7 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 let currentMarket = 'tw';
 let currentStatus = '追蹤中';
 let currentStage = -1;   // -1=全部, 0觸軌/1脫離/2站穩/3轉強
+let currentSide = 'long';  // long 做多 / short 做空
 let chipMap = {};        // code → chip_radar 最新一天籌碼
 let chipDate = '';       // chip_radar 最新一天日期（下午昨日、晚上今日）
 let currentRows = [];
@@ -231,6 +240,7 @@ async function loadList() {
   try {
     const url = SUPABASE_URL + '/rest/v1/cat_recover_list'
       + '?select=*&market=eq.' + currentMarket
+      + '&side=eq.' + currentSide
       + '&status=eq.' + encodeURIComponent(currentStatus)
       + '&order=updated_at.desc';
     const res = await fetch(url, {
@@ -403,9 +413,11 @@ async function loadChipPanel(code, stage, box) {
     if (mg.length) mgTbl = '<table class="chip-tbl"><tr><th>信用 增減(張)</th><th>當日</th><th>近3日</th><th>近5日</th></tr>' +
       trow('融資(散戶多)', mc) + trow('融券(散戶空)', sh) + '</table>';
 
-    box.innerHTML = '<div class="chip-verdict ' + vcls + '">' + vtxt + '</div>' +
-      (note ? '<div class="chip-note-line">' + note + '</div>' : '') +
-      instTbl + mgTbl +
+    const head = (currentSide === 'long')
+      ? '<div class="chip-verdict ' + vcls + '">' + vtxt + '</div>'
+        + (note ? '<div class="chip-note-line">' + note + '</div>' : '')
+      : '<div class="chip-note-line">做空情境的籌碼判讀另計，以下為法人原始買賣超供參考。</div>';
+    box.innerHTML = head + instTbl + mgTbl +
       '<div class="chip-note-line">法人為淨買賣、信用為餘額增減（張，紅買綠賣／紅增綠減）。籌碼是加分項——有進駐叫好、尚無進駐屬早期正常，不代表看壞。</div>';
   } catch (e) {
     box.innerHTML = '<span class="muted">籌碼載入失敗，稍後再試。</span>';
@@ -452,6 +464,30 @@ document.querySelectorAll('.cp-gtab').forEach(tab => {
   });
 });
 
+// ── 做多/做空切換 ─────────────────────────────────
+function applySideUI() {
+  const lng = currentSide === 'long';
+  document.querySelector('.cp-title').textContent = lng ? '📈 回漲雷達' : '📉 轉空雷達';
+  document.querySelector('.cp-sub').textContent = lng
+    ? '觸及貓咪隧道下軌後，整根日 K 站上下軌 → 底部確認回漲，目標鎖定上軌'
+    : '觸及貓咪隧道上軌後，整根日 K 跌破上軌 → 頂部確認轉空，目標鎖定下軌';
+  const setTxt = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
+  setTxt('thBase',   lng ? '基準(下軌)' : '基準(上軌)');
+  setTxt('thMove',   lng ? '回漲%' : '下跌%');
+  setTxt('thTarget', lng ? '目標(上軌)' : '目標(下軌)');
+  setTxt('thGap',    lng ? '距上軌%' : '距下軌%');
+}
+document.querySelectorAll('.cp-side').forEach(tab => {
+  tab.addEventListener('click', () => {
+    if (tab.dataset.side === currentSide) return;
+    currentSide = tab.dataset.side;
+    document.querySelectorAll('.cp-side').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    applySideUI();
+    loadList();
+  });
+});
+
 // ── 市場切換 ─────────────────────────────────────
 document.querySelectorAll('.cp-tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -487,5 +523,4 @@ document.querySelectorAll('.cp-stab').forEach(tab => {
 </script>
 </body>
 </html>
-
 
