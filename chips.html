@@ -37,6 +37,12 @@
   .pure-all { color: #ff8c66; font-size: 0.8em; }
   .pure-trust { color: #f0a500; font-size: 0.8em; }
   .ma-bottom { color: #4da3ff; }
+  /* 關卡徽章（與回漲雷達一致）*/
+  .stg { font-size: 0.82em; padding: 2px 7px; border-radius: 10px; white-space: nowrap; font-weight: 700; }
+  .stg0 { background: rgba(96,125,170,.22); color: #7fa8d8; border: 1px solid rgba(96,125,170,.45); }
+  .stg1 { background: rgba(205,110,45,.22);  color: #e08a3c; border: 1px solid rgba(205,110,45,.5); }
+  .stg2 { background: rgba(38,180,130,.20);  color: #2ecc8f; border: 1px solid rgba(38,180,130,.5); }
+  .stg3 { background: rgba(240,180,20,.24);  color: #ffc107; border: 1px solid rgba(240,180,20,.6); }
   .cr-loading { text-align: center; padding: 30px; color: #aaa; }
   .cr-empty { text-align: center; padding: 30px; color: #777; }
   .cr-locked { text-align: center; padding: 60px 20px; }
@@ -65,6 +71,8 @@
         <thead>
           <tr>
             <th data-key="code">股票</th>
+            <th data-key="close">現價</th>
+            <th data-key="_stage">關卡</th>
             <th data-key="trust_streak">投信連買▼</th>
             <th data-key="trust_conc">投信集中度</th>
             <th data-key="concentration">合計集中度</th>
@@ -81,7 +89,9 @@
     <div class="cr-note">
       投信集中度=投信買超÷成交量(投信吃得多兇);合計集中度=三大法人合計÷成交量(整體態度)。
       位階由均線判斷:季線下=底部、月線季線間/站上均線=中段。自營商參考(避險雜訊多)。
-      純度:🔴三大同買(共識強)、🟡外資倒投信接(底部吸籌典型)。資料每交易日收盤後更新,非投資建議。
+      純度:🔴三大同買(共識強)、🟡外資倒投信接(底部吸籌典型)。
+      關卡來自區間雷達(貓咪隧道多頭):⏳觸軌/🥉脫離/🥈站穩/🥇轉強,只有觸及下軌的股票才有,其餘「—」。
+      資料每交易日收盤後更新,非投資建議。
     </div>
   </div>
 </div>
@@ -109,7 +119,6 @@ const FILTERS = [
   { id: 'foreign', name: '🌊 外資連買' },
   { id: 'all',     name: '全部' },
 ];
-// 需要全市場資料(不限投信連買≥3分類)的濾鏡
 const WIDE_FILTERS = ['dual', 'trust', 'foreign', 'all'];
 function boardDef() {
   if (currentFilter === 'mid') return '🟢 <b>中段吸籌</b> = 投信連買 ＋ 近5日股價沒噴 ＋ 站在均線上/附近<br><span style="color:#999">(上升波段回檔整理、投信默默續買,右側加碼點;線圖難察,靠籌碼抓)</span>';
@@ -121,9 +130,10 @@ function boardDef() {
   if (currentFilter === 'foreign') return '🌊 <b>外資連買</b> = 外資連續買超 ≥ 3 日(全市場)<br><span style="color:#999">(外資偏大型權值,連買代表國際資金流入)</span>';
   return '';
 }
-let allRows = [];       // 有分類的(投信連買≥3),預設載
-let wideRows = null;    // 全市場(雙主力/投信/外資連買 用),延遲載
+let allRows = [];
+let wideRows = null;
 let latestDate = null;
+let stageMap = {};      // code -> 區間雷達多頭 stage（隧道邊緣才有）
 let currentFilter = 'mid';
 let sortKey = 'trust_conc';
 let sortAsc = false;
@@ -140,6 +150,13 @@ async function checkAccess() {
     const plan = (rows && rows[0]) ? rows[0].plan : 'free';
     return ['tw','us','all','admin'].indexOf(plan) !== -1;
   } catch (e) { console.error('auth check failed', e); return false; }
+}
+function stageBadge(s) {
+  if (s === null || s === undefined) return '<span class="muted">-</span>';
+  if (s >= 3) return '<span class="stg stg3">🥇 轉強</span>';
+  if (s === 2) return '<span class="stg stg2">🥈 站穩</span>';
+  if (s === 1) return '<span class="stg stg1">🥉 脫離</span>';
+  return '<span class="stg stg0">⏳ 觸軌</span>';
 }
 function renderFilterBtns() {
   const box = document.getElementById('filterBtns');
@@ -158,6 +175,22 @@ function renderFilterBtns() {
     });
   });
 }
+// 撈區間雷達多頭最新關卡（追蹤中），建 code -> stage
+async function loadStageMap() {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/cat_recover_list'
+      + '?select=code,stage,updated_at&side=eq.long&status=eq.' + encodeURIComponent('追蹤中')
+      + '&order=updated_at.desc', {
+      headers: Object.assign({}, SB_HEADERS, { 'Range-Unit': 'items', 'Range': '0-9999' })
+    });
+    const rows = await res.json();
+    stageMap = {};
+    (Array.isArray(rows) ? rows : []).forEach(r => {
+      const c = String(r.code);
+      if (!(c in stageMap)) stageMap[c] = r.stage;   // 依 updated_at desc，第一筆=最新
+    });
+  } catch (e) { console.error('stageMap load failed', e); stageMap = {}; }
+}
 async function loadData() {
   const loading = document.getElementById('loadingBox');
   loading.style.display = 'block';
@@ -172,6 +205,7 @@ async function loadData() {
     const latest = d[0].date;
     latestDate = latest;
     document.getElementById('scanDate').textContent = '資料日期: ' + latest;
+    await loadStageMap();                       // 先撈關卡對照
     let rows = [], from = 0;
     while (true) {
       const res = await fetch(SUPABASE_URL + '/rest/v1/chip_radar?date=eq.' + latest + '&chip_type=not.is.null&select=*', {
@@ -208,9 +242,7 @@ async function loadWide() {
   } catch (e) { console.error(e); }
   loading.style.display = 'none';
 }
-
 function applyFilter() {
-  // 三顆單指標用全市場;其餘用有分類的
   if (currentFilter === 'dual')    return (wideRows || []).filter(r => r.dual_main === true);
   if (currentFilter === 'trust')   return (wideRows || []).filter(r => (r.trust_streak || 0) >= 2);
   if (currentFilter === 'foreign') return (wideRows || []).filter(r => (r.foreign_streak || 0) >= 3);
@@ -234,6 +266,10 @@ function chg5Fmt(v) {
   if (v === null || v === undefined) return '<span class="muted">-</span>';
   return '<span class="' + (v > 0 ? 'up' : (v < 0 ? 'down' : '')) + '">' + (v > 0 ? '+' : '') + v + '%</span>';
 }
+function priceFmt(v) {
+  if (v === null || v === undefined) return '<span class="muted">-</span>';
+  return v;
+}
 function maFmt(v) {
   if (!v) return '<span class="muted">-</span>';
   return v === '季線下' ? '<span class="ma-bottom">' + v + '</span>' : v;
@@ -255,7 +291,11 @@ function renderTable() {
   const table = document.getElementById('resultTable');
   const empty = document.getElementById('emptyBox');
   document.getElementById('boardDef').innerHTML = boardDef();
-  const rows = applyFilter();
+  // 附上關卡 _stage 供顯示與排序
+  const rows = applyFilter().map(r => {
+    const s = stageMap[String(r.code)];
+    return Object.assign({}, r, { _stage: (s === undefined ? null : s) });
+  });
   document.getElementById('countLine').textContent = '符合 ' + rows.length + ' 檔';
   if (!rows.length) { table.style.display = 'none'; empty.style.display = 'block'; return; }
   empty.style.display = 'none';
@@ -271,6 +311,8 @@ function renderTable() {
     const mtag = r.market === 'otc' ? '<span class="tag-otc">櫃</span>' : '<span class="tag-tw">市</span>';
     html += '<tr>' +
       '<td><a class="cr-stock-link" href="diagnosis.html?symbol=' + r.code + '">' + r.code + ' ' + (r.name || '') + '</a> ' + mtag + '</td>' +
+      '<td>' + priceFmt(r.close) + '</td>' +
+      '<td>' + stageBadge(r._stage) + '</td>' +
       '<td>' + streakFmt(r.trust_streak) + '</td>' +
       '<td>' + concFmt(r.trust_conc) + '</td>' +
       '<td>' + concFmt(r.concentration) + '</td>' +
@@ -304,4 +346,3 @@ document.querySelectorAll('.cr-table th').forEach(th => {
 </script>
 </body>
 </html>
-
