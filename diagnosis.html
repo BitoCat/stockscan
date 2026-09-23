@@ -860,7 +860,15 @@ async function renderInsider(sym) {
   }
 }
 
-// ===== 修改二的新函式：籌碼雷達指標卡（台股）=====
+// ===== 籌碼雷達指標卡（台股）— 直接打 REST，繞過 sb client =====
+const CR_SB_URL = 'https://kldumnxdlgovaxtiszyn.supabase.co';
+const CR_SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI';
+async function crFetch(path) {
+  const res = await fetch(CR_SB_URL + '/rest/v1/' + path, {
+    headers: { 'apikey': CR_SB_ANON, 'Authorization': 'Bearer ' + CR_SB_ANON }
+  });
+  return await res.json();
+}
 async function renderRadar(sym) {
   var box = document.getElementById('r-radar');
   if (!box) return;
@@ -870,18 +878,17 @@ async function renderRadar(sym) {
   var HEAD = '<div class="sec-head">📊 籌碼雷達指標</div>';
   box.innerHTML = HEAD + '<div style="color:var(--muted);font-size:13px;padding:4px 0">載入中...</div>';
   try {
-    var cr = await sb.from('chip_radar')
-      .select('date,close,trust_streak,foreign_streak,trust_conc,concentration,chg5_pct,ma_pos,total_net_5d,dealer_net,chip_quadrant')
-      .eq('code', code).order('date', { ascending: false }).limit(1);
-    var r = (cr.data || [])[0];
+    var cr = await crFetch('chip_radar?code=eq.' + code +
+      '&order=date.desc&limit=1&select=date,close,trust_streak,foreign_streak,trust_conc,concentration,chg5_pct,ma_pos,total_net_5d,dealer_net,chip_quadrant');
+    var r = (Array.isArray(cr) ? cr : [])[0];
     if (!r) { box.innerHTML = HEAD + '<div style="color:var(--muted);font-size:13px;padding:4px 0">本檔近期無籌碼雷達資料。</div>'; return; }
     // 關卡（區間雷達多頭）
     var stage = null;
     try {
-      var rr = await sb.from('cat_recover_list').select('stage')
-        .eq('code', code).eq('side', 'long').eq('status', '追蹤中')
-        .order('updated_at', { ascending: false }).limit(1);
-      if (rr.data && rr.data[0]) stage = rr.data[0].stage;
+      var rr = await crFetch('cat_recover_list?code=eq.' + code +
+        '&side=eq.long&status=eq.' + encodeURIComponent('追蹤中') +
+        '&order=updated_at.desc&limit=1&select=stage');
+      if (Array.isArray(rr) && rr[0]) stage = rr[0].stage;
     } catch (e) {}
 
     var streak = function (v, buyTxt, sellTxt) {
@@ -896,11 +903,9 @@ async function renderRadar(sym) {
     var pure = (r.trust_conc > 0 && r.concentration > 0) ? '<span style="color:#ff8c66">🔴 三大同買</span>'
              : (r.trust_conc > 0 && r.concentration <= 0) ? '<span style="color:#f0a500">🟡 外資倒投信接</span>'
              : '<span style="color:#7a90b0">-</span>';
-    // 位階（白話）
     var maMap = { '站上均線': '站上均線（月線+季線之上，強）', '季線下': '季線下（跌深區、底部）',
                   '月線下季線上': '月線下、季線上（回檔整理中）', '月線上季線下': '月線上、季線下（初升、剛轉強）' };
     var maTxt = r.ma_pos ? (maMap[r.ma_pos] || r.ma_pos) : '<span style="color:#7a90b0">-（投信未連買≥3，無位階）</span>';
-    // 關卡徽章
     var stg = (stage === null || stage === undefined) ? '<span style="color:#7a90b0">-（未觸下軌）</span>'
             : stage >= 3 ? '<span style="color:#ffc107">🥇 轉強</span>'
             : stage === 2 ? '<span style="color:#2ecc8f">🥈 站穩</span>'
@@ -908,7 +913,6 @@ async function renderRadar(sym) {
             : '<span style="color:#7fa8d8">⏳ 觸軌</span>';
     var net5 = (r.total_net_5d === null || r.total_net_5d === undefined) ? '-'
              : (function (x) { var l = Math.round(x / 1000); return '<span style="color:' + (l > 0 ? '#31d071' : '#ff5470') + '">' + (l > 0 ? '+' : '') + l.toLocaleString('en-US') + ' 張</span>'; })(r.total_net_5d);
-
     var row = function (k, v) {
       return '<tr><td style="padding:4px 10px;color:var(--muted);white-space:nowrap">' + k + '</td>'
         + '<td style="padding:4px 10px;color:#fff">' + v + '</td></tr>';
