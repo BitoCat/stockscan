@@ -71,7 +71,7 @@
         <thead>
           <tr>
             <th data-key="code">股票</th>
-            <th data-key="close">現價</th>
+            <th data-key="_price">現價</th>
             <th data-key="_stage">關卡</th>
             <th data-key="trust_streak">投信連買▼</th>
             <th data-key="trust_conc">投信集中度</th>
@@ -175,11 +175,11 @@ function renderFilterBtns() {
     });
   });
 }
-// 撈區間雷達多頭最新關卡（追蹤中），建 code -> stage
+// 撈區間雷達多頭最新關卡+現價（追蹤中），建 code -> {stage, price}
 async function loadStageMap() {
   try {
     const res = await fetch(SUPABASE_URL + '/rest/v1/cat_recover_list'
-      + '?select=code,stage,updated_at&side=eq.long&status=eq.' + encodeURIComponent('追蹤中')
+      + '?select=code,stage,price,updated_at&side=eq.long&status=eq.' + encodeURIComponent('追蹤中')
       + '&order=updated_at.desc', {
       headers: Object.assign({}, SB_HEADERS, { 'Range-Unit': 'items', 'Range': '0-9999' })
     });
@@ -187,7 +187,7 @@ async function loadStageMap() {
     stageMap = {};
     (Array.isArray(rows) ? rows : []).forEach(r => {
       const c = String(r.code);
-      if (!(c in stageMap)) stageMap[c] = r.stage;   // 依 updated_at desc，第一筆=最新
+      if (!(c in stageMap)) stageMap[c] = { stage: r.stage, price: r.price };   // updated_at desc，第一筆=最新
     });
   } catch (e) { console.error('stageMap load failed', e); stageMap = {}; }
 }
@@ -292,10 +292,12 @@ function renderTable() {
   const table = document.getElementById('resultTable');
   const empty = document.getElementById('emptyBox');
   document.getElementById('boardDef').innerHTML = boardDef();
-  // 附上關卡 _stage 供顯示與排序
+  // 附上關卡 _stage 與現價 _price（close 優先，缺則用區間雷達 price 補）供顯示與排序
   const rows = applyFilter().map(r => {
     const s = stageMap[String(r.code)];
-    return Object.assign({}, r, { _stage: (s === undefined ? null : s) });
+    const stage = s ? s.stage : null;
+    const price = (r.close !== null && r.close !== undefined) ? r.close : (s ? s.price : null);
+    return Object.assign({}, r, { _stage: (stage === undefined ? null : stage), _price: price });
   });
   document.getElementById('countLine').textContent = '符合 ' + rows.length + ' 檔';
   if (!rows.length) { table.style.display = 'none'; empty.style.display = 'block'; return; }
@@ -312,7 +314,7 @@ function renderTable() {
     const mtag = r.market === 'otc' ? '<span class="tag-otc">櫃</span>' : '<span class="tag-tw">市</span>';
     html += '<tr>' +
       '<td><a class="cr-stock-link" href="diagnosis.html?symbol=' + r.code + '">' + r.code + ' ' + (r.name || '') + '</a> ' + mtag + '</td>' +
-      '<td>' + priceFmt(r.close) + '</td>' +
+      '<td>' + priceFmt(r._price) + '</td>' +
       '<td>' + stageBadge(r._stage) + '</td>' +
       '<td>' + streakFmt(r.trust_streak) + '</td>' +
       '<td>' + concFmt(r.trust_conc) + '</td>' +
@@ -347,3 +349,5 @@ document.querySelectorAll('.cr-table th').forEach(th => {
 </script>
 </body>
 </html>
+
+
