@@ -1169,6 +1169,40 @@ async function renderHolders(sym) {
   }
 }
 
+// 加進 fetchChipContext 末尾（return 之前）：把籌碼雷達 + 關卡餵給 AI
+async function _radarContext(code, parts) {
+  try {
+    var cr = await crFetch('chip_radar?code=eq.' + code +
+      '&order=date.desc&limit=1&select=close,trust_streak,foreign_streak,trust_conc,concentration,chg5_pct,ma_pos,total_net_5d');
+    var r = (Array.isArray(cr) ? cr : [])[0];
+    if (r) {
+      var conc = (r.trust_conc != null) ? ('投信集中度' + r.trust_conc + '%') : '';
+      var cc = (r.concentration != null) ? ('、合計集中度' + r.concentration + '%') : '';
+      var pure = (r.trust_conc > 0 && r.concentration > 0) ? '（純度:三大同買,共識強）'
+               : (r.trust_conc > 0 && r.concentration <= 0) ? '（純度:外資倒投信接,底部吸籌型態）' : '';
+      if (conc) parts.push('籌碼集中度: ' + conc + cc + pure + '（集中度=法人買超佔成交量比,越高代表法人吃得越兇）');
+      if (r.ma_pos) parts.push('均線位階: ' + r.ma_pos + '（季線下=跌深底部、月線上季線下=初升、站上均線=強勢）');
+      if (r.chg5_pct != null) parts.push('近5日漲幅: ' + r.chg5_pct + '%');
+    }
+  } catch (e) {}
+  // 貓咪隧道關卡（區間雷達多頭）
+  try {
+    var rr = await crFetch('cat_recover_list?code=eq.' + code +
+      '&side=eq.long&status=eq.' + encodeURIComponent('追蹤中') +
+      '&order=updated_at.desc&limit=1&select=stage,base_lower,upper,recover_pct,tp_gap_pct');
+    var k = (Array.isArray(rr) ? rr : [])[0];
+    if (k) {
+      var stageMap = { 0: '觸軌(關鍵K,剛觸下軌、等待方向,約7成反轉)', 1: '脫離(多方形成,剛站上下軌)',
+                       2: '站穩(多方站穩)', 3: '轉強(多方無疑)' };
+      parts.push('貓咪隧道結構: 目前在「' + (stageMap[k.stage] || k.stage) + '」關卡；'
+        + '下軌(進場基準)' + k.base_lower + '、上軌(目標)' + k.upper
+        + '、已回漲' + k.recover_pct + '%、距上軌還有' + k.tp_gap_pct + '%獲利空間。'
+        + '（此為底部反轉做多結構:觸下軌→脫離→站穩→轉強,關卡越前面越早、空間越大但越不確定）');
+    }
+  } catch (e) {}
+  return parts;
+}  
+  
 async function fetchChipContext(sym) {
   var code = (sym || '').replace(/[^0-9]/g, '');
   if (!code || code.length < 4) return '';
@@ -1207,6 +1241,7 @@ async function fetchChipContext(sym) {
     }
   } catch (e) {}
   if (!parts.length) return '';
+  await _radarContext(code, parts);  
   return '\n\n[籌碼面實際數據 (務必納入健診評分與分析)]\n' + parts.join('\n') +
     '\n[判讀提示: 投信為台股主力，投信連續買進代表法人佈局看好；大戶比例高且上升、散戶下降代表籌碼集中，通常利於股價。請把籌碼面納入 healthScore 及【催化劑與風險】的法人籌碼動向。]';
 }
