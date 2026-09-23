@@ -1141,8 +1141,11 @@ async function renderHolders(sym) {
     var big = rows.map(function (r) { return Number(r.big400_pct) || 0; });
     var sml = rows.map(function (r) { return Number(r.small_pct) || 0; });
 
-    var bigChg = big[big.length - 1] - big[0];
-    var smlChg = sml[sml.length - 1] - sml[0];
+    var W_LOOK = 4;
+    var baseIdx = Math.max(0, big.length - 1 - W_LOOK);
+    var bigChg = big[big.length - 1] - big[baseIdx];
+    var smlChg = sml[sml.length - 1] - sml[baseIdx];
+    
     var verdict, vcolor;
     if (bigChg > 0 && smlChg <= 0) { vcolor = '#31d071'; verdict = '大戶增持、散戶退場 → 籌碼向大戶集中(偏多)'; }
     else if (bigChg < 0 && smlChg >= 0) { vcolor = '#ff5470'; verdict = '大戶減持、散戶承接 → 籌碼流向散戶(偏空)'; }
@@ -1150,7 +1153,7 @@ async function renderHolders(sym) {
     var arw = function (c) { return c > 0 ? '▲' : (c < 0 ? '▼' : '—'); };
     var r2 = function (x) { return Math.round(x * 100) / 100; };
     var chgLine = '大戶 ' + arw(bigChg) + ' ' + (bigChg >= 0 ? '+' : '') + r2(bigChg) +
-      ' pt · 散戶 ' + arw(smlChg) + ' ' + (smlChg >= 0 ? '+' : '') + r2(smlChg) + ' pt (期間)';
+      ' pt · 散戶 ' + arw(smlChg) + ' ' + (smlChg >= 0 ? '+' : '') + r2(smlChg) + ' pt 近四週)';
 
     var W = 340, H = 180, padL = 10, padR = 10, padT = 14, padB = 26;
     var plotW = W - padL - padR, plotH = H - padT - padB;
@@ -1252,13 +1255,14 @@ async function fetchChipContext(sym) {
       .eq('code', code).order('date', { ascending: false }).limit(12);
     var hs = (r2.data || []);
     if (hs.length) {
-      var hNow = hs[0], hOld = hs[hs.length - 1];
+      var hNow = hs[0], hOld = hs[Math.min(3, hs.length - 1)];
+      
       var bigChg = (Number(hNow.big400_pct) || 0) - (Number(hOld.big400_pct) || 0);
       var smlChg = (Number(hNow.small_pct) || 0) - (Number(hOld.small_pct) || 0);
       var trend = (bigChg > 0 && smlChg <= 0) ? '大戶增持、散戶退場 → 籌碼向大戶集中(偏多)'
                 : (bigChg < 0 && smlChg >= 0) ? '大戶減持、散戶承接 → 籌碼流向散戶(偏空)'
                 : '大戶散戶變動方向不一致(中性)';
-      parts.push('大戶(>400張)持股: ' + hNow.big400_pct + '%(近' + hs.length + '週 ' + (bigChg >= 0 ? '+' : '') + Math.round(bigChg * 100) / 100 + 'pt)'
+      parts.push('大戶(>400張)持股: ' + hNow.big400_pct + '%(近4週 ' + (bigChg >= 0 ? '+' : '') + Math.round(bigChg * 100) / 100 + 'pt)'
         + '  散戶(<=10張): ' + hNow.small_pct + '%(' + (smlChg >= 0 ? '+' : '') + Math.round(smlChg * 100) / 100 + 'pt)');
       parts.push('大戶散戶趨勢: ' + trend + '（務必以「趨勢方向」判讀，不可只看當下絕對值：持股率高但趨勢在降＝籌碼鬆動偏空）');
     }
