@@ -259,8 +259,8 @@ async function loadList() {
 
   // 顯示資料日期（隧道四關日 + 籌碼日，各自標明）
   const latest = currentRows.reduce((m, r) => (r.updated_at > m ? r.updated_at : m), '');
-  let dateMsg = latest ? ('隧道資料 ' + latest + ' 收盤結算') : '';
-  if (currentMarket === 'tw') dateMsg += chipDate ? ('　籌碼 ' + chipDate) : '　籌碼晚上約22:00更新';
+  let dateMsg = latest ? ('隧道資料日期 ' + latest + ' 收盤結算') : '';
+  if (currentMarket === 'tw') dateMsg += chipDate ? ('　籌碼資料日期 ' + chipDate) : '　籌碼晚上約22:00更新';
   document.getElementById('updatedBox').textContent = dateMsg;
 
   // 籌碼欄：只有台股顯示
