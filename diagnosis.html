@@ -883,7 +883,7 @@ async function renderInsider(sym) {
   }
 }
 
-// ===== 籌碼雷達指標卡（台股）— 直接打 REST，繞過 sb client =====
+// ===== 籌碼雷達指標卡（台股）— 直接打 REST，每欄加白話描述 =====
 const CR_SB_URL = 'https://kldumnxdlgovaxtiszyn.supabase.co';
 const CR_SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI';
 async function crFetch(path) {
@@ -902,10 +902,9 @@ async function renderRadar(sym) {
   box.innerHTML = HEAD + '<div style="color:var(--muted);font-size:13px;padding:4px 0">載入中...</div>';
   try {
     var cr = await crFetch('chip_radar?code=eq.' + code +
-      '&order=date.desc&limit=1&select=date,close,trust_streak,foreign_streak,trust_conc,concentration,chg5_pct,ma_pos,total_net_5d,dealer_net,chip_quadrant');
+      '&order=date.desc&limit=1&select=date,close,trust_streak,foreign_streak,trust_conc,concentration,chg5_pct,ma_pos,total_net_5d,dealer_net,chip_quadrant,chip_type');
     var r = (Array.isArray(cr) ? cr : [])[0];
     if (!r) { box.innerHTML = HEAD + '<div style="color:var(--muted);font-size:13px;padding:4px 0">本檔近期無籌碼雷達資料。</div>'; return; }
-    // 關卡（區間雷達多頭）
     var stage = null;
     try {
       var rr = await crFetch('cat_recover_list?code=eq.' + code +
@@ -914,46 +913,86 @@ async function renderRadar(sym) {
       if (Array.isArray(rr) && rr[0]) stage = rr[0].stage;
     } catch (e) {}
 
-    var streak = function (v, buyTxt, sellTxt) {
-      if (!v) return '<span style="color:#7a90b0">-</span>';
-      return v > 0 ? '<span style="color:#31d071">' + buyTxt + v + '日</span>'
-                   : '<span style="color:#ff5470">' + sellTxt + (-v) + '日</span>';
+    // 連買（值 + 白話）
+    var streakRow = function (v, who) {
+      if (!v) return ['<span style="color:#7a90b0">-</span>', who + '近期無明顯連續買賣'];
+      if (v > 0) return ['<span style="color:#31d071">買 ' + v + ' 日</span>', who + '連續買 ' + v + ' 天，' + (v >= 5 ? '決心強、積極佈局' : v >= 3 ? '持續進場中' : '剛開始買進')];
+      return ['<span style="color:#ff5470">賣 ' + (-v) + ' 日</span>', who + '連續賣 ' + (-v) + ' 天，在調節出場'];
     };
-    var conc = function (v) {
-      if (v === null || v === undefined) return '<span style="color:#7a90b0">-</span>';
-      return '<span style="color:' + (v > 0 ? '#31d071' : (v < 0 ? '#ff5470' : '#7a90b0')) + '">' + v + '%</span>';
+    // 集中度（值 + 白話）
+    var concRow = function (v, who) {
+      if (v === null || v === undefined) return ['<span style="color:#7a90b0">-</span>', ''];
+      var col = v > 0 ? '#31d071' : (v < 0 ? '#ff5470' : '#7a90b0');
+      var desc = v <= 0 ? (who + '整體在賣、沒有集中')
+               : v >= 30 ? (who + '買的量佔成交量 ' + v + '%，吃得非常兇、非常專注')
+               : v >= 10 ? (who + '買的量佔成交量 ' + v + '%，明顯在收貨')
+               : (who + '有買，但佔量比不高 ' + v + '%');
+      return ['<span style="color:' + col + '">' + v + '%</span>', desc];
     };
-    var pure = (r.trust_conc > 0 && r.concentration > 0) ? '<span style="color:#ff8c66">🔴 三大同買</span>'
-             : (r.trust_conc > 0 && r.concentration <= 0) ? '<span style="color:#f0a500">🟡 外資倒投信接</span>'
-             : '<span style="color:#7a90b0">-</span>';
-    var maMap = { '站上均線': '站上均線（月線+季線之上，強）', '季線下': '季線下（跌深區、底部）',
-                  '月線下季線上': '月線下、季線上（回檔整理中）', '月線上季線下': '月線上、季線下（初升、剛轉強）' };
-    var maTxt = r.ma_pos ? (maMap[r.ma_pos] || r.ma_pos) : '<span style="color:#7a90b0">-（投信未連買≥3，無位階）</span>';
-    var stg = (stage === null || stage === undefined) ? '<span style="color:#7a90b0">-（未觸下軌）</span>'
-            : stage >= 3 ? '<span style="color:#ffc107">🥇 轉強</span>'
-            : stage === 2 ? '<span style="color:#2ecc8f">🥈 站穩</span>'
-            : stage === 1 ? '<span style="color:#e08a3c">🥉 脫離</span>'
-            : '<span style="color:#7fa8d8">⏳ 觸軌</span>';
-    var net5 = (r.total_net_5d === null || r.total_net_5d === undefined) ? '-'
-             : (function (x) { var l = Math.round(x / 1000); return '<span style="color:' + (l > 0 ? '#31d071' : '#ff5470') + '">' + (l > 0 ? '+' : '') + l.toLocaleString('en-US') + ' 張</span>'; })(r.total_net_5d);
-    var row = function (k, v) {
-      return '<tr><td style="padding:4px 10px;color:var(--muted);white-space:nowrap">' + k + '</td>'
-        + '<td style="padding:4px 10px;color:#fff">' + v + '</td></tr>';
+    // 純度
+    var pureVal, pureDesc;
+    if (r.trust_conc > 0 && r.concentration > 0) { pureVal = '<span style="color:#ff8c66">🔴 三大同買</span>'; pureDesc = '外資、投信、自營同方向買，共識最強'; }
+    else if (r.trust_conc > 0 && r.concentration <= 0) { pureVal = '<span style="color:#f0a500">🟡 外資倒投信接</span>'; pureDesc = '外資在賣、投信逆勢接手，常是底部吸籌型態'; }
+    else { pureVal = '<span style="color:#7a90b0">-</span>'; pureDesc = '無明顯法人共識'; }
+    // 位階（值 + 白話）
+    var maMap = {
+      '站上均線': ['站上均線', '站在月線和季線之上，處於強勢區'],
+      '季線下': ['季線下', '還在季線之下、跌深的底部區，弱勢'],
+      '月線下季線上': ['月線下季線上', '在月線與季線之間、回檔整理中'],
+      '月線上季線下': ['月線上季線下', '剛翻上月線、初升段，剛開始轉強']
+    };
+    var maVal, maDesc;
+    if (r.ma_pos && maMap[r.ma_pos]) { maVal = maMap[r.ma_pos][0]; maDesc = maMap[r.ma_pos][1]; }
+    else if (r.ma_pos) { maVal = r.ma_pos; maDesc = ''; }
+    else { maVal = '<span style="color:#7a90b0">-</span>'; maDesc = '投信未連買≥3，無位階資料'; }
+    // 走向（吸籌/追買）
+    var typeVal = r.chip_type === 'absorb' ? '<span style="color:#f0a500">吸籌中</span>'
+                : r.chip_type === 'chase' ? '<span style="color:#ff5470">利多追買</span>'
+                : '<span style="color:#7a90b0">-</span>';
+    var typeDesc = r.chip_type === 'absorb' ? '法人在買、但股價還沒噴 → 默默收貨階段（較早）'
+                 : r.chip_type === 'chase' ? '法人在買、股價已在漲 → 已發動、順勢追（較晚）'
+                 : (r.ma_pos ? '無明顯吸籌/追買型態' : '投信未連買≥3，無此判讀');
+    // 關卡（值 + 白話）
+    var stgMap = {
+      0: ['⏳ 觸軌', '#7fa8d8', '剛跌到貓咪隧道下軌、等待方向。約7成會反轉、3成續跌，最早但最不確定'],
+      1: ['🥉 脫離', '#e08a3c', '剛整根站上下軌（多方形成）。止跌轉上第一步，離底部最近、空間最大，但可能假突破'],
+      2: ['🥈 站穩', '#2ecc8f', '收盤站回脫離K之上（多方站穩）。轉強確認度提高'],
+      3: ['🥇 轉強', '#ffc107', '再突破站穩K（多方無疑）。走勢明確轉強，但已漲一段']
+    };
+    var stgVal, stgDesc;
+    if (stage != null && stgMap[stage]) { stgVal = '<span style="color:' + stgMap[stage][1] + '">' + stgMap[stage][0] + '</span>'; stgDesc = stgMap[stage][2]; }
+    else { stgVal = '<span style="color:#7a90b0">-</span>'; stgDesc = '此檔目前未觸及貓咪隧道下軌，無底部反轉結構'; }
+    // 法人5日 / 近5日漲幅
+    var net5 = (r.total_net_5d == null) ? ['<span style="color:#7a90b0">-</span>', '']
+      : (function (x) { var l = Math.round(x / 1000); return ['<span style="color:' + (l > 0 ? '#31d071' : '#ff5470') + '">' + (l > 0 ? '+' : '') + l.toLocaleString('en-US') + ' 張</span>', '三大法人近5日' + (l > 0 ? '合計買超' : '合計賣超') + Math.abs(l) + '張']; })(r.total_net_5d);
+    var chg5 = (r.chg5_pct == null) ? ['<span style="color:#7a90b0">-</span>', '投信未連買≥3，無此資料']
+      : ['<span style="color:' + (r.chg5_pct > 0 ? '#31d071' : '#ff5470') + '">' + (r.chg5_pct > 0 ? '+' : '') + r.chg5_pct + '%</span>', '近5個交易日股價' + (r.chg5_pct > 0 ? '上漲' : '下跌') + Math.abs(r.chg5_pct) + '%'];
+
+    var ts = streakRow(r.trust_streak, '投信'), fs = streakRow(r.foreign_streak, '外資');
+    var tc = concRow(r.trust_conc, '投信'), ac = concRow(r.concentration, '三大法人');
+
+    var row = function (k, valDesc) {
+      var v = valDesc[0], d = valDesc[1];
+      return '<tr style="border-bottom:1px solid rgba(255,255,255,.04)">'
+        + '<td style="padding:6px 10px;color:var(--muted);white-space:nowrap;vertical-align:top">' + k + '</td>'
+        + '<td style="padding:6px 10px;color:#fff;white-space:nowrap;vertical-align:top">' + v + '</td>'
+        + '<td style="padding:6px 10px;color:#8a96ab;font-size:12px;line-height:1.5">' + (d || '') + '</td></tr>';
     };
     box.innerHTML = HEAD +
-      '<table style="width:100%;border-collapse:collapse;font-size:13px;line-height:1.5">' +
-      row('現價', (r.close != null ? r.close : '<span style="color:#7a90b0">-</span>')) +
-      row('投信連買', streak(r.trust_streak, '買', '賣')) +
-      row('外資連買', streak(r.foreign_streak, '買', '賣')) +
-      row('投信集中度', conc(r.trust_conc)) +
-      row('合計集中度', conc(r.concentration)) +
-      row('純度', pure) +
+      '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
+      row('現價', ['<b>' + (r.close != null ? r.close : '-') + '</b>', '']) +
+      row('投信連買', ts) +
+      row('外資連買', fs) +
+      row('投信集中度', tc) +
+      row('合計集中度', ac) +
+      row('純度', [pureVal, pureDesc]) +
+      row('走向', [typeVal, typeDesc]) +
+      row('位階', [maVal, maDesc]) +
+      row('關卡（貓咪隧道多頭）', [stgVal, stgDesc]) +
       row('法人近5日', net5) +
-      row('近5日漲幅', (r.chg5_pct != null ? conc(r.chg5_pct) : '<span style="color:#7a90b0">-（投信未連買≥3）</span>')) +
-      row('位階', maTxt) +
-      row('關卡（貓咪隧道多頭）', stg) +
+      row('近5日漲幅', chg5) +
       '</table>' +
-      '<div style="font-size:11px;color:#4a6080;margin-top:6px;line-height:1.5">集中度=法人買超÷成交量（吃得多兇，%越高越集中）。純度🔴三大同買最強、🟡外資倒投信接為底部吸籌。位階/近5日僅投信連買≥3的股票有；關卡來自貓咪隧道（觸下軌才有）。資料每交易日收盤後更新。</div>';
+      '<div style="font-size:11px;color:#4a6080;margin-top:8px;line-height:1.5">以上為「當下現況」描述。集中度/位階/近5日僅投信連買≥3的股票有；關卡來自貓咪隧道（觸下軌才有）。資料每交易日收盤後更新，非投資建議。</div>';
   } catch (e) {
     box.innerHTML = HEAD + '<div style="color:var(--muted);font-size:13px;padding:4px 0">籌碼雷達資料載入失敗。</div>';
   }
