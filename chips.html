@@ -207,8 +207,8 @@ async function loadData() {
     document.getElementById('scanDate').textContent = '資料日期: ' + latest;
     await loadStageMap();                       // 先撈關卡對照
     let rows = [], from = 0;
-    while (true) {
-      const res = await fetch(SUPABASE_URL + '/rest/v1/chip_radar?date=eq.' + latest + '&chip_type=not.is.null&select=*', {
+    while (true) {                              // 一次撈全市場（不限 chip_type），關卡到處可顯示
+      const res = await fetch(SUPABASE_URL + '/rest/v1/chip_radar?date=eq.' + latest + '&select=*', {
         headers: Object.assign({}, SB_HEADERS, { 'Range-Unit': 'items', 'Range': from + '-' + (from + 999) })
       });
       const batch = await res.json();
@@ -218,6 +218,7 @@ async function loadData() {
       from += 1000;
     }
     allRows = rows;
+    wideRows = rows;                            // 全部分類共用同一份全市場資料
     loading.style.display = 'none';
     renderTable();
   } catch (e) { console.error(e); loading.textContent = '載入失敗,請稍後再試'; }
@@ -243,15 +244,15 @@ async function loadWide() {
   loading.style.display = 'none';
 }
 function applyFilter() {
-  if (currentFilter === 'dual')    return (wideRows || []).filter(r => r.dual_main === true);
-  if (currentFilter === 'trust')   return (wideRows || []).filter(r => (r.trust_streak || 0) >= 2);
-  if (currentFilter === 'foreign') return (wideRows || []).filter(r => (r.foreign_streak || 0) >= 3);
-  if (currentFilter === 'all')     return wideRows || allRows;
-  const rows = allRows;
-  if (currentFilter === 'mid')    return rows.filter(r => r.chip_type === 'absorb' && r.ma_pos !== '季線下');
-  if (currentFilter === 'bottom') return rows.filter(r => r.chip_type === 'absorb' && r.ma_pos === '季線下');
-  if (currentFilter === 'chase')  return rows.filter(r => r.chip_type === 'chase');
-  if (currentFilter === 'absorb') return rows.filter(r => r.chip_type === 'absorb');
+  const rows = wideRows || allRows;            // 一律用全市場資料，關卡在所有分類都能顯示
+  if (currentFilter === 'dual')    return rows.filter(r => r.dual_main === true);
+  if (currentFilter === 'trust')   return rows.filter(r => (r.trust_streak || 0) >= 2);
+  if (currentFilter === 'foreign') return rows.filter(r => (r.foreign_streak || 0) >= 3);
+  if (currentFilter === 'all')     return rows;
+  if (currentFilter === 'mid')     return rows.filter(r => r.chip_type === 'absorb' && r.ma_pos !== '季線下');
+  if (currentFilter === 'bottom')  return rows.filter(r => r.chip_type === 'absorb' && r.ma_pos === '季線下');
+  if (currentFilter === 'chase')   return rows.filter(r => r.chip_type === 'chase');
+  if (currentFilter === 'absorb')  return rows.filter(r => r.chip_type === 'absorb');
   return rows;
 }
 function streakFmt(v) {
