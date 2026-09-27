@@ -60,6 +60,21 @@
   .v-neutral { color: #9aa; }
   .v-absorb { color: #f0a500; }
 
+  /* 籌碼成本分布（CYQ）*/
+  .cyq-wrap { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; margin-bottom: 14px;
+    padding-bottom: 12px; border-bottom: 1px solid #262633;
+    max-width: min(760px, calc(100vw - 56px)); position: sticky; left: 0; }
+  .cyq-svg { flex: 0 0 auto; max-width: 100%; }
+  .cyq-side { flex: 1 1 220px; min-width: 200px; font-size: 0.9em; line-height: 1.9; }
+  .cyq-side b { color: #eee; }
+  .cyq-title { font-weight: 700; margin-bottom: 4px; }
+  .cyq-legend span { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 4px 0 10px; vertical-align: middle; }
+  .cyq-legend span:first-child { margin-left: 0; }
+  .prs { font-size: 0.82em; padding: 2px 7px; border-radius: 10px; font-weight: 700; white-space: nowrap; }
+  .prs-l { background: rgba(38,180,130,.20); color: #2ecc8f; border: 1px solid rgba(38,180,130,.5); }
+  .prs-m { background: rgba(160,160,180,.15); color: #b8b8c8; border: 1px solid rgba(160,160,180,.4); }
+  .prs-h { background: rgba(205,110,45,.22); color: #e08a3c; border: 1px solid rgba(205,110,45,.5); }
+
   .cp-table-box { margin-top: 14px; max-height: 78vh; overflow: auto; }
   table.cp-table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
   .cp-table th, .cp-table td { padding: 9px 8px; border-bottom: 1px solid #333; text-align: right; white-space: nowrap; }
@@ -158,6 +173,7 @@
             <th data-key="foreign_streak" class="chipCol">外資連買</th>
             <th data-key="trust_conc" class="chipCol">投信純度%</th>
             <th data-key="inst_net_5d" class="chipCol">法人5日(張)</th>
+            <th data-key="trapped_pct" class="chipCol" title="成本分布：現價上方的套牢籌碼比例">上方套牢</th>
             <th data-key="remove_reason" class="reasonCol" style="display:none">移除原因</th>
           </tr>
         </thead>
@@ -205,7 +221,9 @@ let currentStatus = '追蹤中';
 let currentStage = -1;   // -1=全部, 0觸軌/1脫離/2站穩/3轉強
 let currentSide = 'long';  // long 做多 / short 做空
 let chipMap = {};        // code → chip_radar 最新一天籌碼
-let chipDate = '';       // chip_radar 最新一天日期（下午昨日、晚上今日）
+let chipDate = '';
+let cyqMap = {};         // code → tw_cyq 成本分布摘要
+let cyqDate = '';       // chip_radar 最新一天日期（下午昨日、晚上今日）
 let currentRows = [];
 let sortKey = 'recover_pct';
 let sortAsc = true;   // 追蹤中預設：回漲% 小→大（最靠下軌的在上）
@@ -254,13 +272,14 @@ async function loadList() {
   loading.style.display = 'none';
 
   // 台股：即時撈 chip_radar 最新一天籌碼（下午為昨日、晚上22:00後為今日，永遠不空）
-  if (currentMarket === 'tw') { await loadChipRadar(); }
-  else { chipMap = {}; chipDate = ''; }
+  if (currentMarket === 'tw') { await Promise.all([loadChipRadar(), loadCyq()]); }
+  else { chipMap = {}; chipDate = ''; cyqMap = {}; cyqDate = ''; }
 
   // 顯示資料日期（隧道四關日 + 籌碼日，各自標明）
   const latest = currentRows.reduce((m, r) => (r.updated_at > m ? r.updated_at : m), '');
   let dateMsg = latest ? ('隧道資料日期 ' + latest + ' 收盤結算') : '';
   if (currentMarket === 'tw') dateMsg += chipDate ? ('　籌碼資料日期 ' + chipDate) : '　籌碼晚上約22:00更新';
+  if (currentMarket === 'tw' && cyqDate) dateMsg += '　成本分布 ' + cyqDate;
   document.getElementById('updatedBox').textContent = dateMsg;
 
   // 籌碼欄：只有台股顯示
@@ -346,6 +365,7 @@ function renderTable() {
       '<td class="chipCol">' + fmtStreak((chipMap[r.code] || {}).foreign_streak) + '</td>' +
       '<td class="chipCol">' + fmt((chipMap[r.code] || {}).trust_conc, '%') + '</td>' +
       '<td class="chipCol">' + fmtNet5d((chipMap[r.code] || {}).total_net_5d) + '</td>' +
+      '<td class="chipCol">' + fmtTrapped(cyqMap[r.code]) + '</td>' +
       (showReason ? '<td class="reasonCol">' + reasonTag(r.remove_reason, r.status) + '</td>' : '') +
       '</tr>' +
       (currentMarket === 'tw'
@@ -376,7 +396,93 @@ function sumLast(arr, k) { let s = 0; for (let i = Math.max(0, arr.length - k); 
 function nfmt(x) { const n = Math.round(x); return (n > 0 ? '+' : (n < 0 ? '−' : '')) + Math.abs(n).toLocaleString('en-US'); }
 function cellHtml(v) { const c = v > 0 ? 'up' : (v < 0 ? 'down' : 'muted'); return '<td class="' + c + '">' + nfmt(v) + '</td>'; }
 
+async function loadCyq() {
+  cyqMap = {}; cyqDate = '';
+  const codes = [...new Set(currentRows.map(r => String(r.code)))];
+  try {
+    for (let i = 0; i < codes.length; i += 300) {
+      const part = codes.slice(i, i + 300).join(',');
+      const rows = await sbQuery('tw_cyq?select=code,date,trapped_pct,benefit_pct,avg_cost,pressure&code=in.(' + part + ')');
+      (rows || []).forEach(r => { cyqMap[String(r.code)] = r; if (r.date > cyqDate) cyqDate = r.date; });
+    }
+  } catch (e) { console.error('tw_cyq 載入失敗', e); }
+  // 併入列資料，讓「上方套牢」可排序
+  currentRows.forEach(r => { const c = cyqMap[String(r.code)]; r.trapped_pct = c ? Number(c.trapped_pct) : null; });
+}
+function prsBadge(p) {
+  if (!p) return '';
+  const cls = p === '輕' ? 'prs-l' : (p === '中' ? 'prs-m' : 'prs-h');
+  return '<span class="prs ' + cls + '">' + p + '</span>';
+}
+function fmtTrapped(c) {
+  if (!c || c.trapped_pct == null) return '<span class="muted">-</span>';
+  return Math.round(c.trapped_pct) + '% ' + prsBadge(c.pressure);
+}
+
+// 成本分布圖：橫向長條，紅=現價下方獲利籌碼、藍=上方套牢籌碼
+function cyqChart(c) {
+  const d = c.dist || {}; const P = d.p || [], V = d.v || [];
+  if (!P.length) return '';
+  const n = P.length, W = 260, rowH = 4, H = n * rowH, padR = 58;
+  const maxV = Math.max(...V) || 1, close = Number(c.close), avg = Number(c.avg_cost);
+  const pMin = P[0], pMax = P[n - 1], step = n > 1 ? (pMax - pMin) / (n - 1) : 1;
+  const y = price => H - ((price - pMin) / (step || 1) + 0.5) * rowH;   // 高價在上
+  let bars = '';
+  for (let i = 0; i < n; i++) {
+    const w = V[i] / maxV * (W - padR - 4);
+    if (w < 0.3) continue;
+    const col = P[i] <= close ? '#ff4d4d' : '#4da3ff';
+    bars += '<rect x="0" y="' + (H - (i + 1) * rowH + 0.5) + '" width="' + w.toFixed(1) + '" height="' + (rowH - 1) + '" fill="' + col + '" opacity="0.85"/>';
+  }
+  const band = (Number(c.c70_high) > 0)
+    ? '<rect x="0" y="' + y(Number(c.c70_high)) + '" width="' + (W - padR) + '" height="' + Math.max(1, y(Number(c.c70_low)) - y(Number(c.c70_high))) + '" fill="#ffffff" opacity="0.05"/>' : '';
+  const line = (price, col, dash, label) => {
+    if (!(price >= pMin - step && price <= pMax + step)) return '';
+    const yy = Math.min(H - 1, Math.max(1, y(price)));
+    return '<line x1="0" x2="' + (W - padR) + '" y1="' + yy + '" y2="' + yy + '" stroke="' + col + '" stroke-width="1.2"' + (dash ? ' stroke-dasharray="4 3"' : '') + '/>' +
+      '<text x="' + (W - padR + 4) + '" y="' + (yy + 4) + '" fill="' + col + '" font-size="11">' + label + '</text>';
+  };
+  const lab = (price, yy) => '<text x="' + (W - padR + 4) + '" y="' + yy + '" fill="#666" font-size="10">' + Math.round(price * 100) / 100 + '</text>';
+  return '<svg class="cyq-svg" width="' + W + '" height="' + (H + 2) + '" viewBox="0 0 ' + W + ' ' + (H + 2) + '">' +
+    band + bars + lab(pMax, 10) + lab(pMin, H - 2) +
+    line(avg, '#dddddd', true, '均 ' + avg) + line(close, '#f0a500', false, '現 ' + close) + '</svg>';
+}
+
+async function loadCyqPanel(code, box) {
+  try {
+    const rows = await sbQuery('tw_cyq?select=*&code=eq.' + code);
+    const c = rows && rows[0];
+    if (!c) { box.innerHTML = '<div class="chip-note-line">本檔尚無成本分布資料。</div>'; return; }
+    const close = Number(c.close), avg = Number(c.avg_cost);
+    const vsAvg = avg > 0 ? Math.round((close / avg - 1) * 1000) / 10 : null;
+    let read;
+    if (c.pressure === '輕') read = '上方套牢少，往上的賣壓較輕。';
+    else if (c.pressure === '中') read = '上方有一定套牢量，接近成本密集區可能有解套賣壓。';
+    else read = '多數籌碼在現價之上，反彈易遇解套賣壓，需量能消化。';
+    box.innerHTML = '<div class="cyq-wrap">' + cyqChart(c) +
+      '<div class="cyq-side">' +
+        '<div class="cyq-title">成本分布 ' + prsBadge(c.pressure) + '</div>' +
+        '上方套牢 <b>' + c.trapped_pct + '%</b>　獲利比例 <b>' + c.benefit_pct + '%</b><br>' +
+        '平均成本 <b>' + avg + '</b>' + (vsAvg != null ? '（現價 <span class="' + (vsAvg >= 0 ? 'up' : 'down') + '">' + (vsAvg >= 0 ? '+' : '') + vsAvg + '%</span>）' : '') + '<br>' +
+        '70% 籌碼區間 <b>' + c.c70_low + ' – ' + c.c70_high + '</b>（集中度 ' + c.c70_conc + '%）<br>' +
+        '<div class="chip-note-line" style="margin:6px 0 4px">' + read + '</div>' +
+        '<div class="cyq-legend muted"><span style="background:#ff4d4d"></span>獲利籌碼<span style="background:#4da3ff"></span>套牢籌碼<span style="background:#f0a500"></span>現價</div>' +
+        '<div class="muted" style="font-size:0.8em">依近 ' + (c.days || 210) + ' 日 K 線與換手率推估，資料日 ' + c.date + '</div>' +
+      '</div></div>';
+  } catch (e) {
+    box.innerHTML = '<div class="chip-note-line">成本分布載入失敗。</div>';
+  }
+}
+
+// 展開面板：上方成本分布 + 下方法人/信用（兩者各自載入，互不影響）
 async function loadChipPanel(code, stage, box) {
+  box.innerHTML = '<div class="cyq-box muted">成本分布載入中…</div><div class="inst-box muted">法人載入中…</div>';
+  const cyqBox = box.querySelector('.cyq-box'), instBox = box.querySelector('.inst-box');
+  cyqBox.classList.remove('muted'); instBox.classList.remove('muted');
+  await Promise.all([loadCyqPanel(code, cyqBox), loadInstPanel(code, stage, instBox)]);
+}
+
+async function loadInstPanel(code, stage, box) {
   try {
     const inst = await sbQuery('tw_institutional?select=date,foreign_net,trust_net,dealer_net,total_net&ticker=eq.' + code + '&order=date.desc&limit=60');
     if (!inst.length) { box.innerHTML = '<span class="muted">本檔近期無三大法人資料（可能上櫃或無交易紀錄）。</span>'; return; }
@@ -523,4 +629,6 @@ document.querySelectorAll('.cp-stab').forEach(tab => {
 </script>
 </body>
 </html>
+
+
 
