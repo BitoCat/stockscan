@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -173,7 +174,7 @@
             <th data-key="foreign_streak" class="chipCol">外資連買</th>
             <th data-key="trust_conc" class="chipCol">投信純度%</th>
             <th data-key="inst_net_5d" class="chipCol">法人5日(張)</th>
-            <th data-key="trapped_pct" class="chipCol" title="成本分布：現價上方的套牢籌碼比例">上方套牢</th>
+            <th data-key="trapped_pct" class="cyqCol" title="成本分布：現價上方的套牢籌碼比例">上方套牢</th>
             <th data-key="remove_reason" class="reasonCol" style="display:none">移除原因</th>
           </tr>
         </thead>
@@ -190,6 +191,7 @@
       <b>中途轉弱：</b>收盤跌破脫離K → 脫離資格取消、退回觸軌等待（仍留清單），再看往上重新脫離或往下觸及下軌。<b>基準始終以當前下軌為準。</b><br>
       <b>移除：</b>當日最高碰到中線 → <span class="tag tag-grad">已畢業</span>（到中線該獲利，不論哪根K）；脫離K一出現就碰中線＝隧道太窄、無進場意義，不收；停在觸軌／脫離 10 個交易日未進展 → <span class="tag tag-exp">過期</span>。<br>
       <b>籌碼欄（僅台股，獨立參考）：</b>投信/外資連買、投信純度%、法人近5日合計（張，紅買綠賣）。籌碼是附加品質、任何關卡都可能有——「觸軌／剛脫離就有投信大買」正是最佳組合；點「📊 查籌碼」看完整法人與融資融券。<br>
+      <b>上方套牢（台美股）：</b>依近期 K 線與換手率推估的成本分布，現價上方被套住的籌碼比例；輕 &lt;20%、中 20–50%、重 ≥50%。套牢越輕，往上的解套賣壓越小；點「📊 查籌碼」看完整分布圖。<br>
       本頁為每日收盤結算資料，非即時報價；即時狀態請以您的券商工具為準。本頁僅供研究參考，非投資建議。
 
       <div style="margin-top:18px;text-align:center">
@@ -273,17 +275,18 @@ async function loadList() {
 
   // 台股：即時撈 chip_radar 最新一天籌碼（下午為昨日、晚上22:00後為今日，永遠不空）
   if (currentMarket === 'tw') { await Promise.all([loadChipRadar(), loadCyq()]); }
-  else { chipMap = {}; chipDate = ''; cyqMap = {}; cyqDate = ''; }
+  else { chipMap = {}; chipDate = ''; await loadCyq(); }
 
   // 顯示資料日期（隧道四關日 + 籌碼日，各自標明）
   const latest = currentRows.reduce((m, r) => (r.updated_at > m ? r.updated_at : m), '');
   let dateMsg = latest ? ('隧道資料日期 ' + latest + ' 收盤結算') : '';
   if (currentMarket === 'tw') dateMsg += chipDate ? ('　籌碼資料日期 ' + chipDate) : '　籌碼晚上約22:00更新';
-  if (currentMarket === 'tw' && cyqDate) dateMsg += '　成本分布 ' + cyqDate;
+  if (cyqDate) dateMsg += '　成本分布 ' + cyqDate;
   document.getElementById('updatedBox').textContent = dateMsg;
 
   // 籌碼欄：只有台股顯示
   document.querySelectorAll('.chipCol').forEach(el => el.style.display = currentMarket === 'tw' ? '' : 'none');
+  document.querySelectorAll('.cyqCol').forEach(el => el.style.display = '');   // 成本分布：台美股都有
 
   // 移除原因欄：只有非「追蹤中」才顯示
   const showReason = currentStatus !== '追蹤中';
@@ -350,9 +353,7 @@ function renderTable() {
     html += '<tr>' +
       '<td><a class="cp-stock-link" href="diagnosis.html?symbol=' + r.code + '">' +
         r.code + ' ' + (r.name || '') + '</a></td>' +
-      (currentMarket === 'tw'
-        ? '<td><button class="chip-btn" data-code="' + r.code + '" data-stage="' + st + '">📊 查籌碼</button></td>'
-        : '<td><span class="muted">-</span></td>') +
+      '<td><button class="chip-btn" data-code="' + r.code + '" data-stage="' + st + '">📊 查籌碼</button></td>' +
       '<td>' + stageBadge(r.stage) + '</td>' +
       '<td>' + fmtP(r.base_lower) + '</td>' +
       '<td>' + fmt(r.price) + '</td>' +
@@ -365,14 +366,14 @@ function renderTable() {
       '<td class="chipCol">' + fmtStreak((chipMap[r.code] || {}).foreign_streak) + '</td>' +
       '<td class="chipCol">' + fmt((chipMap[r.code] || {}).trust_conc, '%') + '</td>' +
       '<td class="chipCol">' + fmtNet5d((chipMap[r.code] || {}).total_net_5d) + '</td>' +
-      '<td class="chipCol">' + fmtTrapped(cyqMap[r.code]) + '</td>' +
+      '<td class="cyqCol">' + fmtTrapped(cyqMap[r.code]) + '</td>' +
       (showReason ? '<td class="reasonCol">' + reasonTag(r.remove_reason, r.status) + '</td>' : '') +
       '</tr>' +
-      (currentMarket === 'tw'
-        ? '<tr class="chip-detail" style="display:none"><td colspan="20"><div class="chip-body muted">載入中…</div></td></tr>'
-        : '');
+      '<tr class="chip-detail" style="display:none"><td colspan="20"><div class="chip-body muted">載入中…</div></td></tr>';
   });
   document.getElementById('resultBody').innerHTML = html;
+  // 每次重繪後套用欄位顯示（法人欄僅台股；原本只套在表頭，列內格子會錯位）
+  document.querySelectorAll('.chipCol').forEach(el => el.style.display = currentMarket === 'tw' ? '' : 'none');
 }
 
 // ── 就地展開：查籌碼 ───────────────────────────────
@@ -401,11 +402,11 @@ async function loadCyq() {
   const codes = [...new Set(currentRows.map(r => String(r.code)))];
   try {
     for (let i = 0; i < codes.length; i += 300) {
-      const part = codes.slice(i, i + 300).join(',');
-      const rows = await sbQuery('tw_cyq?select=code,date,trapped_pct,benefit_pct,avg_cost,pressure&code=in.(' + part + ')');
+      const part = codes.slice(i, i + 300).map(c => '"' + c + '"').join(',');   // 加引號：BRK.B 這類含點代號
+      const rows = await sbQuery(currentMarket + '_cyq?select=code,date,trapped_pct,benefit_pct,avg_cost,pressure&code=in.(' + encodeURIComponent(part) + ')');
       (rows || []).forEach(r => { cyqMap[String(r.code)] = r; if (r.date > cyqDate) cyqDate = r.date; });
     }
-  } catch (e) { console.error('tw_cyq 載入失敗', e); }
+  } catch (e) { console.error(currentMarket + '_cyq 載入失敗', e); }
   // 併入列資料，讓「上方套牢」可排序
   currentRows.forEach(r => { const c = cyqMap[String(r.code)]; r.trapped_pct = c ? Number(c.trapped_pct) : null; });
 }
@@ -448,9 +449,9 @@ function cyqChart(c) {
     line(avg, '#dddddd', true, '均 ' + avg) + line(close, '#f0a500', false, '現 ' + close) + '</svg>';
 }
 
-async function loadCyqPanel(code, box) {
+async function loadCyqPanel(code, box, market) {
   try {
-    const rows = await sbQuery('tw_cyq?select=*&code=eq.' + code);
+    const rows = await sbQuery(market + '_cyq?select=*&code=eq.' + encodeURIComponent(code));
     const c = rows && rows[0];
     if (!c) { box.innerHTML = '<div class="chip-note-line">本檔尚無成本分布資料。</div>'; return; }
     const close = Number(c.close), avg = Number(c.avg_cost);
@@ -476,10 +477,15 @@ async function loadCyqPanel(code, box) {
 
 // 展開面板：上方成本分布 + 下方法人/信用（兩者各自載入，互不影響）
 async function loadChipPanel(code, stage, box) {
+  if (currentMarket !== 'tw') {   // 美股：只有成本分布（無法人/信用資料）
+    box.innerHTML = '<div class="cyq-box">成本分布載入中…</div>';
+    await loadCyqPanel(code, box.querySelector('.cyq-box'), currentMarket);
+    return;
+  }
   box.innerHTML = '<div class="cyq-box muted">成本分布載入中…</div><div class="inst-box muted">法人載入中…</div>';
   const cyqBox = box.querySelector('.cyq-box'), instBox = box.querySelector('.inst-box');
   cyqBox.classList.remove('muted'); instBox.classList.remove('muted');
-  await Promise.all([loadCyqPanel(code, cyqBox), loadInstPanel(code, stage, instBox)]);
+  await Promise.all([loadCyqPanel(code, cyqBox, 'tw'), loadInstPanel(code, stage, instBox)]);
 }
 
 async function loadInstPanel(code, stage, box) {
@@ -629,6 +635,7 @@ document.querySelectorAll('.cp-stab').forEach(tab => {
 </script>
 </body>
 </html>
+
 
 
 
