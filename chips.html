@@ -61,6 +61,7 @@
   .cr-search input { width: 100%; box-sizing: border-box; padding: 10px 36px 10px 14px; border-radius: 20px;
     border: 1px solid #444; background: #1e1e2a; color: #eee; font-size: 16px; outline: none; }
   .cr-search input:focus { border-color: #f0a500; }
+  .cr-search input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
   .cr-search .clr { position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
     background: none; border: none; color: #888; font-size: 18px; cursor: pointer; display: none; }
   .cr-btns.dim { opacity: .4; }
@@ -112,7 +113,7 @@
     <div class="cr-note">
       投信集中度=投信買超÷成交量(投信吃得多兇);合計集中度=三大法人合計÷成交量(整體態度)。
       位階由均線判斷:季線下=底部、月線季線間/站上均線=中段。自營商參考(避險雜訊多)。
-      量價:量比=今日量÷前20日均量(🚀帶量突破需≥1.5x);控量=5日均量÷20日均量<0.9。
+      量價:量比=今日量÷前20日均量(🚀帶量突破需≥1.5x);控量=5日均量÷20日均量<0.8。
       紅=價漲量增(健康攻擊)、藍=價跌量縮/量縮盤整(籌碼安定)、橘=價漲量縮/量增價滯(力道存疑)、綠=價跌量增(賣壓)。
       上櫃股與非候選股的量價/位階由每日累積的全市場日K計算,前幾週資料不足時顯示「-」。<br>
       純度:🔴三大同買(共識強)、🟡外資倒投信接(底部吸籌典型)。
@@ -154,7 +155,7 @@ function boardDef() {
   if (currentFilter === 'bottom') return '🔵 <b>底部吸籌</b> = 投信連買 ＋ 近5日股價沒噴 ＋ 位於季線下(跌深)<br><span style="color:#999">(跌深打底、投信低接,長線抄底良機;稀有,左側交易)</span>';
   if (currentFilter === 'chase') return '🔥 <b>利多追買</b> = 投信連買 ＋ 近5日股價在漲<br><span style="color:#999">(利多發酵、投信追價,已發動、順勢跟)</span>';
   if (currentFilter === 'absorb') return '💧 <b>全部吸籌</b> = 投信連買 ＋ 近5日股價沒噴(底部+中段)<br><span style="color:#999">(投信在吃、股價還沒動的所有標的)</span>';
-  if (currentFilter === 'ctrl') return '🤫 <b>控量吸籌</b> = 投信連買 ＋ 近5日股價沒噴 ＋ 5日均量 < 20日均量(量能收斂)<br><span style="color:#999">(吸籌的完整定義:投信積極買 + 控量不抬價。成交量驗證過的「真吸籌」,比中段/底部更純)</span>';
+  if (currentFilter === 'ctrl') return '🤫 <b>控量吸籌</b> = 投信連買 ＋ 近5日股價沒噴 ＋ 5日均量 < 20日均量×0.8(量能明顯收斂)<br><span style="color:#999">(吸籌的完整定義:投信積極買 + 控量不抬價。成交量驗證過的「真吸籌」,比中段/底部更純)</span>';
   if (currentFilter === 'breakout') return '🚀 <b>帶量突破</b> = 突破20日高點或站上季線 ＋ 量比≥1.5 ＋ 投信或外資連買≥2<br><span style="color:#999">(法人連買＋突破＋量增,三者同時成立=發動訊號;順勢追,注意隔日量能能否延續)</span>';
   if (currentFilter === 'vwarn') return '⚠️ <b>量價警訊</b> = 爆量長黑 / 價量背離(創高量縮) / 法人賣超＋價跌量增<br><span style="color:#999">(持股健檢用:出現在這裡的持股要提高警覺,不是放空訊號)</span>';
   if (currentFilter === 'dual') return '🤝 <b>雙主力</b> = 當日外資與投信「同時」淨買<br><span style="color:#999">(兩大主力同步進場,共識最強;全市場)</span>';
@@ -182,7 +183,7 @@ function statusTags(r) {
   if ((r.foreign_streak || 0) <= -3) t.push('⚠️ 外資連賣');
   if (r.vol_signal) t.push({ '帶量突破': '🚀 帶量突破', '爆量長紅': '🔺 爆量長紅', '爆量長黑': '⚠️ 爆量長黑',
     '價量背離': '⚠️ 價量背離', '窒息量': '🧊 窒息量' }[r.vol_signal] || r.vol_signal);
-  if (r.chip_type === 'absorb' && r.vol_trend !== null && r.vol_trend !== undefined && r.vol_trend < 0.9) t.push('🤫 控量吸籌');
+  if (r.chip_type === 'absorb' && r.vol_trend !== null && r.vol_trend !== undefined && r.vol_trend < 0.8) t.push('🤫 控量吸籌');
   if (!t.length) t.push('— 無明顯籌碼訊號');
   return '<span class="st-tags">' + t.map(x => '<span class="st-tag">' + x + '</span>').join('') + '</span>';
 }
@@ -334,7 +335,7 @@ function applyFilter() {
   if (currentFilter === 'bottom')  return rows.filter(r => r.chip_type === 'absorb' && r.ma_pos === '季線下');
   if (currentFilter === 'chase')   return rows.filter(r => r.chip_type === 'chase');
   if (currentFilter === 'absorb')  return rows.filter(r => r.chip_type === 'absorb');
-  if (currentFilter === 'ctrl')    return rows.filter(r => r.chip_type === 'absorb' && r.vol_trend !== null && r.vol_trend !== undefined && r.vol_trend < 0.9);
+  if (currentFilter === 'ctrl')    return rows.filter(r => r.chip_type === 'absorb' && r.vol_trend !== null && r.vol_trend !== undefined && r.vol_trend < 0.8);
   if (currentFilter === 'breakout') return rows.filter(r => r.vol_signal === '帶量突破' && ((r.trust_streak || 0) >= 2 || (r.foreign_streak || 0) >= 2));
   if (currentFilter === 'vwarn')   return rows.filter(r => r.vol_signal === '爆量長黑' || r.vol_signal === '價量背離' || (r.vp_state === '價跌量增' && (r.total_net || 0) < 0));
   return rows;
@@ -453,5 +454,4 @@ document.querySelectorAll('.cr-table th').forEach(th => {
 </script>
 </body>
 </html>
-
 
