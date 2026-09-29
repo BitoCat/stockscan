@@ -48,6 +48,13 @@
   .cr-locked { text-align: center; padding: 60px 20px; }
   .cr-locked h2 { color: #f0a500; }
   .cr-locked a { color: #4da3ff; }
+  .vp { font-size: 0.82em; padding: 2px 7px; border-radius: 10px; font-weight: 700; white-space: nowrap; }
+  .vp-good { background: rgba(255,77,77,.15); color: #ff6b6b; border: 1px solid rgba(255,77,77,.4); }
+  .vp-calm { background: rgba(77,163,255,.15); color: #6fb4ff; border: 1px solid rgba(77,163,255,.4); }
+  .vp-warn { background: rgba(240,165,0,.15); color: #f0a500; border: 1px solid rgba(240,165,0,.45); }
+  .vp-bad  { background: rgba(46,204,113,.15); color: #2ecc71; border: 1px solid rgba(46,204,113,.4); }
+  .vp-plain { color: #aaa; font-size: 0.85em; }
+  .vr { color: #888; font-size: 0.8em; margin-left: 4px; }
   .cr-note { color: #777; font-size: 0.82em; margin-top: 14px; line-height: 1.6; }
   /* 搜尋 */
   .cr-search { position: relative; margin: 10px 0 4px; max-width: 420px; }
@@ -93,6 +100,7 @@
             <th data-key="concentration">合計集中度</th>
             <th data-key="chg5_pct">近5日%</th>
             <th data-key="ma_pos">位階</th>
+            <th data-key="vol_ratio">量價</th>
             <th data-key="dealer_net">自營商</th>
             <th data-key="foreign_streak">外資連買</th>
             <th data-key="_pure">純度</th>
@@ -104,6 +112,9 @@
     <div class="cr-note">
       投信集中度=投信買超÷成交量(投信吃得多兇);合計集中度=三大法人合計÷成交量(整體態度)。
       位階由均線判斷:季線下=底部、月線季線間/站上均線=中段。自營商參考(避險雜訊多)。
+      量價:量比=今日量÷前20日均量(🚀帶量突破需≥1.5x);控量=5日均量÷20日均量<0.9。
+      紅=價漲量增(健康攻擊)、藍=價跌量縮/量縮盤整(籌碼安定)、橘=價漲量縮/量增價滯(力道存疑)、綠=價跌量增(賣壓)。
+      上櫃股與非候選股的量價/位階由每日累積的全市場日K計算,前幾週資料不足時顯示「-」。<br>
       純度:🔴三大同買(共識強)、🟡外資倒投信接(底部吸籌典型)。
       關卡來自區間雷達(貓咪隧道多頭):⏳觸軌/🥉脫離/🥈站穩/🥇轉強,只有觸及下軌的股票才有,其餘「—」。
       資料每交易日收盤後更新,非投資建議。
@@ -129,17 +140,23 @@ const FILTERS = [
   { id: 'bottom',  name: '🔵 底部吸籌' },
   { id: 'chase',   name: '🔥 利多追買' },
   { id: 'absorb',  name: '💧 全部吸籌' },
+  { id: 'ctrl',    name: '🤫 控量吸籌' },
+  { id: 'breakout',name: '🚀 帶量突破' },
+  { id: 'vwarn',   name: '⚠️ 量價警訊' },
   { id: 'dual',    name: '🤝 雙主力' },
   { id: 'trust',   name: '📈 投信連買' },
   { id: 'foreign', name: '🌊 外資連買' },
   { id: 'all',     name: '全部' },
 ];
-const WIDE_FILTERS = ['dual', 'trust', 'foreign', 'all'];
+const WIDE_FILTERS = ['dual', 'trust', 'foreign', 'all', 'breakout', 'vwarn'];
 function boardDef() {
   if (currentFilter === 'mid') return '🟢 <b>中段吸籌</b> = 投信連買 ＋ 近5日股價沒噴 ＋ 站在均線上/附近<br><span style="color:#999">(上升波段回檔整理、投信默默續買,右側加碼點;線圖難察,靠籌碼抓)</span>';
   if (currentFilter === 'bottom') return '🔵 <b>底部吸籌</b> = 投信連買 ＋ 近5日股價沒噴 ＋ 位於季線下(跌深)<br><span style="color:#999">(跌深打底、投信低接,長線抄底良機;稀有,左側交易)</span>';
   if (currentFilter === 'chase') return '🔥 <b>利多追買</b> = 投信連買 ＋ 近5日股價在漲<br><span style="color:#999">(利多發酵、投信追價,已發動、順勢跟)</span>';
   if (currentFilter === 'absorb') return '💧 <b>全部吸籌</b> = 投信連買 ＋ 近5日股價沒噴(底部+中段)<br><span style="color:#999">(投信在吃、股價還沒動的所有標的)</span>';
+  if (currentFilter === 'ctrl') return '🤫 <b>控量吸籌</b> = 投信連買 ＋ 近5日股價沒噴 ＋ 5日均量 < 20日均量(量能收斂)<br><span style="color:#999">(吸籌的完整定義:投信積極買 + 控量不抬價。成交量驗證過的「真吸籌」,比中段/底部更純)</span>';
+  if (currentFilter === 'breakout') return '🚀 <b>帶量突破</b> = 突破20日高點或站上季線 ＋ 量比≥1.5 ＋ 投信或外資連買≥2<br><span style="color:#999">(法人連買＋突破＋量增,三者同時成立=發動訊號;順勢追,注意隔日量能能否延續)</span>';
+  if (currentFilter === 'vwarn') return '⚠️ <b>量價警訊</b> = 爆量長黑 / 價量背離(創高量縮) / 法人賣超＋價跌量增<br><span style="color:#999">(持股健檢用:出現在這裡的持股要提高警覺,不是放空訊號)</span>';
   if (currentFilter === 'dual') return '🤝 <b>雙主力</b> = 當日外資與投信「同時」淨買<br><span style="color:#999">(兩大主力同步進場,共識最強;全市場)</span>';
   if (currentFilter === 'trust') return '📈 <b>投信連買</b> = 投信連續買超 ≥ 2 日(全市場)<br><span style="color:#999">(投信主動選股,連買常是波段起漲)</span>';
   if (currentFilter === 'foreign') return '🌊 <b>外資連買</b> = 外資連續買超 ≥ 3 日(全市場)<br><span style="color:#999">(外資偏大型權值,連買代表國際資金流入)</span>';
@@ -163,6 +180,9 @@ function statusTags(r) {
   if ((r.foreign_streak || 0) >= 3) t.push('🌊 外資連買');
   if ((r.trust_streak || 0) <= -3) t.push('⚠️ 投信連賣');
   if ((r.foreign_streak || 0) <= -3) t.push('⚠️ 外資連賣');
+  if (r.vol_signal) t.push({ '帶量突破': '🚀 帶量突破', '爆量長紅': '🔺 爆量長紅', '爆量長黑': '⚠️ 爆量長黑',
+    '價量背離': '⚠️ 價量背離', '窒息量': '🧊 窒息量' }[r.vol_signal] || r.vol_signal);
+  if (r.chip_type === 'absorb' && r.vol_trend !== null && r.vol_trend !== undefined && r.vol_trend < 0.9) t.push('🤫 控量吸籌');
   if (!t.length) t.push('— 無明顯籌碼訊號');
   return '<span class="st-tags">' + t.map(x => '<span class="st-tag">' + x + '</span>').join('') + '</span>';
 }
@@ -314,6 +334,9 @@ function applyFilter() {
   if (currentFilter === 'bottom')  return rows.filter(r => r.chip_type === 'absorb' && r.ma_pos === '季線下');
   if (currentFilter === 'chase')   return rows.filter(r => r.chip_type === 'chase');
   if (currentFilter === 'absorb')  return rows.filter(r => r.chip_type === 'absorb');
+  if (currentFilter === 'ctrl')    return rows.filter(r => r.chip_type === 'absorb' && r.vol_trend !== null && r.vol_trend !== undefined && r.vol_trend < 0.9);
+  if (currentFilter === 'breakout') return rows.filter(r => r.vol_signal === '帶量突破' && ((r.trust_streak || 0) >= 2 || (r.foreign_streak || 0) >= 2));
+  if (currentFilter === 'vwarn')   return rows.filter(r => r.vol_signal === '爆量長黑' || r.vol_signal === '價量背離' || (r.vp_state === '價跌量增' && (r.total_net || 0) < 0));
   return rows;
 }
 function streakFmt(v) {
@@ -336,6 +359,18 @@ function maFmt(v) {
   if (!v) return '<span class="muted">-</span>';
   return v === '季線下' ? '<span class="ma-bottom">' + v + '</span>' : v;
 }
+const VP_CLASS = { '價漲量增': 'vp-good', '價跌量縮': 'vp-calm', '量縮盤整': 'vp-calm',
+  '價漲量縮': 'vp-warn', '量增價滯': 'vp-warn', '價跌量增': 'vp-bad' };
+const SIG_HTML = { '帶量突破': '<span class="vp vp-good">🚀 帶量突破</span>', '爆量長紅': '<span class="vp vp-good">🔺 爆量長紅</span>',
+  '爆量長黑': '<span class="vp vp-bad">⚠️ 爆量長黑</span>', '價量背離': '<span class="vp vp-warn">⚠️ 價量背離</span>',
+  '窒息量': '<span class="vp vp-calm">🧊 窒息量</span>' };
+function vpFmt(r) {
+  if (!r.vp_state) return '<span class="muted">-</span>';
+  const ratio = (r.vol_ratio !== null && r.vol_ratio !== undefined) ? '<span class="vr">' + r.vol_ratio + 'x</span>' : '';
+  if (r.vol_signal && SIG_HTML[r.vol_signal]) return SIG_HTML[r.vol_signal] + ratio;
+  const cls = VP_CLASS[r.vp_state];
+  return (cls ? '<span class="vp ' + cls + '">' + r.vp_state + '</span>' : '<span class="vp-plain">' + r.vp_state + '</span>') + ratio;
+}
 function dealerFmt(v) {
   if (v === null || v === undefined) return '<span class="muted">-</span>';
   const lots = Math.round(v / 1000);
@@ -353,7 +388,7 @@ function renderTable() {
   const table = document.getElementById('resultTable');
   const empty = document.getElementById('emptyBox');
   document.getElementById('boardDef').innerHTML = searchQ
-    ? '🔍 <b>搜尋模式</b>:全市場比對「' + searchQ.replace(/[<>&"]/g, '') + '」,忽略分類濾鏡。每檔下方標籤=目前符合的籌碼狀態。<br><span style="color:#999">(位階只對投信連買候選股計算,其他股顯示「-」;關卡只有觸及貓咪隧道下軌的股票才有)</span>'
+    ? '🔍 <b>搜尋模式</b>:全市場比對「' + searchQ.replace(/[<>&"]/g, '') + '」,忽略分類濾鏡。每檔下方標籤=目前符合的籌碼狀態。<br><span style="color:#999">(位階/量價資料累積中,部分股票暫顯示「-」;關卡只有觸及貓咪隧道下軌的股票才有)</span>'
     : boardDef();
   // 附上關卡 _stage 與現價 _price（close 優先，缺則用區間雷達 price 補）供顯示與排序
   const rows = applyFilter().map(r => {
@@ -388,6 +423,7 @@ function renderTable() {
       '<td>' + concFmt(r.concentration) + '</td>' +
       '<td>' + chg5Fmt(r.chg5_pct) + '</td>' +
       '<td>' + maFmt(r.ma_pos) + '</td>' +
+      '<td>' + vpFmt(r) + '</td>' +
       '<td>' + dealerFmt(r.dealer_net) + '</td>' +
       '<td>' + streakFmt(r.foreign_streak) + '</td>' +
       '<td>' + pureFmt(r) + '</td>' +
@@ -417,4 +453,5 @@ document.querySelectorAll('.cr-table th').forEach(th => {
 </script>
 </body>
 </html>
+
 
