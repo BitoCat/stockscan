@@ -164,6 +164,7 @@
 
       <h3 id="g-total">最上面的大字（綜合判斷）</h3>
       <p>每一項偏多加分（+1 或 +2）、偏空扣分。總分 <b>+3 以上＝多方比較強</b>、<b>−3 以下＝空方比較強</b>，中間是<b>多空拉扯</b>。大字下面列出哪幾項看漲、哪幾項看跌，想知道原因就去看那幾張卡片。</p>
+      <p><b>🔒 漲停／跌停時：</b>價格被鎖住不能動，靠價格波動計算的 ① 吸收、⑤ 接近方式會失真，所以改成看<b>排隊張數</b>：漲停價排隊買的張數越多（例如超過今日成交量的 3 成，或 3000 張以上），代表鎖得越緊；只排幾百張的話，一有大賣單就容易被「打開」。漲停又<b>量縮</b>，表示手上有股票的人捨不得賣；漲停卻<b>爆大量</b>，表示有人趁高價出貨。</p>
 
       <h3 id="g-data">資料從哪裡來、有什麼限制</h3>
       <table class="gt">
@@ -314,6 +315,21 @@ function onBook(q) {
   S.wallEvents = S.wallEvents.filter(e => now - e.t < 15 * 60e3).slice(-20);
 }
 
+// 判斷是否鎖漲停／跌停（優先用證交所給的漲跌停價，沒有就用漲跌幅＋五檔推算）
+function lockInfo(dayChg) {
+  const q = S.q; if (!q || !q.price) return null;
+  const bid1 = q.bids[0], ask1 = q.asks[0], askSum = sum(q.asks.map(x => x[1])), bidSum = sum(q.bids.map(x => x[1]));
+  let side = 0;
+  if (q.limUp && q.price >= q.limUp) side = 1;
+  else if (q.limDn && q.price <= q.limDn) side = -1;
+  else if (!q.limUp && dayChg !== null && dayChg >= 9.4 && askSum === 0) side = 1;
+  else if (!q.limDn && dayChg !== null && dayChg <= -9.4 && bidSum === 0) side = -1;
+  if (!side) return null;
+  const lim = side > 0 ? (q.limUp || q.price) : (q.limDn || q.price);
+  const row = side > 0 ? q.bids.find(x => x[0] === lim) || bid1 : q.asks.find(x => x[0] === lim) || ask1;
+  return { side, lim, queue: row ? row[1] : 0, oppQ: side > 0 ? askSum : bidSum, vol: q.vol || 0 };
+}
+
 // ================= 計算 =================
 function compute() {
   const b = S.bars, n = b.length, k = P.k, L = P.L;
@@ -451,8 +467,27 @@ function compute() {
   else if (pv === '價跌量增') m7j = '還在隧道裡｜價跌量增 → 賣壓比較重';
   R.m7 = { sc: m7, j: m7j, st: `<b>${pv}</b>｜量能 <b>${effortK === null ? '—' : effortK.toFixed(1) + 'x'}</b>｜${nameA}隧道外 <b>${Math.max(aboveN, belowN)}</b> 根` };
 
+  // ---- 漲停／跌停：價格被鎖住時，上面的波動類計算都會失真，改用排隊張數判讀 ----
+  const lk = lockInfo(dayChg);
+  if (lk) {
+    const up = lk.side > 0, word = up ? '漲停' : '跌停', who = up ? '買' : '賣', opp = up ? '賣' : '買';
+    const pct = lk.vol > 0 ? lk.queue / lk.vol * 100 : null;
+    const strong = lk.queue >= 3000 || (pct !== null && pct >= 30), thin = lk.queue < 500 && (pct === null || pct < 10);
+    lk.strong = strong; lk.thin = thin; lk.pct = pct;
+    R.m1 = { sc: 0, j: `🔒 ${word}鎖住，價格不動，這項暫停判斷`, st: `${word}時大家都在排隊，看 ④ 的排隊張數比較準` };
+    R.m4 = { sc: strong ? lk.side * 2 : thin ? 0 : lk.side,
+      j: strong ? `🔒 ${word}價排隊${who} ${lk.queue.toLocaleString()} 張，鎖得很緊` : thin ? `⚠️ ${word}價排隊${who}只有 ${lk.queue.toLocaleString()} 張 → 鎖不緊，容易被打開` : `🔒 ${word}價排隊${who} ${lk.queue.toLocaleString()} 張`,
+      st: `${word}價 <b>${fmtPx(lk.lim)}</b>｜排隊${who} <b>${lk.queue.toLocaleString()}</b> 張｜${opp}方掛單 <b>${lk.oppQ.toLocaleString()}</b> 張｜排隊量是今日成交的 <b>${pct === null ? '—' : pct.toFixed(0) + '%'}</b>`,
+      ev: R.m4.ev };
+    R.m5 = { sc: 0, j: `🔒 ${word}鎖住，價格暫時不能再動`, st: `觀察重點：排隊張數有沒有變少、有沒有被打開` };
+    const lowVol = effortK !== null && effortK < 1;
+    R.m7 = { sc: lowVol ? lk.side : -lk.side,
+      j: up ? (lowVol ? '✅ 漲停量縮 → 想賣的人少，籌碼惜售' : '⚠️ 漲停但量很大 → 有人趁高出貨，留意打開')
+            : (lowVol ? '⚠️ 跌停量縮 → 想買的人少，賣壓還沒消化' : '跌停但量很大 → 有人在低檔承接，留意打開'),
+      st: `量能 <b>${effortK === null ? '—' : effortK.toFixed(1) + 'x'}</b>（1x＝平常量）｜今日成交 <b>${lk.vol.toLocaleString()}</b> 張` };
+  }
   const tot = R.m1.sc + R.m2.sc + R.m3.sc + R.m4.sc + R.m5.sc + R.m6.sc + R.m7.sc;
-  return { R, tot, px, nL, nDir, act, nD, dayChg, liveN, T };
+  return { R, tot, px, nL, nDir, act, nD, dayChg, liveN, T, lk };
 }
 
 // ================= 畫面 =================
@@ -488,11 +523,16 @@ function render() {
   document.getElementById('lvlLine').innerHTML = r.nL ? `${r.nDir > 0 ? '價格往上碰壓力' : '價格往下碰支撐'}：<b>${r.nL.name} ${fmtPx(r.nL.v)}</b>（${fmt((r.nL.v - r.px) / r.px * 100, '%', 2)}）` : '隧道資料載入中';
   document.getElementById('tunLine').textContent = `生效隧道 ${r.act === 'D' ? '日線' : '週線'}（自動）・日線雜訊 ${r.nD === null ? '—' : r.nD.toFixed(2)}・即時內外盤 ${r.liveN}/${P.k} 根`;
   const big = document.getElementById('totBig');
-  big.className = 'big ' + (r.tot >= 3 ? 'bg-up' : r.tot <= -3 ? 'bg-dn' : 'bg-y');
-  big.textContent = r.tot >= 3 ? '📈 目前多方比較強' : r.tot <= -3 ? '📉 目前空方比較強' : '⚖️ 多空拉扯，方向還不明';
+  big.className = 'big ' + (r.lk ? (r.lk.side > 0 ? 'bg-up' : 'bg-dn') : r.tot >= 3 ? 'bg-up' : r.tot <= -3 ? 'bg-dn' : 'bg-y');
+  const openNow = marketState() === 'open';
+  big.textContent = r.lk ? (r.lk.side > 0 ? (openNow ? '🔒 漲停鎖住中' : '🔒 今天收在漲停') : (openNow ? '🔒 跌停鎖住中' : '🔒 今天收在跌停'))
+    : r.tot >= 3 ? '📈 目前多方比較強' : r.tot <= -3 ? '📉 目前空方比較強' : '⚖️ 多空拉扯，方向還不明';
   const short = t => t.replace(/^[①-⑦]\s*/, '');
   const pos = CARDS.filter(([id]) => r.R[id].sc > 0).map(c => short(c[1])), neg = CARDS.filter(([id]) => r.R[id].sc < 0).map(c => short(c[1]));
-  const sentence = r.tot >= 3 ? '多數觀察點偏向上漲，多方證據比較多。' : r.tot <= -3 ? '多數觀察點偏向下跌，空方證據比較多。' : (pos.length || neg.length) ? '有的看漲、有的看跌，互相抵銷，還沒有明確方向。' : '七項都沒有明顯訊號，盤面平靜。';
+  const lk = r.lk, lkWord = lk ? (lk.side > 0 ? '漲停' : '跌停') : '';
+  const sentence = lk ? `${lkWord}價 ${fmtPx(lk.lim)} 排隊${lk.side > 0 ? '買' : '賣'} <b>${lk.queue.toLocaleString()}</b> 張${lk.pct === null ? '' : `（是今日成交量的 ${lk.pct.toFixed(0)}%）`}，` +
+      (lk.strong ? (lk.side > 0 ? '買盤排得很多，鎖得很緊。' : '賣單排得很多，跌停鎖得很死。') : lk.thin ? '排隊張數不多，鎖得不緊，盤中容易被打開。' : '鎖得還算穩，留意排隊張數有沒有快速減少。')
+    : r.tot >= 3 ? '多數觀察點偏向上漲，多方證據比較多。' : r.tot <= -3 ? '多數觀察點偏向下跌，空方證據比較多。' : (pos.length || neg.length) ? '有的看漲、有的看跌，互相抵銷，還沒有明確方向。' : '七項都沒有明顯訊號，盤面平靜。';
   document.getElementById('totWhy').innerHTML = `${sentence}<br>🔴 看漲的：${pos.join('、') || '沒有'}<br>🟢 看跌的：${neg.join('、') || '沒有'}<br>綜合分數 <b>${r.tot > 0 ? '+' : ''}${r.tot}</b>（+3 以上偏多、−3 以下偏空）・<a href="#g-total">怎麼算？</a>`;
   for (const [id] of CARDS) {
     const c = document.getElementById('c_' + id), m = r.R[id];
