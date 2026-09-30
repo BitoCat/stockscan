@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>台股盤口面板 - 交易大師 ProTrader</title>
+<meta name="description" content="台股即時盤口面板：吸收、法人動向、融資融券、五檔掛單、接近方式、動能背離、價量接受度">
+<link rel="stylesheet" href="css/base.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
+<style>
+  body { padding-bottom: 90px; }
+  .tp-wrap { max-width: 1120px; margin: 0 auto; padding: 16px; position: relative; z-index: 1; }
+  .tp-bar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; margin:8px 0 12px; }
+  .tp-title { font-size:1.45em; font-weight:700; }
+  .tp-title small { display:block; font-size:12px; color:var(--accent); letter-spacing:.08em; }
+  .tp-ctrls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .tp-search input { font:inherit; font-size:15px; padding:8px 14px; border-radius:999px; border:1px solid var(--border2); background:var(--panel2); color:var(--text); width:220px; min-height:40px; }
+  .tp-search input:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  .seg { display:inline-flex; background:var(--panel2); border:1px solid var(--border2); border-radius:999px; padding:3px; }
+  .seg button { border:0; background:transparent; color:var(--text); font:inherit; font-size:14px; padding:6px 12px; border-radius:999px; cursor:pointer; min-height:34px; }
+  .seg button[aria-pressed="true"] { background:var(--accent); color:#04121c; font-weight:700; }
+
+  .hero { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:16px 18px; display:grid; grid-template-columns:1fr auto; gap:12px 20px; align-items:center; }
+  .sym { color:var(--accent); font-weight:700; font-size:15px; }
+  .price { font-size:32px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .price .chg { font-size:15px; margin-left:8px; }
+  .lvl { color:var(--muted); font-size:15px; margin-top:2px; }
+  .lvl b { color:var(--text); }
+  .verdict { text-align:right; }
+  .verdict .big { display:inline-block; padding:8px 16px; border-radius:10px; color:#fff; font-weight:700; font-size:19px; }
+  .verdict .why { color:var(--muted); font-size:14px; margin-top:8px; max-width:380px; margin-left:auto; text-align:left; line-height:1.7; }
+  .verdict .why a { color:var(--accent); }
+  @media (max-width:680px) { .hero { grid-template-columns:1fr; } .verdict { text-align:left; } .verdict .why { margin-left:0; } }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:12px; margin:14px 0; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:8px; }
+  .card h3 { margin:0; font-size:16px; display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .card h3 > span:first-child { white-space:nowrap; }
+  .card h3 .q { color:var(--muted); font-weight:400; font-size:13px; text-align:right; }
+  .card h3 a.help { text-decoration:none; font-size:12px; border:1px solid var(--border2); border-radius:50%; width:20px; height:20px; display:inline-grid; place-items:center; color:var(--muted); margin-left:6px; }
+  .card .j { padding:8px 10px; border-radius:8px; color:#fff; font-weight:700; font-size:15px; line-height:1.45; }
+  .card .st { color:var(--muted); font-size:13.5px; font-variant-numeric:tabular-nums; }
+  .card .st b { color:var(--text); font-weight:500; }
+  .card .ev { font-size:13px; color:var(--muted); border-top:1px dashed var(--border2); padding-top:6px; }
+  .tag { font-size:11.5px; color:var(--muted); border:1px solid var(--border2); border-radius:6px; padding:0 5px; margin-left:4px; font-weight:400; }
+  /* 台股慣例：紅＝偏多、綠＝偏空 */
+  .bg-up { background:#c8372c; } .bg-dn { background:#1b8a4b; } .bg-y { background:#c77700; } .bg-w { background:#4a5a78; }
+
+  .foot { display:flex; flex-wrap:wrap; gap:6px 16px; color:var(--muted); font-size:13px; padding:6px 0; }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:4px; vertical-align:middle; }
+  .ok { background:var(--green); } .bad { background:var(--red); } .wait { background:#4a5a78; }
+  .msg { display:none; background:rgba(243,156,18,.12); border:1px solid rgba(243,156,18,.4); border-radius:10px; padding:10px 14px; margin:10px 0; font-size:14.5px; }
+  .msg a { color:var(--accent); }
+
+  #lockedBox { display:none; text-align:center; padding:60px 20px; }
+  #lockedBox h2 { color:#f0a500; } #lockedBox a { color:var(--accent); }
+  #mainBox { display:none; }
+
+  /* 說明 */
+  #guide { margin-top:28px; border-top:1px solid var(--border2); padding-top:14px; line-height:1.8; }
+  #guide h2 { font-size:22px; margin:6px 0; }
+  #guide h3 { font-size:18px; margin:22px 0 6px; color:var(--accent); }
+  #guide p { margin:6px 0; }
+  #guide .lead { color:var(--muted); }
+  .gnav { display:flex; gap:8px; overflow-x:auto; padding:8px 0; position:sticky; top:0; background:var(--bg); z-index:2; scrollbar-width:none; }
+  .gnav a { flex:none; text-decoration:none; color:var(--text); background:var(--panel2); border:1px solid var(--border2); padding:3px 12px; border-radius:999px; font-size:14px; }
+  .gt { width:100%; border-collapse:collapse; margin:8px 0; font-size:14.5px; }
+  .gt td, .gt th { border-bottom:1px solid var(--border); padding:8px; text-align:left; vertical-align:top; }
+  .gt th { color:var(--muted); font-weight:400; }
+  .chip { display:inline-block; padding:1px 8px; border-radius:6px; color:#fff; font-size:13px; font-weight:700; }
+  .note { background:var(--panel2); border-left:3px solid var(--accent); border-radius:6px; padding:10px 14px; margin:10px 0; font-size:14.5px; color:var(--muted); }
+  html { scroll-padding-top: 56px; }
+</style>
+</head>
+<body>
+<div class="tp-wrap">
+  <div id="lockedBox">
+    <h2>🔒 此功能為台股付費會員專屬</h2>
+    <p>請至 <a href="profile.html">我的帳號</a> 聯繫管理員升級方案</p>
+  </div>
+
+  <div id="mainBox">
+    <div class="tp-bar">
+      <div class="tp-title"><small>交易大師 ProTrader</small>🔬 台股盤口面板</div>
+      <div class="tp-ctrls">
+        <form class="tp-search" id="symForm" autocomplete="off">
+          <input id="symIn" list="symList" placeholder="🔍 代號或名稱，例 2330" aria-label="搜尋股票" maxlength="20">
+          <datalist id="symList"></datalist>
+        </form>
+        <div class="seg" id="itvSeg" role="group" aria-label="判讀週期">
+          <button data-v="5m" aria-pressed="true">5分</button><button data-v="15m" aria-pressed="false">15分</button><button data-v="60m" aria-pressed="false">60分</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="msg" id="err"></div>
+    <div class="msg" id="serr"></div>
+
+    <div class="hero">
+      <div>
+        <div class="sym" id="symLbl"></div>
+        <div class="price"><span id="px">—</span><span class="chg" id="pxChg"></span></div>
+        <div class="lvl" id="lvlLine">載入中…</div>
+        <div class="lvl" id="tunLine"></div>
+      </div>
+      <div class="verdict">
+        <div class="big bg-w" id="totBig">計算中</div>
+        <div class="why" id="totWhy"></div>
+      </div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+    <div class="foot" id="foot"></div>
+    <p style="color:var(--muted);font-size:14px">📖 看不懂？<a href="#guide" style="color:var(--accent)">往下看白話說明</a>　·　盤中每 5 秒自動更新，不用重新整理　·　顏色：<span class="chip bg-up">紅＝偏多</span> <span class="chip bg-dn">綠＝偏空</span> <span class="chip bg-y">橘＝要小心</span></p>
+
+    <section id="guide">
+      <h2>📖 白話說明</h2>
+      <p class="lead">價格走到隧道上下軌時，面板把「看不到的盤口」拆成七項：誰在買賣、籌碼乾不乾淨、掛單是真是假、力道有沒有跟上。每項都有<b>判斷</b>（白話結論）和<b>狀態</b>（實際數字）。</p>
+      <nav class="gnav" aria-label="說明章節">
+        <a href="#g-how">怎麼看</a><a href="#g1">① 吸收</a><a href="#g2">② 法人動向</a><a href="#g3">③ 融資融券</a><a href="#g4">④ 五檔掛單</a><a href="#g5">⑤ 接近方式</a><a href="#g6">⑥ 動能背離</a><a href="#g7">⑦ 價量／接受度</a><a href="#g-total">綜合判斷</a><a href="#g-data">資料限制</a>
+      </nav>
+
+      <h3 id="g-how">怎麼看</h3>
+      <p>最上面寫著目前最靠近的<b>關卡</b>（日線或週線貓咪隧道的上下軌），以及價格是往上碰壓力、還是往下碰支撐。下面七張卡片各看一件事，右上角的大字是七項加總的結論。</p>
+      <div class="note">面板描述的是<b>現在盤面的狀況</b>，不是買賣指令。進場、出場、停損由你自己決定。</div>
+
+      <h3 id="g1">① 吸收：有沒有人在默默接貨／壓貨</h3>
+      <p>一直有人用市價賣（打在買價上＝<b>內盤</b>），價格卻不跌，代表下面有大量掛單在接；反過來，一直有人市價買（打在賣價上＝<b>外盤</b>）卻漲不上去，代表上面有人在倒貨。</p>
+      <table class="gt"><tr><th>面板上寫</th><th>白話意思</th></tr>
+        <tr><td><span class="chip bg-up">賣的人很多卻跌不下去</span></td><td>下面有人接，容易止跌反彈。</td></tr>
+        <tr><td><span class="chip bg-dn">買的人很多卻漲不上去</span></td><td>上面有人倒貨，容易回落。</td></tr></table>
+
+      <h3 id="g2">② 法人動向（盤後）</h3>
+      <p>外資、投信昨天買還是賣、連續幾天、買的量佔成交量多少（集中度）。投信是台股最重要的「吸籌主力」。這項是<b>前一個交易日收盤後</b>的資料，不是盤中即時。</p>
+      <table class="gt"><tr><th>面板上寫</th><th>白話意思</th></tr>
+        <tr><td><span class="chip bg-up">外資、投信一起買</span></td><td>兩大法人同方向，籌碼偏多。</td></tr>
+        <tr><td><span class="chip bg-up">投信連續買超</span></td><td>投信在建立部位，常是波段起點。</td></tr>
+        <tr><td><span class="chip bg-y">外資賣、投信接</span></td><td>換手中，要看投信能不能撐住。</td></tr>
+        <tr><td><span class="chip bg-dn">法人連續賣超</span></td><td>主力在出貨，反彈容易被賣。</td></tr></table>
+
+      <h3 id="g3">③ 融資融券（盤後）：籌碼乾不乾淨</h3>
+      <p>融資是散戶借錢買股票。漲的時候融資大增，代表散戶在追，籌碼變亂；漲的時候融資反而減少，代表籌碼乾淨。融券是借股票放空，券資比高的股票如果往上漲，空方被迫回補會形成<b>軋空</b>。</p>
+      <table class="gt"><tr><th>面板上寫</th><th>白話意思</th></tr>
+        <tr><td><span class="chip bg-up">漲了融資反而減少</span></td><td>散戶沒追，籌碼在大戶手上，比較乾淨。</td></tr>
+        <tr><td><span class="chip bg-y">散戶融資追價</span></td><td>散戶在追，籌碼變亂，容易被洗。</td></tr>
+        <tr><td><span class="chip bg-y">跌了散戶還在攤平</span></td><td>融資還在增加，賣壓沒清完。</td></tr>
+        <tr><td><span class="chip bg-y">券資比高＋價格往上</span></td><td>空方可能被迫回補，有軋空力道。</td></tr></table>
+
+      <h3 id="g4">④ 五檔掛單：大單是真的還是假的</h3>
+      <p>看最佳五檔裡有沒有特別大的掛單。價格靠近時大單被<b>吃掉</b>＝真的有人在交易；被<b>撤掉</b>＝假單嚇人。台股只看得到五檔，更遠的掛單看不到。</p>
+      <table class="gt"><tr><th>面板上寫</th><th>白話意思</th></tr>
+        <tr><td><span class="chip bg-up">上方大賣單被買光</span></td><td>買盤是真的。</td></tr>
+        <tr><td><span class="chip bg-dn">下方大買單被賣光</span></td><td>賣壓是真的。</td></tr>
+        <tr><td><span class="chip bg-y">大買單在價格靠近時撤掉</span></td><td>假支撐，小心往下破。</td></tr></table>
+
+      <h3 id="g5">⑤ 接近方式：價格怎麼走到關卡的</h3>
+      <p>慢慢磨上去、低點越墊越高＝賣壓被吃掉，容易突破；一口氣爆量衝上去＝常是最後一衝，容易反轉。同一個位置碰越多次，防守越弱。</p>
+
+      <h3 id="g6">⑥ 動能背離：價格在衝，力道有沒有跟上</h3>
+      <p>價格創新高，但內外盤累積（CVD）、RSI、MACD、PHL 沒有跟著創新高，代表上漲快沒力了；創新低時反過來看。背離的指標越多，訊號越強。</p>
+
+      <h3 id="g7">⑦ 價量／接受度：突破後市場認不認帳</h3>
+      <p>衝出隧道後，要連續站穩、量也跟上，突破才算成立；衝出去又收回來就是假突破。價漲量增＝健康；價漲量縮＝追的人變少；價跌量增＝賣壓重。</p>
+
+      <h3 id="g-total">最上面的大字（綜合判斷）</h3>
+      <p>每一項偏多加分（+1 或 +2）、偏空扣分。總分 <b>+3 以上＝多方比較強</b>、<b>−3 以下＝空方比較強</b>，中間是<b>多空拉扯</b>。大字下面列出哪幾項看漲、哪幾項看跌，想知道原因就去看那幾張卡片。</p>
+
+      <h3 id="g-data">資料從哪裡來、有什麼限制</h3>
+      <table class="gt">
+        <tr><td>即時報價</td><td>證交所即時行情，盤中約每 5 秒一次（不是逐筆），收盤後不再更新。</td></tr>
+        <tr><td>內外盤</td><td>用「成交價碰到買價還是賣價」推算，是近似值。打開網頁<b>之前</b>的 K 棒用收盤位置推算，打開<b>之後</b>用即時內外盤。</td></tr>
+        <tr><td>歷史 K 線</td><td>畫隧道用，最近幾根可能有延遲，會由即時報價補上。</td></tr>
+        <tr><td>法人、融資融券</td><td>前一個交易日收盤後的資料。</td></tr>
+        <tr><td>五檔</td><td>只有最佳五檔，看不到更遠的掛單。</td></tr>
+      </table>
+    </section>
+  </div>
+</div>
+
+<nav class="tabbar">
+  <a class="tb" href="index.html"><span class="ti">🏠</span>首頁</a>
+  <a class="tb" href="watchlist.html"><span class="ti">⭐</span>名單</a>
+  <a class="tb" href="daily.html"><span class="ti">📊</span>盤面</a>
+  <a class="tb" href="tracker.html"><span class="ti">🔭</span>追蹤</a>
+  <a class="tb" href="tutorial.html"><span class="ti">📈</span>圖表</a>
+  <a class="tb" href="concepts.html"><span class="ti">🧩</span>概念</a>
+  <a class="tb active" href="screener.html"><span class="ti">🎯</span>篩選</a>
+  <a class="tb" href="profile.html"><span class="ti">👤</span>我的</a>
+</nav>
+
+<script>
+// =====================================================================
+//  台股盤口面板
+//  ★ 部署 Cloudflare Worker 後，把網址貼到下面 PROXY（結尾不要斜線）
+// =====================================================================
+const PROXY = 'https://tw-panel.media160588.workers.dev';
+
+const SUPABASE_URL = 'https://kldumnxdlgovaxtiszyn.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtsZHVtbnhkbGdvdmF4dGlzenluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMjIyNDgsImV4cCI6MjA5MzY5ODI0OH0.P_anfYpSV2tgCPIQ7uZDVBjUFY3UhfEXk9u3XjlzBHI';
+const SB_HEADERS = { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON };
+
+const P = { k: 6, L: 30, volLen: 20, tolMult: 0.3, deltaThr: 15, absEffort: 1.8, absResult: 0.3,
+            noiseThr: 0.30, confirmN: 2, bw: 14, devD: 1.4, devW: 1.4, testLook: 100 };
+const ITV_MS = { '5m': 5 * 60e3, '15m': 15 * 60e3, '60m': 60 * 60e3 };
+
+let S = null, NAMES = [];
+
+// ================= 工具 =================
+const sum = a => a.reduce((x, y) => x + y, 0);
+const last = a => a[a.length - 1];
+function ema(arr, n) { const out = []; const a = 2 / (n + 1); let e = null; for (const v of arr) { e = e === null ? v : v * a + e * (1 - a); out.push(e); } return out; }
+function rma(arr, n) { const out = []; let r = null, s = 0; arr.forEach((v, i) => { if (i < n) { s += v; r = s / (i + 1); } else r = (r * (n - 1) + v) / n; out.push(r); }); return out; }
+function atrArr(b, n) { const tr = b.map((x, i) => i === 0 ? x.h - x.l : Math.max(x.h - x.l, Math.abs(x.h - b[i - 1].c), Math.abs(x.l - b[i - 1].c))); return rma(tr, n); }
+function rsiArr(c, n) { const up = [], dn = []; c.forEach((v, i) => { const d = i ? v - c[i - 1] : 0; up.push(Math.max(d, 0)); dn.push(Math.max(-d, 0)); }); const u = rma(up, n), d = rma(dn, n); return u.map((x, i) => d[i] === 0 ? 100 : 100 - 100 / (1 + x / d[i])); }
+function smiArr(b, lk, ld) {
+  const rel = [], rng = [];
+  b.forEach((x, i) => { const s = b.slice(Math.max(0, i - lk + 1), i + 1); const hh = Math.max(...s.map(y => y.h)), ll = Math.min(...s.map(y => y.l)); rel.push(x.c - (hh + ll) / 2); rng.push(hh - ll); });
+  const n = ema(ema(rel, ld), ld), d = ema(ema(rng, ld), ld);
+  return n.map((v, i) => 200 * v / (d[i] === 0 ? 1 : d[i]));
+}
+const W = (() => { const w = []; for (let j = 0; j < 500; j++) w.push(Math.exp(-((j / P.bw) ** 2) / 2) / Math.sqrt(2 * Math.PI)); return { w, s: sum(w) }; })();
+function bands(closesNewestFirst, dev) {
+  if (closesNewestFirst.length < 20) return null;
+  let s1 = 0, s2 = 0;
+  for (let j = 0; j < Math.min(500, closesNewestFirst.length); j++) { const v = closesNewestFirst[j], w = W.w[j]; s1 += v * w; s2 += v * v * w; }
+  const m = s1 / W.s, sd = Math.sqrt(Math.max(s2 / W.s - m * m, 0));
+  return { u: m + dev * sd, d: m - dev * sd, m };
+}
+const fmt = (x, suf = '', dp = 1) => (x === null || x === undefined || !isFinite(x)) ? '—' : (x > 0 ? '+' : '') + x.toFixed(dp) + suf;
+const fmtPx = x => !isFinite(x) || x === null ? '—' : x.toLocaleString('en-US', { minimumFractionDigits: x < 50 ? 2 : x < 500 ? 1 : 0, maximumFractionDigits: 2 });
+async function getJ(url, opt) { const r = await fetch(url, opt); if (!r.ok) throw new Error(r.status); return r.json(); }
+const clv = b => b.h > b.l ? b.v * ((b.c - b.l) - (b.h - b.c)) / (b.h - b.l) : 0;   // 收盤位置推算主動買賣
+
+// 台北時間與交易時段
+function tpeNow() { const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' })); return d; }
+function marketState() {
+  const d = tpeNow(), wd = d.getDay(), m = d.getHours() * 60 + d.getMinutes();
+  if (wd === 0 || wd === 6) return 'closed';
+  if (m >= 540 && m <= 815) return 'open';          // 09:00–13:35
+  if (m > 815) return 'after';
+  return 'pre';
+}
+
+// ================= 資料 =================
+function freshState(code, itv) {
+  return { code, itv, name: '', bars: [], day: [], week: [], chip: null, margin: null,
+           q: null, prevQ: null, walls: new Map(), wallEvents: [],
+           conn: { bars: 'wait', mis: 'wait', chip: 'wait', margin: 'wait' }, timers: [] };
+}
+async function loadAll() {
+  const c = S.code;
+  const px = (path) => `${PROXY}${path}`;
+  await Promise.all([
+    getJ(px(`/bars?code=${c}&tf=${S.itv}`)).then(d => { if (!d.ok) throw 0; S.bars = d.bars.map(b => ({ ...b, d: clv(b), live: false })); S.conn.bars = 'ok'; }).catch(() => S.conn.bars = 'bad'),
+    getJ(px(`/bars?code=${c}&tf=1d`)).then(d => { S.day = d.bars || []; }).catch(() => {}),
+    getJ(px(`/bars?code=${c}&tf=1wk`)).then(d => { S.week = d.bars || []; }).catch(() => {}),
+    getJ(px(`/margin?code=${c}`)).then(d => { S.margin = d.m; S.conn.margin = d.m ? 'ok' : 'na'; }).catch(() => S.conn.margin = 'bad'),
+    getJ(`${SUPABASE_URL}/rest/v1/chip_radar?code=eq.${c}&order=date.desc&limit=1&select=date,name,trust_streak,foreign_streak,trust_conc,concentration,dual_main,total_net_5d`, { headers: SB_HEADERS })
+      .then(d => { S.chip = d[0] || null; if (S.chip && !S.name) S.name = S.chip.name; S.conn.chip = S.chip ? 'ok' : 'na'; }).catch(() => S.conn.chip = 'bad'),
+  ]);
+  await pollMis();
+}
+
+// 即時報價：用前一次的五檔判斷這段期間的成交是內盤還是外盤
+async function pollMis(snapOnly) {
+  let q;
+  try { q = await getJ(`${PROXY}/mis?code=${S.code}`); } catch (e) { S.conn.mis = 'bad'; return; }
+  if (!q.ok) { S.conn.mis = 'bad'; return; }
+  S.conn.mis = 'ok'; S.name = q.name || S.name;
+  const prev = S.q; S.prevQ = prev; S.q = q;
+  if (snapOnly) { onBook(q); return; }             // 盤後/開盤前：只拿報價與五檔，不動 K 棒
+  if (q.price === null) return;
+  const bucket = Math.floor((q.t) / ITV_MS[S.itv]) * ITV_MS[S.itv];
+  let b = last(S.bars);
+  if (!b || bucket > b.t) { b = { t: bucket, o: q.price, h: q.price, l: q.price, c: q.price, v: 0, buy: 0, sell: 0, d: 0, live: true }; S.bars.push(b); if (S.bars.length > 600) S.bars.shift(); }
+  else if (bucket === b.t) { b.h = Math.max(b.h, q.price); b.l = Math.min(b.l, q.price); b.c = q.price; }
+  if (prev && prev.vol && q.vol > prev.vol && q.t > prev.t) {
+    const dv = q.vol - prev.vol;
+    const ask1 = prev.asks[0] ? prev.asks[0][0] : null, bid1 = prev.bids[0] ? prev.bids[0][0] : null;
+    let buy = 0, sell = 0;
+    if (ask1 && q.price >= ask1) buy = dv; else if (bid1 && q.price <= bid1) sell = dv;
+    else if (prev.price !== null && q.price > prev.price) buy = dv; else if (prev.price !== null && q.price < prev.price) sell = dv;
+    else { buy = dv / 2; sell = dv / 2; }
+    if (!b.live) { b.live = true; b.buy = 0; b.sell = 0; b.v = 0; }
+    b.buy += buy; b.sell += sell; b.v += dv; b.d = b.buy - b.sell;
+  }
+  // 今日 / 本週 K 棒也用即時價更新，隧道才會跟著動
+  for (const arr of [S.day, S.week]) { const l = last(arr); if (l) { l.c = q.price; l.h = Math.max(l.h, q.price); l.l = Math.min(l.l, q.price); } }
+  onBook(q);
+}
+
+// ---- 五檔大單追蹤 ----
+function onBook(q) {
+  const all = [...q.bids.map(x => ['bid', ...x]), ...q.asks.map(x => ['ask', ...x])].filter(x => x[1] > 0);
+  if (!all.length) return;
+  const qs = all.map(x => x[2]).sort((a, b) => a - b), med = qs[Math.floor(qs.length / 2)] || 0;
+  const now = Date.now(), seen = new Set(), px = q.price || (q.bids[0] && q.bids[0][0]);
+  for (const [side, p, v] of all) {
+    if (v >= Math.max(med * 3, 50)) {
+      const key = side + p; seen.add(key);
+      const w = S.walls.get(key); if (w) { w.v = v; w.max = Math.max(w.max, v); } else S.walls.set(key, { side, p, v, max: v, first: now });
+    }
+  }
+  const bidLo = q.bids.length ? last(q.bids)[0] : 0, askHi = q.asks.length ? last(q.asks)[0] : Infinity;
+  for (const [key, w] of S.walls) {
+    if (seen.has(key)) continue;
+    const inView = w.side === 'bid' ? w.p >= bidLo : w.p <= askHi;
+    if (inView && px) {
+      const touched = w.side === 'bid' ? px <= w.p : px >= w.p;
+      S.wallEvents.push({ t: now, side: w.side, p: w.p, v: w.max, kind: touched ? 'eaten' : 'pulled' });
+    }
+    S.walls.delete(key);
+  }
+  S.wallEvents = S.wallEvents.filter(e => now - e.t < 15 * 60e3).slice(-20);
+}
+
+// ================= 計算 =================
+function compute() {
+  const b = S.bars, n = b.length, k = P.k, L = P.L;
+  if (n < k + L + P.volLen + 5) return null;
+  const I = n - 1, V = b.map(x => x.v), C = b.map(x => x.c), D = b.map(x => x.d);
+  let cs = 0; const cvd = D.map(v => (cs += v));
+  const atrN = last(atrArr(b, 14)), tol = atrN * P.tolMult;
+  const win = (a, end, len) => sum(a.slice(end - len + 1, end + 1));
+  const vK = win(V, I, k), baseVol = sum(V.slice(I - k - P.volLen + 1, I - k + 1)) / P.volLen;
+  const effortK = baseVol > 0 ? vK / (baseVol * k) : null;
+  const delK = vK > 0 ? win(D, I, k) / vK * 100 : null;
+  const progK = atrN > 0 ? (C[I] - C[I - k]) / atrN : null;
+  const liveN = b.slice(-k).filter(x => x.live).length;
+
+  const pr0 = I - k - L + 1, pr1 = I - k; let hiIdx = pr0, loIdx = pr0;
+  for (let i = pr0; i <= pr1; i++) { if (b[i].h >= b[hiIdx].h) hiIdx = i; if (b[i].l <= b[loIdx].l) loIdx = i; }
+  const recent = b.slice(I - k + 1);
+  const newHi = Math.max(...recent.map(x => x.h)) > b[hiIdx].h, newLo = Math.min(...recent.map(x => x.l)) < b[loIdx].l;
+  const maxW = a => Math.max(...a.slice(I - k + 1)), minW = a => Math.min(...a.slice(I - k + 1));
+  const rsi = rsiArr(C, 14), e1 = ema(C, 12), e2 = ema(C, 26), macd = e1.map((v, i) => v - e2[i]), phl = smiArr(b, 10, 3);
+  const div = {
+    top: { c: newHi && maxW(cvd) < cvd[hiIdx], r: newHi && maxW(rsi) < rsi[hiIdx], m: newHi && maxW(macd) < macd[hiIdx], h: newHi && maxW(phl) < phl[hiIdx] },
+    bot: { c: newLo && minW(cvd) > cvd[loIdx], r: newLo && minW(rsi) > rsi[loIdx], m: newLo && minW(macd) > macd[loIdx], h: newLo && minW(phl) > phl[loIdx] },
+  };
+
+  // 隧道：日線（中貓咪）、週線（大貓咪）
+  const T = {};
+  if (S.day.length > 20) T.D = { ...bands(S.day.map(x => x.c).reverse(), P.devD), atr: last(atrArr(S.day, 6)) };
+  if (S.week.length > 20) T.W = { ...bands(S.week.map(x => x.c).reverse(), P.devW), atr: last(atrArr(S.week, 6)) };
+  const nD = T.D && (T.D.u - T.D.d) > 0 ? T.D.atr / (T.D.u - T.D.d) : null;
+  const act = T.D && (nD === null || nD <= P.noiseThr) ? 'D' : T.W ? 'W' : 'D';
+  const A = T[act], px = C[I];
+  const uA = A ? A.u : null, dA = A ? A.d : null;
+  const nameA = act === 'D' ? '日線' : '週線';
+  let nL = null;
+  if (A) nL = Math.abs(px - uA) <= Math.abs(px - dA) ? { name: nameA + ' 上軌', v: uA } : { name: nameA + ' 下軌', v: dA };
+  const nDir = nL ? (px <= nL.v ? 1 : -1) : 1;
+
+  const R = {};
+  // ① 吸收
+  const wick = lo => recent.reduce((s, x) => s + (x.h > x.l ? (lo ? (Math.min(x.o, x.c) - x.l) : (x.h - Math.max(x.o, x.c))) / (x.h - x.l) : 0), 0) / k;
+  const wLo = wick(true), wUp = wick(false);
+  R.m1 = { sc: 0, j: '沒有特別情況', st: `內外盤差 <b>${fmt(delK, '%')}</b>｜價格 <b>${fmt(progK, ' ATR', 2)}</b>｜下影 ${(wLo * 100).toFixed(0)}%・上影 ${(wUp * 100).toFixed(0)}%` };
+  if (delK !== null && progK !== null && delK <= -P.deltaThr && progK >= -P.absResult) R.m1 = { ...R.m1, sc: 2, j: wLo >= 0.35 ? '🛡️ 賣的人很多卻跌不下去，下面有人接 → 容易反彈' : '🛡️ 賣的人很多卻跌不下去 → 容易反彈' };
+  else if (delK !== null && progK !== null && delK >= P.deltaThr && progK <= P.absResult) R.m1 = { ...R.m1, sc: -2, j: wUp >= 0.35 ? '🛡️ 買的人很多卻漲不上去，上面有人倒貨 → 容易回落' : '🛡️ 買的人很多卻漲不上去 → 容易回落' };
+
+  // ② 法人動向（盤後）
+  const ch = S.chip;
+  let m2 = 0, m2j = '— 沒有法人資料', m2s = '—';
+  if (ch) {
+    const ts = ch.trust_streak || 0, fs = ch.foreign_streak || 0, tc = ch.trust_conc, cc = ch.concentration;
+    m2j = '法人沒有明顯動作';
+    if (ch.dual_main && ts > 0 && fs > 0) { m2 = 2; m2j = '✅ 外資、投信一起買 → 籌碼偏多'; }
+    else if (ts >= 3 && (tc || 0) >= 5) { m2 = 2; m2j = `✅ 投信連續買超 ${ts} 天 → 主力在建立部位`; }
+    else if (ts >= 2) { m2 = 1; m2j = `投信連買 ${ts} 天`; }
+    else if (ts <= -3 && fs <= -3) { m2 = -2; m2j = '⚠️ 外資、投信連續賣超 → 主力在出貨'; }
+    else if (fs <= -3 && ts > 0) { m2j = '⚠️ 外資賣、投信接 → 換手中，看投信撐不撐得住'; }
+    else if (ts <= -3) { m2 = -1; m2j = `投信連賣 ${-ts} 天`; }
+    else if (fs >= 3) { m2 = 1; m2j = `外資連買 ${fs} 天`; }
+    else if (fs <= -3) { m2 = -1; m2j = `外資連賣 ${-fs} 天`; }
+    const st = v => !v ? '0' : v > 0 ? `買${v}` : `賣${-v}`;
+    m2s = `投信 <b>${st(ts)}</b>・外資 <b>${st(fs)}</b>｜投信集中度 <b>${tc == null ? '—' : tc + '%'}</b>｜合計 <b>${cc == null ? '—' : cc + '%'}</b><span class="tag">${ch.date} 盤後</span>`;
+  }
+  R.m2 = { sc: m2, j: m2j, st: m2s };
+
+  // ③ 融資融券（盤後）
+  const mg = S.margin, dN = S.day.length;
+  const dayChg = S.q && S.q.prev && S.q.price ? (S.q.price - S.q.prev) / S.q.prev * 100
+               : dN >= 2 && S.day[dN - 2].c ? (S.day[dN - 1].c - S.day[dN - 2].c) / S.day[dN - 2].c * 100 : null;
+  let m3 = 0, m3j = '— 沒有融資融券資料', m3s = '—';
+  if (mg && mg.marginToday !== null && mg.marginPrev) {
+    const mChg = (mg.marginToday - mg.marginPrev) / mg.marginPrev * 100;
+    const ratio = mg.marginToday > 0 && mg.shortToday !== null ? mg.shortToday / mg.marginToday * 100 : null;
+    const up = dayChg !== null && dayChg > 0.5, dn = dayChg !== null && dayChg < -0.5;
+    m3j = '融資沒有明顯變化';
+    if (up && mChg <= -1) { m3 = 1; m3j = '✅ 漲了融資反而減少 → 籌碼乾淨'; }
+    else if (up && mChg >= 3) { m3 = -1; m3j = '⚠️ 散戶融資追價 → 籌碼變亂，容易被洗'; }
+    else if (dn && mChg >= 2) { m3 = -1; m3j = '⚠️ 跌了散戶還在攤平 → 賣壓沒清完'; }
+    else if (dn && mChg <= -3) { m3 = 1; m3j = '🔥 融資大減（斷頭或退場）→ 籌碼在沉澱'; }
+    else if (mChg >= 3) { m3j = '融資明顯增加，散戶變多'; }
+    if (ratio !== null && ratio >= 30 && up) { m3 += 1; m3j += '｜🔥 券資比高＋價格往上 → 有軋空力道'; }
+    m3s = `融資 <b>${fmt(mChg, '%')}</b>｜券資比 <b>${ratio === null ? '—' : ratio.toFixed(1) + '%'}</b>｜今日漲跌 <b>${fmt(dayChg, '%', 2)}</b><span class="tag">融資為前日盤後</span>`;
+  }
+  R.m3 = { sc: m3, j: m3j, st: m3s };
+
+  // ④ 五檔掛單
+  const now = Date.now(), ev = S.wallEvents.filter(e => now - e.t < 5 * 60e3), le = last(ev);
+  let m4 = 0, m4j = '五檔沒有特別大的掛單';
+  const walls = [...S.walls.values()];
+  const wB = walls.filter(w => w.side === 'bid').sort((a, c) => c.v - a.v)[0], wA = walls.filter(w => w.side === 'ask').sort((a, c) => c.v - a.v)[0];
+  if (le) {
+    if (le.kind === 'eaten') { m4 = le.side === 'ask' ? 1 : -1; m4j = le.side === 'ask' ? '✅ 上方大賣單被買光 → 買盤是真的' : '✅ 下方大買單被賣光 → 賣壓是真的'; }
+    else { m4 = le.side === 'bid' ? -1 : 1; m4j = le.side === 'bid' ? '⚠️ 大買單在價格靠近時撤掉 → 假支撐，小心' : '⚠️ 大賣單在價格靠近時撤掉 → 假壓力，容易突破'; }
+  } else if (wA || wB) m4j = '五檔有大單，但還沒被碰到';
+  const q = S.q, bidSum = q ? sum(q.bids.map(x => x[1])) : 0, askSum = q ? sum(q.asks.map(x => x[1])) : 0;
+  R.m4 = { sc: m4, j: m4j,
+    st: `委買 <b>${bidSum}</b> 張・委賣 <b>${askSum}</b> 張｜大賣單 <b>${wA ? fmtPx(wA.p) + '（' + wA.v + '張）' : '—'}</b>｜大買單 <b>${wB ? fmtPx(wB.p) + '（' + wB.v + '張）' : '—'}</b>`,
+    ev: ev.slice(-3).reverse().map(e => `${new Date(e.t).toLocaleTimeString('zh-TW', { hour12: false })} ${e.side === 'bid' ? '買單' : '賣單'} ${fmtPx(e.p)}（${e.v}張）${e.kind === 'eaten' ? '被吃掉' : '被撤掉'}`).join('<br>') };
+
+  // ⑤ 接近方式
+  const atrS2 = last(atrArr(b.slice(-k * 4 - 20), k)), atrL2 = last(atrArr(b.slice(-k * 8 - 40), k * 4));
+  const volRat = atrL2 > 0 ? atrS2 / atrL2 : null, compress = volRat !== null && volRat < 0.75;
+  let hl = 0, lh = 0; for (let i = I - k + 1; i <= I; i++) { if (b[i].l > b[i - 1].l) hl++; if (b[i].h < b[i - 1].h) lh++; }
+  const climax = effortK >= 2 && progK !== null && Math.abs(progK) >= 1.5;
+  let tests = 0;
+  if (nL) { let prev = false; for (let i = Math.max(0, n - P.testLook); i < n; i++) { const t = b[i].l <= nL.v + tol && b[i].h >= nL.v - tol; if (t && !prev) tests++; prev = t; } }
+  let m5 = 0, m5j = '正常速度靠近';
+  if (climax) { m5 = progK > 0 ? -2 : 2; m5j = progK > 0 ? '⚡ 急漲又爆大量 → 常是最後一衝，小心反轉' : '⚡ 急跌又爆大量 → 常是恐慌殺盤，容易反彈'; }
+  else if (compress && nDir > 0 && hl >= k * 0.5) { m5 = 1; m5j = '🧱 慢慢靠近、低點越墊越高 → 較容易突破'; }
+  else if (compress && nDir < 0 && lh >= k * 0.5) { m5 = -1; m5j = '🧱 慢慢靠近、高點越來越低 → 較容易跌破'; }
+  else if (compress) m5j = '波動變小，正在醞釀';
+  if (tests >= 3) { m5 += nDir; m5j += `｜已經第 ${tests} 次碰這裡 → 越碰越容易破`; }
+  R.m5 = { sc: m5, j: m5j, st: `波動比 <b>${volRat === null ? '—' : volRat.toFixed(2)}</b>｜${nDir > 0 ? '低點墊高' : '高點下移'} <b>${nDir > 0 ? hl : lh}/${k}</b>｜測試 <b>${tests}</b> 次` };
+
+  // ⑥ 動能背離
+  const cnt = o => ['c', 'r', 'm', 'h'].filter(x => o[x]).length, topN = cnt(div.top), botN = cnt(div.bot);
+  const names = o => [o.c && '內外盤CVD', o.r && 'RSI', o.m && 'MACD', o.h && 'PHL'].filter(Boolean).join('、');
+  R.m6 = { sc: Math.max(-3, Math.min(3, botN - topN)),
+    j: topN >= 2 ? `⚠️ 價格創新高但力道變弱（${topN} 項）→ 上漲快沒力了` : topN === 1 ? '上漲力道有一點變弱' : botN >= 2 ? `⚠️ 價格創新低但賣壓變弱（${botN} 項）→ 下跌快沒力了` : botN === 1 ? '下跌力道有一點變弱' : '力道正常，沒有背離',
+    st: topN ? `頂背離：<b>${names(div.top)}</b>` : botN ? `底背離：<b>${names(div.bot)}</b>` : (newHi ? '創新高，力道有跟上' : newLo ? '創新低，力道有跟上' : '沒有創新高或新低') };
+
+  // ⑦ 價量／接受度（日線或週線隧道）
+  const pv = progK === null ? '—' : progK >= 0.3 ? (effortK >= 1.2 ? '價漲量增' : effortK < 0.8 ? '價漲量縮' : '價漲量平') : progK <= -0.3 ? (effortK >= 1.2 ? '價跌量增' : effortK < 0.8 ? '價跌量縮' : '價跌量平') : '價平';
+  let aboveN = 0, belowN = 0;
+  if (uA !== null) { for (let i = I; i >= 0 && C[i] > uA; i--) aboveN++; for (let i = I; i >= 0 && C[i] < dA; i--) belowN++; }
+  const recentOut = side => { for (let i = I - 1; i >= I - k; i--) if (side > 0 ? C[i] > uA : C[i] < dA) return true; return false; };
+  let m7 = pv === '價漲量增' ? 1 : pv === '價跌量增' ? -1 : 0, m7j = '還在隧道裡';
+  if (uA === null) m7j = '— 隧道資料載入中';
+  else if (aboveN >= P.confirmN) { m7 += effortK >= 1 ? 2 : 0; m7j = effortK >= 1 ? `✅ 突破後站穩 ${aboveN} 根，量也有跟 → 突破成立` : '⚠️ 站上了但沒量 → 站不穩的機率高'; }
+  else if (belowN >= P.confirmN) { m7 -= effortK >= 1 ? 2 : 0; m7j = effortK >= 1 ? `✅ 跌破後壓了 ${belowN} 根，量也有跟 → 跌破成立` : '⚠️ 跌破了但沒量 → 容易再站回來'; }
+  else if (C[I] <= uA && recentOut(1)) { m7 -= 2; m7j = '↩️ 突破後又跌回來 → 假突破'; }
+  else if (C[I] >= dA && recentOut(-1)) { m7 += 2; m7j = '↩️ 跌破後又站回來 → 假跌破'; }
+  else if (aboveN > 0 || belowN > 0) m7j = '剛穿出去，還要等確認';
+  R.m7 = { sc: m7, j: m7j, st: `<b>${pv}</b>｜量能 <b>${effortK === null ? '—' : effortK.toFixed(1) + 'x'}</b>｜${nameA}隧道外 <b>${Math.max(aboveN, belowN)}</b> 根` };
+
+  const tot = R.m1.sc + R.m2.sc + R.m3.sc + R.m4.sc + R.m5.sc + R.m6.sc + R.m7.sc;
+  return { R, tot, px, nL, nDir, act, nD, dayChg, liveN, T };
+}
+
+// ================= 畫面 =================
+const CARDS = [
+  ['m1', '① 吸收', '有沒有人在默默接貨／倒貨', 'g1'],
+  ['m2', '② 法人動向', '外資、投信在買還是賣', 'g2'],
+  ['m3', '③ 融資融券', '籌碼乾不乾淨', 'g3'],
+  ['m4', '④ 五檔掛單', '大單是真的還是假的', 'g4'],
+  ['m5', '⑤ 接近方式', '價格怎麼走到關卡的', 'g5'],
+  ['m6', '⑥ 動能背離', '價格在衝，力道有沒有跟上', 'g6'],
+  ['m7', '⑦ 價量／接受度', '突破後市場認不認帳', 'g7'],
+];
+const cls = (sc, j) => sc > 0 ? 'bg-up' : sc < 0 ? 'bg-dn' : /⚠️|🔥/.test(j) ? 'bg-y' : 'bg-w';
+function buildGrid() {
+  document.getElementById('grid').innerHTML = CARDS.map(([id, t, q, sec]) =>
+    `<div class="card" id="c_${id}"><h3><span>${t}<a class="help" href="#${sec}" aria-label="${t} 說明">?</a></span><span class="q">${q}</span></h3><div class="j bg-w">計算中…</div><div class="st"></div><div class="ev" style="display:none"></div></div>`).join('');
+}
+function render() {
+  const st = marketState(), conn = S.conn;
+  const stTxt = { open: '🟢 盤中', pre: '⏳ 開盤前', after: '⏹ 已收盤', closed: '⏹ 休市' }[st];
+  const foot = [['K線', conn.bars], ['即時報價', conn.mis], ['法人', conn.chip], ['融資融券', conn.margin]];
+  document.getElementById('foot').innerHTML = `<span>${stTxt}</span>` + foot.map(([n, s]) => `<span><span class="dot ${s === 'na' ? 'wait' : s}"></span>${n}${s === 'na' ? '（此股沒有）' : ''}</span>`).join('') + `<span>更新 ${new Date().toLocaleTimeString('zh-TW', { hour12: false })}</span>`;
+  const err = document.getElementById('err');
+  if (PROXY.includes('YOUR-NAME')) { err.style.display = 'block'; err.textContent = '⚙️ 尚未設定轉發服務網址（PROXY）。'; return; }
+  if (conn.bars === 'bad') { err.style.display = 'block'; err.textContent = '⚠️ 抓不到這檔股票的 K 線。請確認代號正確，或稍後再試。'; }
+  else err.style.display = 'none';
+  document.getElementById('symLbl').textContent = `${S.code} ${S.name || ''}`;
+  const r = compute();
+  if (!r) return;
+  document.getElementById('px').textContent = fmtPx(r.px);
+  const ce = document.getElementById('pxChg');
+  ce.textContent = r.dayChg === null ? '' : '今日 ' + fmt(r.dayChg, '%', 2); ce.style.color = r.dayChg >= 0 ? '#ff6b5f' : '#3ecf7a';
+  document.getElementById('lvlLine').innerHTML = r.nL ? `${r.nDir > 0 ? '價格往上碰壓力' : '價格往下碰支撐'}：<b>${r.nL.name} ${fmtPx(r.nL.v)}</b>（${fmt((r.nL.v - r.px) / r.px * 100, '%', 2)}）` : '隧道資料載入中';
+  document.getElementById('tunLine').textContent = `生效隧道 ${r.act === 'D' ? '日線' : '週線'}（自動）・日線雜訊 ${r.nD === null ? '—' : r.nD.toFixed(2)}・即時內外盤 ${r.liveN}/${P.k} 根`;
+  const big = document.getElementById('totBig');
+  big.className = 'big ' + (r.tot >= 3 ? 'bg-up' : r.tot <= -3 ? 'bg-dn' : 'bg-y');
+  big.textContent = r.tot >= 3 ? '📈 目前多方比較強' : r.tot <= -3 ? '📉 目前空方比較強' : '⚖️ 多空拉扯，方向還不明';
+  const short = t => t.replace(/^[①-⑦]\s*/, '');
+  const pos = CARDS.filter(([id]) => r.R[id].sc > 0).map(c => short(c[1])), neg = CARDS.filter(([id]) => r.R[id].sc < 0).map(c => short(c[1]));
+  const sentence = r.tot >= 3 ? '多數觀察點偏向上漲，多方證據比較多。' : r.tot <= -3 ? '多數觀察點偏向下跌，空方證據比較多。' : (pos.length || neg.length) ? '有的看漲、有的看跌，互相抵銷，還沒有明確方向。' : '七項都沒有明顯訊號，盤面平靜。';
+  document.getElementById('totWhy').innerHTML = `${sentence}<br>🔴 看漲的：${pos.join('、') || '沒有'}<br>🟢 看跌的：${neg.join('、') || '沒有'}<br>綜合分數 <b>${r.tot > 0 ? '+' : ''}${r.tot}</b>（+3 以上偏多、−3 以下偏空）・<a href="#g-total">怎麼算？</a>`;
+  for (const [id] of CARDS) {
+    const c = document.getElementById('c_' + id), m = r.R[id];
+    const j = c.querySelector('.j'); j.className = 'j ' + cls(m.sc, m.j); j.textContent = m.j;
+    c.querySelector('.st').innerHTML = m.st;
+    const ev = c.querySelector('.ev'); ev.style.display = m.ev ? 'block' : 'none'; ev.innerHTML = m.ev ? '最近：<br>' + m.ev : '';
+  }
+}
+
+// ================= 啟動 / 切換 =================
+function stop() { if (S) S.timers.forEach(clearInterval); }
+async function start(code, itv) {
+  stop(); const my = S = freshState(code, itv); buildGrid();
+  document.getElementById('px').textContent = '—';
+  if (window.MOCK) MOCK.fill(S); else if (!PROXY.includes('YOUR-NAME')) { await loadAll(); if (S !== my) return; await pollMis(marketState() !== 'open'); if (S !== my) return; }
+  S.timers.push(setInterval(() => { if (!window.MOCK && marketState() === 'open') pollMis(); }, 5000));
+  S.timers.push(setInterval(render, 1000)); render();
+}
+async function loadNames() {
+  try {
+    const d = await getJ(`${SUPABASE_URL}/rest/v1/chip_radar?select=date&order=date.desc&limit=1`, { headers: SB_HEADERS });
+    if (!d.length) return;
+    const rows = await getJ(`${SUPABASE_URL}/rest/v1/chip_radar?date=eq.${d[0].date}&select=code,name`, { headers: { ...SB_HEADERS, 'Range-Unit': 'items', 'Range': '0-2999' } });
+    NAMES = rows.map(r => ({ code: String(r.code), name: r.name || '' }));
+    document.getElementById('symList').innerHTML = NAMES.map(x => `<option value="${x.code} ${x.name}">`).join('');
+  } catch (e) {}
+}
+function bindUI(code0, itv0) {
+  const inp = document.getElementById('symIn');
+  document.getElementById('symForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const raw = inp.value.trim(); if (!raw) return;
+    let code = (raw.match(/^[0-9A-Z]{4,6}/i) || [''])[0].toUpperCase();
+    if (!code) { const hit = NAMES.find(x => x.name.includes(raw)); code = hit ? hit.code : ''; }
+    const serr = document.getElementById('serr');
+    if (!code) { serr.style.display = 'block'; serr.textContent = `找不到「${raw}」，請輸入股票代號（例如 2330）或名稱。`; return; }
+    serr.style.display = 'none'; inp.value = ''; inp.blur();
+    try { localStorage.setItem('twp_code', code); } catch (x) {}
+    start(code, S.itv);
+  });
+  inp.addEventListener('change', () => { if (/^[0-9A-Z]{4,6}\s/i.test(inp.value)) document.getElementById('symForm').requestSubmit(); });
+  document.getElementById('itvSeg').addEventListener('click', e => {
+    const btn = e.target.closest('button'); if (!btn) return;
+    document.querySelectorAll('#itvSeg button').forEach(b => b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'));
+    try { localStorage.setItem('twp_itv', btn.dataset.v); } catch (x) {}
+    start(S.code, btn.dataset.v);
+  });
+  document.querySelectorAll('#itvSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === itv0 ? 'true' : 'false'));
+  const pre = new URLSearchParams(location.search).get('code');
+  start(pre && /^[0-9A-Z]{4,6}$/i.test(pre) ? pre.toUpperCase() : code0, itv0);
+  loadNames();
+}
+
+// ================= 會員驗證（台股方案）=================
+async function checkAccess() {
+  try {
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    const sess = (await sb.auth.getSession()).data.session;
+    if (!sess) { location.href = 'login.html'; return false; }
+    const rows = await getJ(SUPABASE_URL + '/rest/v1/profiles?id=eq.' + sess.user.id + '&select=plan', { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + sess.access_token } });
+    const plan = rows && rows[0] ? rows[0].plan : 'free';
+    return ['tw', 'all', 'admin'].indexOf(plan) !== -1;
+  } catch (e) { return false; }
+}
+(async function init() {
+  let code = '2330', itv = '5m';
+  try { code = localStorage.getItem('twp_code') || code; itv = localStorage.getItem('twp_itv') || itv; } catch (e) {}
+  if (!ITV_MS[itv]) itv = '5m';
+  const ok = (location.protocol === 'file:' && window.MOCK) ? true : await checkAccess();
+  if (!ok) { document.getElementById('lockedBox').style.display = 'block'; return; }
+  document.getElementById('mainBox').style.display = 'block';
+  bindUI(code, itv);
+})();
+</script>
+</body>
+</html>
