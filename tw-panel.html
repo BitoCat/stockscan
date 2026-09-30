@@ -447,6 +447,8 @@ function compute() {
   else if (C[I] <= uA && recentOut(1)) { m7 -= 2; m7j = '↩️ 突破後又跌回來 → 假突破'; }
   else if (C[I] >= dA && recentOut(-1)) { m7 += 2; m7j = '↩️ 跌破後又站回來 → 假跌破'; }
   else if (aboveN > 0 || belowN > 0) m7j = '剛穿出去，還要等確認';
+  else if (pv === '價漲量增') m7j = '還在隧道裡｜價漲量增 → 買盤比較積極';
+  else if (pv === '價跌量增') m7j = '還在隧道裡｜價跌量增 → 賣壓比較重';
   R.m7 = { sc: m7, j: m7j, st: `<b>${pv}</b>｜量能 <b>${effortK === null ? '—' : effortK.toFixed(1) + 'x'}</b>｜${nameA}隧道外 <b>${Math.max(aboveN, belowN)}</b> 根` };
 
   const tot = R.m1.sc + R.m2.sc + R.m3.sc + R.m4.sc + R.m5.sc + R.m6.sc + R.m7.sc;
