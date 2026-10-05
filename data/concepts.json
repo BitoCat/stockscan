@@ -4,6 +4,25 @@
   "note": "概念股清單由 BitoCat 維護。code 只放四碼股號，後端會自動嘗試 .TW 再 fallback .TWO",
   "concepts": [
     {
+      "id": "glass",
+      "name": "玻璃基板概念股",
+      "category": "電子供應鏈",
+      "stocks": [
+        { "code": "3583", "name": "辛耘" },
+        { "code": "8027", "name": "鈦昇" },
+        { "code": "6207", "name": "雷科" },
+        { "code": "6664", "name": "群翔" },
+        { "code": "2464", "name": "盟立" },
+        { "code": "8374", "name": "羅昇" },
+        { "code": "6937", "name": "天虹" },
+        { "code": "2049", "name": "上銀" },
+        { "code": "6405", "name": "悅城" },
+        { "code": "3481", "name": "群創" },
+        { "code": "2409", "name": "友達" },
+        { "code": "3673", "name": "宸鴻-KY" }
+      ]
+    },
+    {
       "id": "ofc",
       "name": "光通訊概念股",
       "category": "電子供應鏈",
