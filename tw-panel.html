@@ -154,7 +154,7 @@
         <tr><td><span class="chip bg-y">大買單在價格靠近時撤掉</span></td><td>假支撐，小心往下破。</td></tr></table>
 
       <h3 id="g5">⑤ 接近方式：價格怎麼走到關卡的</h3>
-      <p>慢慢磨上去、低點越墊越高＝賣壓被吃掉，容易突破；一口氣爆量衝上去＝常是最後一衝，容易反轉。同一個位置碰越多次，防守越弱。</p>
+      <p>「關卡」就是最上面那行寫的壓力或支撐（隧道上軌或下軌）。<b>慢慢往上靠近壓力、低點一次比一次高</b>＝買方在推，比較容易突破；<b>慢慢往下靠近支撐、高點一次比一次低</b>＝賣方在壓，比較容易跌破。<b>短時間急漲急跌又爆大量</b>＝常是最後一衝／最後一殺，容易回頭。同一個支撐或壓力<b>碰到第 3 次以上</b>，守的人越來越少，比較容易被打穿。寫「速度正常，沒有特別訊號」時，這一項不提供方向，看其他項目就好。</p>
 
       <h3 id="g6">⑥ 動能背離：價格在衝，力道有沒有跟上</h3>
       <p>價格創新高，但內外盤累積（CVD）、RSI、MACD、PHL 沒有跟著創新高，代表上漲快沒力了；創新低時反過來看。背離的指標越多，訊號越強。</p>
@@ -436,13 +436,21 @@ function compute() {
   const climax = effortK >= 2 && progK !== null && Math.abs(progK) >= 1.5;
   let tests = 0;
   if (nL) { let prev = false; for (let i = Math.max(0, n - P.testLook); i < n; i++) { const t = b[i].l <= nL.v + tol && b[i].h >= nL.v - tol; if (t && !prev) tests++; prev = t; } }
-  let m5 = 0, m5j = '正常速度靠近';
-  if (climax) { m5 = progK > 0 ? -2 : 2; m5j = progK > 0 ? '⚡ 急漲又爆大量 → 常是最後一衝，小心反轉' : '⚡ 急跌又爆大量 → 常是恐慌殺盤，容易反彈'; }
-  else if (compress && nDir > 0 && hl >= k * 0.5) { m5 = 1; m5j = '🧱 慢慢靠近、低點越墊越高 → 較容易突破'; }
-  else if (compress && nDir < 0 && lh >= k * 0.5) { m5 = -1; m5j = '🧱 慢慢靠近、高點越來越低 → 較容易跌破'; }
-  else if (compress) m5j = '波動變小，正在醞釀';
-  if (tests >= 3) { m5 += nDir; m5j += `｜已經第 ${tests} 次碰這裡 → 越碰越容易破`; }
-  R.m5 = { sc: m5, j: m5j, st: `波動比 <b>${volRat === null ? '—' : volRat.toFixed(2)}</b>｜${nDir > 0 ? '低點墊高' : '高點下移'} <b>${nDir > 0 ? hl : lh}/${k}</b>｜測試 <b>${tests}</b> 次` };
+  const side = nDir > 0 ? '壓力' : '支撐', goWord = nDir > 0 ? '往上' : '往下', brk = nDir > 0 ? '突破' : '跌破';
+  const stepN = nDir > 0 ? hl : lh;
+  let m5 = 0, m5j = nL ? `價格正${goWord}靠近${side}，速度正常，沒有特別訊號` : '— 關卡資料載入中';
+  if (climax) { m5 = progK > 0 ? -2 : 2; m5j = progK > 0 ? '⚡ 短時間急漲又爆大量 → 常是最後一衝，容易回頭' : '⚡ 短時間急跌又爆大量 → 常是恐慌殺盤，容易反彈'; }
+  else if (compress && nDir > 0 && hl >= k * 0.5) { m5 = 1; m5j = '🧱 價格慢慢往上靠近壓力，低點一次比一次高 → 買方在推，比較容易突破'; }
+  else if (compress && nDir < 0 && lh >= k * 0.5) { m5 = -1; m5j = '🧱 價格慢慢往下靠近支撐，高點一次比一次低 → 賣方在壓，比較容易跌破'; }
+  else if (compress) m5j = `價格在${side}附近越走越窄，正在醞釀，還看不出會往哪邊`;
+  if (tests >= 3 && nL) {
+    m5 += nDir;
+    const t = `第 ${tests} 次碰到這個${side} → 碰越多次越守不住，比較容易${brk}`;
+    m5j = (climax || /^🧱/.test(m5j)) ? `${m5j}；而且這是${t}` : `🔁 這是${t}`;
+  }
+  const volWord = volRat === null ? '—' : volRat < 0.75 ? '變小（在醞釀）' : volRat > 1.3 ? '變大' : '跟平常差不多';
+  R.m5 = { sc: m5, j: m5j,
+    st: `${nDir > 0 ? '上方壓力' : '下方支撐'} <b>${nL ? nL.name + ' ' + fmtPx(nL.v) : '—'}</b>（距離 ${nL ? fmt((nL.v - px) / px * 100, '%', 2) : '—'}）<br>波動 <b>${volWord}</b>｜最近 ${k} 根有 <b>${stepN}</b> 根${nDir > 0 ? '低點比前一根高' : '高點比前一根低'}｜這個位置碰過 <b>${tests}</b> 次` };
 
   // ⑥ 動能背離
   const cnt = o => ['c', 'r', 'm', 'h'].filter(x => o[x]).length, topN = cnt(div.top), botN = cnt(div.bot);
