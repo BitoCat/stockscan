@@ -260,6 +260,13 @@ async function selectConceptTW(concept) {
     const res = await fetch(url, { headers: { 'apikey': SUPABASE_ANON } });
     currentResults = await res.json();
     if (!Array.isArray(currentResults)) currentResults = [];
+    // 不篩選：概念內每一檔都列出，資料庫沒有籌碼資料的也補一列
+    const have = new Set(currentResults.map(r => String(r.code)));
+    concept.stocks.forEach(s => {
+      const code = (typeof s === 'string') ? s.trim() : String(s.code || s.symbol || s.stockNo || '').trim();
+      if (!code || have.has(code)) return;
+      currentResults.push({ code: code, name: (typeof s === 'object' ? s.name : '') || '', noData: true });
+    });
     sortKey = 'chip_score'; sortAsc = false;
     renderTableTW();
   } catch (e) {
@@ -336,6 +343,14 @@ function renderTableTW() {
 
   let html = '';
   sorted.forEach((r, idx) => {
+    if (r.noData) {
+      html += '<tr class="cp-row-nodata">' +
+        '<td><a class="cp-stock-link" href="diagnosis.html?symbol=' + r.code + '">' +
+          r.code + ' ' + (r.name || '') + '</a></td>' +
+        '<td colspan="' + (TW_COLS.length - 1) + '" class="muted">無籌碼資料（可能為上櫃股或今日無資料）</td>' +
+        '</tr>';
+      return;
+    }
     html += '<tr class="cp-row" data-idx="' + idx + '">' +
       '<td><a class="cp-stock-link" href="diagnosis.html?symbol=' + r.code +
         '" onclick="event.stopPropagation()">' + r.code + ' ' + (r.name || '') + '</a></td>' +
