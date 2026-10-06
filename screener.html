@@ -269,6 +269,9 @@ async function loadResults() {
       document.getElementById('scanDate').textContent = '';
     }
 
+    // 台股：籌碼四欄直接從 chip_radar（全市場籌碼表）補上，不依賴掃描後回寫
+    if (currentMarket === 'tw' && rows.length) await mergeChips(rows);
+
     currentRows = rows;
     loading.style.display = 'none';
     if (!rows.length) { empty.style.display = 'block'; return; }
@@ -279,6 +282,28 @@ async function loadResults() {
     console.error(e);
     loading.textContent = '載入失敗,請稍後再試';
   }
+}
+
+// 從 chip_radar 抓最新一天的法人籌碼，依股票代號合併進篩選結果
+async function mergeChips(rows) {
+  try {
+    const d = await (await fetch(SUPABASE_URL + '/rest/v1/chip_radar?select=date&order=date.desc&limit=1', { headers: SB_HEADERS })).json();
+    if (!Array.isArray(d) || !d.length) return;
+    const codes = [...new Set(rows.map(r => String(r.code)))].map(c => encodeURIComponent(c)).join(',');
+    const url = SUPABASE_URL + '/rest/v1/chip_radar?date=eq.' + d[0].date + '&code=in.(' + codes + ')' +
+                '&select=code,trust_streak,foreign_streak,dual_main,chip_quadrant';
+    const chips = await (await fetch(url, { headers: SB_HEADERS })).json();
+    if (!Array.isArray(chips)) return;
+    const map = {};
+    chips.forEach(c => { map[String(c.code)] = c; });
+    rows.forEach(r => {
+      const c = map[String(r.code)]; if (!c) return;
+      r.trust_streak = c.trust_streak; r.foreign_streak = c.foreign_streak;
+      r.dual_main = c.dual_main; r.chip_quadrant = c.chip_quadrant;
+    });
+    const el = document.getElementById('scanDate');
+    el.textContent += '　｜　法人籌碼日期: ' + d[0].date;
+  } catch (e) { console.warn('chip merge failed', e); }
 }
 
 function fmt(v, suffix) {
