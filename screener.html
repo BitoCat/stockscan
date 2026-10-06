@@ -47,6 +47,7 @@
   .up { color: #ff4d4d; }
   .down { color: #2ecc71; }
   .muted { color: #666; }
+  .concept { color: #f0a500; }   /* 概念股雷達的分類 */
   tr.sc-row { cursor: pointer; }
   tr.sc-row:hover { background: #1c1c28; }
   .rate-sb { color: #ff4d4d; font-weight: 700; }
@@ -107,7 +108,7 @@
             <th data-key="name">股票</th>
             <th data-key="price">現價</th>
             <th data-key="change_pct">漲跌%</th>
-            <th data-key="sector">產業</th>
+            <th data-key="industry_label">產業</th>
             <th data-key="rating">評級</th>
             <th data-key="target_upside_pct">目標價空間%▼</th>
             <th data-key="pe">P/E</th>
@@ -269,6 +270,8 @@ async function loadResults() {
       document.getElementById('scanDate').textContent = '';
     }
 
+    await tagConcepts(rows);
+
     // 台股：籌碼四欄直接從 chip_radar（全市場籌碼表）補上，不依賴掃描後回寫
     if (currentMarket === 'tw' && rows.length) await mergeChips(rows);
 
@@ -282,6 +285,29 @@ async function loadResults() {
     console.error(e);
     loading.textContent = '載入失敗,請稍後再試';
   }
+}
+
+// 產業欄：先用概念股雷達的分類，查不到才用原本的產業
+const CONCEPT_FILES = { tw: 'data/concepts.json', us: 'data/us_concepts.json' };
+const conceptCache = {};
+async function tagConcepts(rows) {
+  try {
+    if (!conceptCache[currentMarket]) {
+      const d = await (await fetch(CONCEPT_FILES[currentMarket])).json();
+      const map = {};
+      (d.concepts || []).forEach(c => {
+        const nm = (c.name || '').replace(/概念股$/, '');
+        (c.stocks || []).forEach(st => { const k = String(st.code).toUpperCase(); (map[k] = map[k] || []).includes(nm) || map[k].push(nm); });
+      });
+      conceptCache[currentMarket] = map;
+    }
+    const map = conceptCache[currentMarket];
+    rows.forEach(r => {
+      const list = map[String(r.code).toUpperCase()];
+      r.concepts = list || null;
+      r.industry_label = list ? list[0] + (list.length > 1 ? ' +' + (list.length - 1) : '') : r.sector;
+    });
+  } catch (e) { rows.forEach(r => { r.industry_label = r.sector; }); }
 }
 
 // 從 chip_radar 抓最新一天的法人籌碼，依股票代號合併進篩選結果
@@ -371,7 +397,8 @@ function renderTable() {
         '" onclick="event.stopPropagation()">' + r.code + ' ' + (r.name || '') + '</a></td>' +
       '<td>' + fmt(r.price) + '</td>' +
       '<td class="' + pctClass(r.change_pct) + '">' + fmt(r.change_pct, '%') + '</td>' +
-      '<td>' + fmt(r.sector) + '</td>' +
+      (r.concepts ? '<td class="concept" title="' + r.concepts.join('、') + '">' + r.industry_label + '</td>'
+                  : '<td>' + fmt(r.sector) + '</td>') +
       '<td class="' + rateClass(r.rating) + '">' + fmt(r.rating) + '</td>' +
       '<td class="' + pctClass(r.target_upside_pct) + '"><b>' + fmt(r.target_upside_pct, '%') + '</b></td>' +
       '<td>' + fmt(r.pe) + '</td>' +
