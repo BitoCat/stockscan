@@ -6,6 +6,7 @@
 <title>概念股籌碼雷達 - 交易大師 ProTrader</title>
 <link rel="stylesheet" href="css/base.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
+<script src="js/turnover_groups.js"></script>
 <style>
   body { padding-bottom: 90px; }
   .cp-wrap { max-width: 1200px; margin: 0 auto; padding: 16px; }
@@ -73,6 +74,13 @@
   .cp-locked a { color: #4da3ff; }
   .cp-note { color: #777; font-size: 0.82em; margin-top: 14px; line-height: 1.6; }
   .cp-asof { color: #888; font-size: 0.85em; margin: 6px 0; }
+  .cp-rank { margin: 8px 0 4px; }
+  .cp-rank-title { color: #f0a500; font-size: 0.9em; margin-bottom: 6px; }
+  .cp-rank-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .cp-rank-item { border: 1px solid #333; border-radius: 8px; padding: 4px 10px; font-size: 0.85em;
+    background: #16161e; color: #ddd; cursor: pointer; }
+  .cp-rank-item:hover { border-color: #f0a500; }
+  .cp-btn .vrb { margin-left: 4px; font-size: 0.85em; }
 </style>
 </head>
 <body>
@@ -92,6 +100,7 @@
       <button class="cp-tab" data-market="us">🇺🇸 美股（估值）</button>
     </div>
     <div id="asOf" class="cp-asof"></div>
+    <div id="groupRank" class="cp-rank"></div>
     <div id="conceptBtns"></div>
 
     <div class="cp-table-box">
@@ -111,6 +120,8 @@
       投信/外資連買＝有號連買天數（買N/賣N）。集中度＝法人5日買超佔近似5日量（今日量×5）%，
       跨股票可比；合計集中度為負代表法人整體倒貨。純度＝外資/投信/自營5日方向組合
       （三大同買 / 外資倒投信接 ...）。標籤：投信認養、外資回補、軋空候選（軋空分≥70）。
+      週轉率＝成交股數÷已發行股數；量比＝今日量÷前20日均量。族群量比＝概念內個股量比的中位數（週轉率&lt;0.1%的冷門股不計），
+      🔥≥1.5× 資金湧入、♨️≥1.15× 升溫、🧊≤0.7× 冷清。
       資料為前一交易日盤後，僅供研究參考，非投資建議。
     </div>
     <div id="noteUS" class="cp-note" style="display:none">
@@ -144,12 +155,16 @@ let currentResults = [];
 let sortKey = 'chip_score';
 let sortAsc = false;
 let latestDateTW = null;
+let turnMap = {};        // code → tw_turnover 最新一天（週轉率/量比/型態）
+let turnDate = null;
 
 // 台股籌碼欄位
 const TW_COLS = [
   { key: 'name', label: '股票' },
   { key: 'close', label: '現價' },
   { key: 'change_pct', label: '漲跌%' },
+  { key: '_turnover', label: '週轉率' },
+  { key: '_vr', label: '量比' },
   { key: 'chip_score', label: '籌碼分數' },
   { key: 'trust_streak', label: '投信連買' },
   { key: 'foreign_streak', label: '外資連買' },
@@ -186,6 +201,18 @@ async function loadConcepts() {
   const res = await fetch(DATA_FILES[currentMarket] + '?t=' + Date.now());
   conceptsData = await res.json();
   const box = document.getElementById('conceptBtns');
+  const rankBox = document.getElementById('groupRank');
+  rankBox.innerHTML = '';
+  if (currentMarket === 'tw' && window.TurnoverGroups) {
+    try {
+      const all = [];
+      conceptsData.concepts.forEach(c => extractCodes(c.stocks).forEach(x => all.push(x)));
+      const t = await TurnoverGroups.load(all);
+      turnMap = t.map; turnDate = t.date;
+      conceptsData.concepts.forEach(c => { c._vr = TurnoverGroups.stats(extractCodes(c.stocks), turnMap); });
+      renderGroupRank(rankBox);
+    } catch (e) { console.error('週轉率載入失敗', e); turnMap = {}; }
+  }
   const groups = {};
   conceptsData.concepts.forEach(c => {
     if (!groups[c.category]) groups[c.category] = [];
@@ -196,7 +223,8 @@ async function loadConcepts() {
     html += '<div class="cp-cat">' + cat + '</div><div class="cp-btns">';
     groups[cat].forEach(c => {
       html += '<button class="cp-btn" data-id="' + c.id + '">' + c.name +
-              ' (' + c.stocks.length + ')</button>';
+              ' (' + c.stocks.length + ')' +
+              (c._vr ? '<span class="vrb">' + TurnoverGroups.badge(c._vr, false) + '</span>' : '') + '</button>';
     });
     html += '</div>';
   });
@@ -204,6 +232,23 @@ async function loadConcepts() {
   box.querySelectorAll('.cp-btn').forEach(btn => {
     btn.addEventListener('click', () => selectConcept(btn.dataset.id, btn));
   });
+}
+
+// 族群量比排行：依中位數量比排序，點擊直接開該概念
+function renderGroupRank(box) {
+  const list = conceptsData.concepts.filter(c => c._vr).sort((a, b) => b._vr.med - a._vr.med);
+  if (!list.length) { box.innerHTML = ''; return; }
+  const item = c => '<span class="cp-rank-item" data-id="' + c.id + '">' + c.name + ' ' +
+    TurnoverGroups.badge(c._vr, true) + '</span>';
+  const top = list.slice(0, 6), bottom = list.length > 9 ? list.slice(-3).reverse() : [];
+  box.innerHTML =
+    '<div class="cp-rank-title">🔥 族群量比排行' + (turnDate ? '<span style="color:#777;font-size:.9em">（' + turnDate + '，概念內個股量比中位數；小字＝放量檔數/有效檔數）</span>' : '') + '</div>' +
+    '<div class="cp-rank-list">' + top.map(item).join('') + '</div>' +
+    (bottom.length ? '<div class="cp-rank-title" style="margin-top:8px;color:#4da3ff">🧊 最冷清</div><div class="cp-rank-list">' + bottom.map(item).join('') + '</div>' : '');
+  box.querySelectorAll('.cp-rank-item').forEach(el => el.addEventListener('click', () => {
+    const btn = document.querySelector('.cp-btn[data-id="' + el.dataset.id + '"]');
+    if (btn) { selectConcept(el.dataset.id, btn); btn.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  }));
 }
 
 // concept.stocks 可能是字串代號或物件，統一抽出代號
@@ -267,6 +312,17 @@ async function selectConceptTW(concept) {
       if (!code || have.has(code)) return;
       currentResults.push({ code: code, name: (typeof s === 'object' ? s.name : '') || '', noData: true });
     });
+    currentResults.forEach(r => {
+      const x = turnMap[String(r.code)];
+      r._tx = x || null;
+      r._turnover = x ? Number(x.turnover) : null;
+      r._vr = (x && x.ratio !== null && x.ratio !== undefined) ? Number(x.ratio) : null;
+    });
+    if (concept._vr) {
+      const h = TurnoverGroups.heat(concept._vr.med);
+      document.getElementById('asOf').innerHTML = (latest ? '資料日：' + latest + '　' : '') +
+        '族群量比 ' + TurnoverGroups.badge(concept._vr, false) + '（' + h.label + '，放量 ' + concept._vr.hot + '/' + concept._vr.n + ' 檔）';
+    }
     sortKey = 'chip_score'; sortAsc = false;
     renderTableTW();
   } catch (e) {
@@ -356,6 +412,8 @@ function renderTableTW() {
         '" onclick="event.stopPropagation()">' + r.code + ' ' + (r.name || '') + '</a></td>' +
       '<td>' + fmt(r.close) + '</td>' +
       '<td class="' + pctClass(r.change_pct) + '">' + fmt(r.change_pct, '%') + '</td>' +
+      '<td>' + TurnoverGroups.turnoverCell(r._tx) + '</td>' +
+      '<td>' + vrCell(r._vr) + '</td>' +
       '<td class="' + scoreClass(r.chip_score) + '">' + fmt(r.chip_score) + '</td>' +
       '<td>' + renderStreak(r.trust_streak) + '</td>' +
       '<td>' + renderStreak(r.foreign_streak) + '</td>' +
@@ -385,6 +443,12 @@ function renderTableTW() {
     });
   });
   bindSort(renderTableTW);
+}
+
+function vrCell(v) {
+  if (v === null || v === undefined) return '<span class="muted">-</span>';
+  const c = v >= 2.5 ? '#ff5470' : (v >= 1.5 ? '#ffb020' : (v <= 0.7 ? '#4da3ff' : '#ddd'));
+  return '<span style="color:' + c + ';font-family:monospace">' + v.toFixed(2) + '×</span>';
 }
 
 function renderDetailTW(r) {
@@ -532,5 +596,6 @@ document.querySelectorAll('.cp-tab').forEach(tab => {
 </script>
 </body>
 </html>
+
 
 
