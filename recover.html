@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -163,6 +162,7 @@
             <th data-key="code">股票</th>
             <th>籌碼</th>
             <th data-key="stage">關卡</th>
+            <th data-key="bk_vol_ratio" title="脫離K的量 ÷ 觸軌前20日均量；型態依脫離K與觸軌期間的量能分類">脫離量能</th>
             <th data-key="base_lower" id="thBase">基準(下軌)</th>
             <th data-key="price">現價</th>
             <th data-key="recover_pct" id="thMove">回漲%▲</th>
@@ -335,6 +335,22 @@ function stageBadge(s) {
   return '<span class="stg stg0" title="等待出方向（約7成反轉、3成續跌）">⏳ 觸軌</span>';
 }
 
+// 脫離K 量能四型（cat_recover_scanner.py 的 vol_profile 寫入）
+const VOL_TYPE = {
+  swell:        ['放量脫離', '#31d071', '脫離K量比≥1.5：主動買盤'],
+  washout:      ['洗盤完成', '#00d4ff', '觸軌期間曾放量、脫離K量縮：賣壓已在觸軌時出清'],
+  shrink:       ['量縮脫離', '#ffb020', '脫離K量比<1：賣壓竭盡型反彈，待後續補量'],
+  burst_shadow: ['爆量長影', '#ff5470', '脫離K量比≥4且長上影：解套賣壓或一日行情'],
+  normal:       ['量平脫離', '#7a90b0', '脫離K量能一般']
+};
+function volTypeBadge(r) {
+  const t = VOL_TYPE[r.bk_vol_type];
+  if (!t) return '<span class="muted">-</span>';
+  const ratio = (r.bk_vol_ratio != null) ? ' ' + Number(r.bk_vol_ratio).toFixed(1) + '×' : '';
+  const tip = t[2] + (r.touch_vol_ratio != null ? '（觸軌期最大量 ' + Number(r.touch_vol_ratio).toFixed(1) + '×）' : '');
+  return '<span title="' + tip + '" style="color:' + t[1] + ';white-space:nowrap">' + t[0] + '<span style="font-family:monospace;font-size:.85em;opacity:.8">' + ratio + '</span></span>';
+}
+
 function renderTable() {
   const showReason = currentStatus !== '追蹤中';
   let base = currentRows;
@@ -355,6 +371,7 @@ function renderTable() {
         r.code + ' ' + (r.name || '') + '</a></td>' +
       '<td><button class="chip-btn" data-code="' + r.code + '" data-stage="' + st + '">📊 查籌碼</button></td>' +
       '<td>' + stageBadge(r.stage) + '</td>' +
+      '<td>' + volTypeBadge(r) + '</td>' +
       '<td>' + fmtP(r.base_lower) + '</td>' +
       '<td>' + fmt(r.price) + '</td>' +
       '<td class="' + pctClass(r.recover_pct) + '"><b>' + fmt(r.recover_pct, '%') + '</b></td>' +
@@ -635,7 +652,6 @@ document.querySelectorAll('.cp-stab').forEach(tab => {
 </script>
 </body>
 </html>
-
 
 
 
