@@ -9,7 +9,7 @@
   var H = { 'apikey': ANON, 'Authorization': 'Bearer ' + ANON };
   var LIQ_MIN = 0.1;      // 週轉率 % 門檻
   var HOT = 1.5, WARM = 1.15, COLD = 0.7;
-  var COLS = 'code,date,turnover,ratio,level,vol_state,setup,signal,zone';
+  var COLS = 'code,date,turnover,ratio,level,vol_state,setup,signal,zone,industry';
 
   async function latestDate() {
     var r = await fetch(URL + '/rest/v1/tw_turnover?select=date&order=date.desc&limit=1', { headers: H });
@@ -59,6 +59,22 @@
     return { med: Math.round(m * 100) / 100, hot: hot, n: rs.length };
   }
 
+  // 依官方產業別分組算量比中位數：回 {產業名: stats}（全市場 map 才有意義）
+  function industryStats(map) {
+    var groups = {};
+    Object.keys(map).forEach(function (c) {
+      var ind = map[c].industry;
+      if (!ind) return;
+      (groups[ind] = groups[ind] || []).push(c);
+    });
+    var out = {};
+    Object.keys(groups).forEach(function (ind) {
+      var st = stats(groups[ind], map);
+      if (st && st.n >= 3) out[ind] = st;      // 有效檔數太少的產業不算
+    });
+    return out;
+  }
+
   function heat(med) {
     if (med === null || med === undefined) return { cls: 'none', icon: '', label: '-' };
     if (med >= HOT) return { cls: 'hot', icon: '🔥', label: '資金湧入' };
@@ -87,5 +103,5 @@
       (x.setup ? '<div style="font-size:.78em;color:#999;white-space:nowrap">' + x.setup + '</div>' : '');
   }
 
-  global.TurnoverGroups = { load: load, stats: stats, heat: heat, badge: badge, turnoverCell: turnoverCell, LIQ_MIN: LIQ_MIN };
+  global.TurnoverGroups = { load: load, stats: stats, industryStats: industryStats, heat: heat, badge: badge, turnoverCell: turnoverCell, LIQ_MIN: LIQ_MIN };
 })(window);
