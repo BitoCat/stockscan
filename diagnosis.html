@@ -1051,21 +1051,27 @@ async function renderTurnover(sym) {
       '<span style="color:var(--muted)">中線 ' + num(t.band_mid, 2) + '</span>' +
       '<span style="color:#31d071">上軌 ' + num(t.band_upper, 2) + '</span></div>' : '';
 
-    // 近20日週轉率柱狀（金色＝今日，虛線＝20日均）
+    // 近20日週轉率柱狀（金色＝今日，虛線＝20日均）。固定高度，避免寬螢幕被放大；
+    // 今日若遠大於其他天，刻度以其他天為準、今日柱頂截斷並標數值，才看得到前面的量。
     var vals = rows.map(function (r) { return Number(r.turnover) || 0; });
-    var W = 340, H = 80, pad = 4, n = vals.length;
-    var maxV = Math.max.apply(null, vals.concat([Number(t.avg20) || 0])) || 1;
-    var bw = (W - pad * 2) / n;
+    var W = 340, H = 60, n = vals.length;
+    var others = vals.slice(0, -1).concat([Number(t.avg20) || 0]);
+    var scale = Math.max.apply(null, others) || 1;
+    var today = vals[n - 1], clipped = today > scale * 3;
+    scale = clipped ? scale * 2 : Math.max(scale, today);
+    var bw = W / n;
     var bars = vals.map(function (v, i) {
-      var h = (H - 16) * v / maxV, x = pad + i * bw;
-      return '<rect x="' + (x + 1).toFixed(1) + '" y="' + (H - 12 - h).toFixed(1) + '" width="' + Math.max(bw - 2, 1).toFixed(1) +
-        '" height="' + h.toFixed(1) + '" fill="' + (i === n - 1 ? '#ffb020' : '#33507d') + '"/>';
+      var h = Math.min(H, H * v / scale), x = i * bw;
+      return '<rect x="' + (x + 1).toFixed(1) + '" y="' + (H - h).toFixed(1) + '" width="' + Math.max(bw - 2, 1).toFixed(1) +
+        '" height="' + h.toFixed(1) + '" fill="' + (i === n - 1 ? '#ffb020' : '#4a6a96') + '"/>';
     }).join('');
-    var avgY = t.avg20 ? (H - 12 - (H - 16) * Number(t.avg20) / maxV).toFixed(1) : null;
-    var avgLine = avgY ? '<line x1="' + pad + '" y1="' + avgY + '" x2="' + (W - pad) + '" y2="' + avgY + '" stroke="#00d4ff" stroke-width="1" stroke-dasharray="3 3"/>' : '';
-    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block">' + bars + avgLine +
-      '<text x="' + pad + '" y="' + (H - 1) + '" fill="#4a6080" font-size="9" font-family="Share Tech Mono">近' + n + '日週轉率</text>' +
-      '<text x="' + (W - pad) + '" y="' + (H - 1) + '" fill="#4a6080" font-size="9" text-anchor="end" font-family="Share Tech Mono">虛線＝20日均</text></svg>';
+    var avgY = t.avg20 ? (H - H * Number(t.avg20) / scale).toFixed(1) : null;
+    var avgLine = avgY ? '<line x1="0" y1="' + avgY + '" x2="' + W + '" y2="' + avgY + '" stroke="#00d4ff" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>' : '';
+    var svg = '<div style="position:relative">' +
+      '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="width:100%;height:64px;display:block">' + bars + avgLine + '</svg>' +
+      (clipped ? '<div style="position:absolute;right:0;top:-2px;font-size:11px;font-family:monospace;color:#ffb020">今日 ' + num(today, 2) + '% ↑</div>' : '') +
+      '</div><div style="display:flex;justify-content:space-between;font-size:11px;color:#4a6080;margin-top:2px">' +
+      '<span>近' + n + '日週轉率</span><span>虛線＝20日均 ' + num(t.avg20, 2) + '%</span></div>';
 
     box.innerHTML = head + setupLine + grid + bands + svg +
       '<div style="font-size:11px;color:#4a6080;margin-top:6px;line-height:1.5">週轉率＝成交股數÷已發行股數。型態判讀來自台美股一年日線回測的歷史傾向，非保證；資料日 ' +
@@ -1395,4 +1401,3 @@ async function fetchChipContext(sym) {
 </script>
 </body>
 </html>
-
