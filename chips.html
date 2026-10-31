@@ -6,6 +6,7 @@
 <title>全市場籌碼雷達 - 交易大師 ProTrader</title>
 <link rel="stylesheet" href="css/base.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
+<script src="js/turnover_groups.js"></script>
 <style>
   body { padding-bottom: 90px; }
   .cr-wrap { max-width: 1200px; margin: 0 auto; padding: 16px; }
@@ -102,6 +103,8 @@
             <th data-key="chg5_pct">近5日%</th>
             <th data-key="ma_pos">位階</th>
             <th data-key="vol_ratio">量價</th>
+            <th data-key="_turnover">週轉率</th>
+            <th data-key="_grp">族群量比</th>
             <th data-key="dealer_net">自營商</th>
             <th data-key="foreign_streak">外資連買</th>
             <th data-key="_pure">純度</th>
@@ -116,7 +119,9 @@
       量價:量比=今日量÷前20日均量(🚀帶量突破需≥1.5x);控量=5日均量÷20日均量<0.8。
       紅=價漲量增(健康攻擊)、藍=價跌量縮/量縮盤整(籌碼安定)、橘=價漲量縮/量增價滯(力道存疑)、綠=價跌量增(賣壓)。
       上櫃股與非候選股的量價/位階由每日累積的全市場日K計算,前幾週資料不足時顯示「-」。<br>
-      純度:🔴三大同買(共識強)、🟡外資倒投信接(底部吸籌典型)。
+      純度:🔴三大同買(共識強)、🟡外資倒投信接(底部吸籌典型)。<br>
+      週轉率=成交股數÷已發行股數(下方小字為貓咪隧道型態)。族群量比=該股所屬概念(取最熱的一個)內個股量比的中位數:
+      🔥≥1.5× 資金湧入、♨️≥1.15× 升溫、🧊≤0.7× 冷清;不屬於任何概念的顯示「-」。個股吸籌＋族群升溫,代表資金輪動到這個族群。
       關卡來自區間雷達(貓咪隧道多頭):⏳觸軌/🥉脫離/🥈站穩/🥇轉強,只有觸及下軌的股票才有,其餘「—」。
       資料每交易日收盤後更新,非投資建議。
     </div>
@@ -167,6 +172,8 @@ let allRows = [];
 let wideRows = null;
 let latestDate = null;
 let stageMap = {};      // code -> 區間雷達多頭 stage（隧道邊緣才有）
+let turnMap = {};       // code -> tw_turnover 最新一天
+let grpMap = {};        // code -> {name, st}：所屬概念中族群量比最高的一個
 let currentFilter = 'mid';
 let sortKey = 'trust_conc';
 let sortAsc = false;
@@ -269,6 +276,26 @@ async function loadStageMap() {
     });
   } catch (e) { console.error('stageMap load failed', e); stageMap = {}; }
 }
+// 週轉率（全市場）＋ 概念族群量比；失敗不影響主表
+async function loadTurnover() {
+  if (!window.TurnoverGroups) return;
+  try {
+    const [t, cj] = await Promise.all([
+      TurnoverGroups.load(null),
+      fetch('data/concepts.json?t=' + Date.now()).then(r => r.json())
+    ]);
+    turnMap = t.map; grpMap = {};
+    (cj.concepts || []).forEach(c => {
+      const codes = c.stocks.map(x => typeof x === 'string' ? x.trim() : String(x.code || '').trim()).filter(Boolean);
+      const st = TurnoverGroups.stats(codes, turnMap);
+      if (!st) return;
+      codes.forEach(code => {
+        const cur = grpMap[code];
+        if (!cur || st.med > cur.st.med) grpMap[code] = { name: c.name.replace(/概念股$/, ''), st: st };
+      });
+    });
+  } catch (e) { console.error('週轉率載入失敗', e); }
+}
 async function loadData() {
   const loading = document.getElementById('loadingBox');
   loading.style.display = 'block';
@@ -283,7 +310,7 @@ async function loadData() {
     const latest = d[0].date;
     latestDate = latest;
     document.getElementById('scanDate').textContent = '資料日期: ' + latest;
-    await loadStageMap();                       // 先撈關卡對照
+    await Promise.all([loadStageMap(), loadTurnover()]);   // 先撈關卡對照、週轉率與族群量比
     let rows = [], from = 0;
     while (true) {                              // 一次撈全市場（不限 chip_type），關卡到處可顯示
       const res = await fetch(SUPABASE_URL + '/rest/v1/chip_radar?date=eq.' + latest + '&select=*', {
@@ -396,7 +423,9 @@ function renderTable() {
     const s = stageMap[String(r.code)];
     const stage = s ? s.stage : null;
     const price = (r.close !== null && r.close !== undefined) ? r.close : (s ? s.price : null);
-    return Object.assign({}, r, { _stage: (stage === undefined ? null : stage), _price: price });
+    const tx = turnMap[String(r.code)] || null, g = grpMap[String(r.code)] || null;
+    return Object.assign({}, r, { _stage: (stage === undefined ? null : stage), _price: price,
+      _tx: tx, _turnover: tx ? Number(tx.turnover) : null, _g: g, _grp: g ? g.st.med : null });
   });
   document.getElementById('countLine').textContent = (searchQ ? '搜尋結果 ' : '符合 ') + rows.length + ' 檔';
   if (!rows.length) {
@@ -425,6 +454,8 @@ function renderTable() {
       '<td>' + chg5Fmt(r.chg5_pct) + '</td>' +
       '<td>' + maFmt(r.ma_pos) + '</td>' +
       '<td>' + vpFmt(r) + '</td>' +
+      '<td>' + TurnoverGroups.turnoverCell(r._tx) + '</td>' +
+      '<td>' + (r._g ? TurnoverGroups.badge(r._g.st, false) + '<div style="font-size:.78em;color:#999;white-space:nowrap">' + r._g.name + '</div>' : '<span class="muted">-</span>') + '</td>' +
       '<td>' + dealerFmt(r.dealer_net) + '</td>' +
       '<td>' + streakFmt(r.foreign_streak) + '</td>' +
       '<td>' + pureFmt(r) + '</td>' +
@@ -454,4 +485,6 @@ document.querySelectorAll('.cr-table th').forEach(th => {
 </script>
 </body>
 </html>
+
+
 
