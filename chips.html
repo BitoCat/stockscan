@@ -105,6 +105,7 @@
             <th data-key="vol_ratio">量價</th>
             <th data-key="_turnover">週轉率</th>
             <th data-key="_grp">族群量比</th>
+            <th data-key="_ind">產業量比</th>
             <th data-key="dealer_net">自營商</th>
             <th data-key="foreign_streak">外資連買</th>
             <th data-key="_pure">純度</th>
@@ -121,7 +122,7 @@
       上櫃股與非候選股的量價/位階由每日累積的全市場日K計算,前幾週資料不足時顯示「-」。<br>
       純度:🔴三大同買(共識強)、🟡外資倒投信接(底部吸籌典型)。<br>
       週轉率=成交股數÷已發行股數(下方小字為貓咪隧道型態)。族群量比=該股所屬概念(取最熱的一個)內個股量比的中位數:
-      🔥≥1.5× 資金湧入、♨️≥1.15× 升溫、🧊≤0.7× 冷清;不屬於任何概念的顯示「-」。個股吸籌＋族群升溫,代表資金輪動到這個族群。
+      🔥≥1.5× 資金湧入、♨️≥1.15× 升溫、🧊≤0.7× 冷清;不屬於任何概念的顯示「-」。產業量比=同一官方產業別(證交所/櫃買分類)內個股量比的中位數,全市場每檔都有。個股吸籌＋族群升溫,代表資金輪動到這個族群。
       關卡來自區間雷達(貓咪隧道多頭):⏳觸軌/🥉脫離/🥈站穩/🥇轉強,只有觸及下軌的股票才有,其餘「—」。
       資料每交易日收盤後更新,非投資建議。
     </div>
@@ -174,6 +175,7 @@ let latestDate = null;
 let stageMap = {};      // code -> 區間雷達多頭 stage（隧道邊緣才有）
 let turnMap = {};       // code -> tw_turnover 最新一天
 let grpMap = {};        // code -> {name, st}：所屬概念中族群量比最高的一個
+let indStats = {};      // 產業名 -> 量比中位數 stats（官方產業別）
 let currentFilter = 'mid';
 let sortKey = 'trust_conc';
 let sortAsc = false;
@@ -285,6 +287,7 @@ async function loadTurnover() {
       fetch('data/concepts.json?t=' + Date.now()).then(r => r.json())
     ]);
     turnMap = t.map; grpMap = {};
+    indStats = TurnoverGroups.industryStats(turnMap);
     (cj.concepts || []).forEach(c => {
       const codes = c.stocks.map(x => typeof x === 'string' ? x.trim() : String(x.code || '').trim()).filter(Boolean);
       const st = TurnoverGroups.stats(codes, turnMap);
@@ -425,7 +428,9 @@ function renderTable() {
     const price = (r.close !== null && r.close !== undefined) ? r.close : (s ? s.price : null);
     const tx = turnMap[String(r.code)] || null, g = grpMap[String(r.code)] || null;
     return Object.assign({}, r, { _stage: (stage === undefined ? null : stage), _price: price,
-      _tx: tx, _turnover: tx ? Number(tx.turnover) : null, _g: g, _grp: g ? g.st.med : null });
+      _tx: tx, _turnover: tx ? Number(tx.turnover) : null, _g: g, _grp: g ? g.st.med : null,
+      _indName: (tx && tx.industry) || null,
+      _ind: (tx && tx.industry && indStats[tx.industry]) ? indStats[tx.industry].med : null });
   });
   document.getElementById('countLine').textContent = (searchQ ? '搜尋結果 ' : '符合 ') + rows.length + ' 檔';
   if (!rows.length) {
@@ -456,6 +461,7 @@ function renderTable() {
       '<td>' + vpFmt(r) + '</td>' +
       '<td>' + TurnoverGroups.turnoverCell(r._tx) + '</td>' +
       '<td>' + (r._g ? TurnoverGroups.badge(r._g.st, false) + '<div style="font-size:.78em;color:#999;white-space:nowrap">' + r._g.name + '</div>' : '<span class="muted">-</span>') + '</td>' +
+      '<td>' + (r._indName && indStats[r._indName] ? TurnoverGroups.badge(indStats[r._indName], false) + '<div style="font-size:.78em;color:#999;white-space:nowrap">' + r._indName + '</div>' : '<span class="muted">-</span>') + '</td>' +
       '<td>' + dealerFmt(r.dealer_net) + '</td>' +
       '<td>' + streakFmt(r.foreign_streak) + '</td>' +
       '<td>' + pureFmt(r) + '</td>' +
@@ -485,6 +491,7 @@ document.querySelectorAll('.cr-table th').forEach(th => {
 </script>
 </body>
 </html>
+
 
 
 
