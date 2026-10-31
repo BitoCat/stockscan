@@ -336,19 +336,19 @@ function stageBadge(s) {
 }
 
 // 脫離K 量能四型（cat_recover_scanner.py 的 vol_profile 寫入）
-const VOL_TYPE = {
-  swell:        ['放量脫離', '#31d071', '脫離K量比≥1.5：主動買盤'],
-  washout:      ['洗盤完成', '#00d4ff', '觸軌期間曾放量、脫離K量縮：賣壓已在觸軌時出清'],
-  shrink:       ['量縮脫離', '#ffb020', '脫離K量比<1：賣壓竭盡型反彈，待後續補量'],
-  burst_shadow: ['爆量長影', '#ff5470', '脫離K量比≥4且長上影：解套賣壓或一日行情'],
-  normal:       ['量平脫離', '#7a90b0', '脫離K量能一般']
+const VOL_TYPE = {   // 文字依 2026/10 台美股一年回測：10日內先碰中線(畢業) vs 先回下軌(失敗)
+  swell:        ['放量脫離', '#31d071', '✅', '脫離K量比≥1.5。回測最強：約7~8成先碰中線、失敗約2成'],
+  washout:      ['洗盤完成', '#00d4ff', '✅', '觸軌期曾放量、脫離K量縮。回測優於平均：賣壓已在觸軌時出清'],
+  shrink:       ['量縮脫離', '#ffb020', '⚠️', '脫離K量比<1。回測最弱：約4成會回到下軌，宜輕倉或等補量'],
+  burst_shadow: ['爆量長影', '#ff5470', '', '脫離K量比≥4且長上影。回測樣本不足，僅供參考'],
+  normal:       ['量平脫離', '#7a90b0', '', '脫離K量能一般（量比1~1.5），回測無明顯優劣']
 };
 function volTypeBadge(r) {
   const t = VOL_TYPE[r.bk_vol_type];
   if (!t) return '<span class="muted">-</span>';
   const ratio = (r.bk_vol_ratio != null) ? ' ' + Number(r.bk_vol_ratio).toFixed(1) + '×' : '';
-  const tip = t[2] + (r.touch_vol_ratio != null ? '（觸軌期最大量 ' + Number(r.touch_vol_ratio).toFixed(1) + '×）' : '');
-  return '<span title="' + tip + '" style="color:' + t[1] + ';white-space:nowrap">' + t[0] + '<span style="font-family:monospace;font-size:.85em;opacity:.8">' + ratio + '</span></span>';
+  const tip = t[3] + (r.touch_vol_ratio != null ? '（觸軌期最大量 ' + Number(r.touch_vol_ratio).toFixed(1) + '×）' : '');
+  return '<span title="' + tip + '" style="color:' + t[1] + ';white-space:nowrap">' + (t[2] ? t[2] + ' ' : '') + t[0] + '<span style="font-family:monospace;font-size:.85em;opacity:.8">' + ratio + '</span></span>';
 }
 
 function renderTable() {
@@ -652,6 +652,5 @@ document.querySelectorAll('.cp-stab').forEach(tab => {
 </script>
 </body>
 </html>
-
 
 
