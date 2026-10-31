@@ -1,6 +1,7 @@
 # 交易大師 ProTrader 專案摘要（貼給 Claude 用）
-> 最後更新：2026年7月3日
-> 本次變更：tw-alert-bot 除役刪除、改記錄 TradingView 快訊直送 Telegram 做法、概念股雷達補分批載入說明
+> 最後更新：2026年10月31日
+> 本次變更：週轉率系統（tw_turnover）＋貓咪隧道×量能回測、健診週轉卡、回漲清單脫離K量能型態、
+>           概念股/籌碼雷達族群與產業量比、下軌外反彈名單推播（詳見檔尾【週轉率 × 貓咪隧道】）
 
 ---
 
@@ -922,3 +923,72 @@ chip_push.py(投信吸籌榜推播,排程16:17,台股報報):
   屆時加收斂:距軌 X% 內、或成交量/漲幅門檻。先觀察正式盤中量再決定。
 - 踩雷:改多處失敗時整支重貼最穩(曾因分次改一~改五中途出錯,程式靜默無輸出、
   綠勾9秒、不推播;整支覆蓋後正常)。GitHub 網頁 log 會摺疊,看 ⚙️ View raw logs 才完整。
+
+═══════════════════════════════════════════════════════════════
+【週轉率 × 貓咪隧道 系統 + 回測結論】(2026/10/31)
+═══════════════════════════════════════════════════════════════
+■ 新資料表 tw_turnover（PK code,date；RLS 全體 SELECT；SQL 在 trading-bot/tw_turnover.sql 共三版 alter）
+  欄位：code/date(YYYYMMDD)/name/market(tw/otc)/close/chg_pct/vol(張)/shares(已發行股數)/
+  turnover(週轉率%)/avg20/ratio(量比=今日÷前20日均)/pct_rank(近120日百分位)/
+  level(冷門<1/正常<3/活躍<7/高度活躍<10/過熱<20/極端)/vol_state(地量/量縮/正常/放量/爆量)/
+  tunnel_pos(日貓咪位置%,下軌0上軌100)/zone(下軌外/低位/中位/高位/上軌外)/
+  band_lower/band_mid/band_upper/out_days(隧道外連續第幾天)/setup/signal/industry(官方產業別)
+  已 backfill 89 交易日、164,032 筆（約 2 小時，寫入慢是正常）。
+
+■ trading-bot/turnover_scanner.py（workflow turnover_scanner.yml，cron '30 8 * * 1-5'＝台灣16:30）
+  - 今日量價：TWSE STOCK_DAY_ALL + TPEX daily_close_quotes。歷史：tw_daily_quote（chip_scanner 累積，vol 單位張）。
+  - 已發行股數＋產業別：TWSE opendata/t187ap03_L（欄位「已發行普通股數或TDR原股發行股數」「產業別」）、
+    TPEX mopsfin_t187ap03_O（IssueShares、SecuritiesIndustryCode）。產業代碼→名稱用 IND_NAME 對照表。
+  - 隧道沿用 cat_tunnel_scanner.day_bands（BW=14、DEV=1.5）。
+  - 手動參數：留空=dry-run / --run 寫今日 / --backfill 回補全部歷史。workflow 第二步接 turnover_push.py。
+  - 踩雷：曾把 tunnel_backtest.yml 內容誤貼進 turnover_scanner.yml（Actions 名稱變 Tunnel Backtest、找不到 py）。
+
+■ 回測 trading-bot/tunnel_backtest.py（手動 workflow tunnel_backtest.yml；只讀不寫；CSV 在 Artifacts）
+  資料：Railway /screener-quote 一年日線（股票池同 pattern_scanner：台221檔、美149檔）。量用相對值，台美通用。
+  基準先跑隨機漫步：上軌/下軌比≈1.0、上軌外「10日回隧道」也≈99%（隧道會跟價格移動）→ 判斷續漲/回跌要看
+  「10日內再漲≥5%」與平均報酬，不能只看回隧道比例。只採台美股方向一致的結論：
+  A 上軌之上：非回跌訊號。台 71%再漲5%、10日+3.69%；美≈持平。量價背離/長上影/軌外最大量都「沒有」預測反轉。
+     台股鎖漲停最強（84%、+6.27%）。→ 不建議放空，續抱用移動停利。
+  B 下軌之下：偏回漲（10日 台+5.0%、美+3.0%，高於中間進場），但約一半先再跌5%。
+     第2~3天最好（台+7.3%/美+3.8%）、第4天以上最差；軌外最大量(投降量)最強（台+10.5%/美+5.3%）；
+     放量優於量縮陰跌；長下影反而偏弱（≠止跌）。
+  C 隧道中間(40~60%)：勝負看「從哪來＋中線方向」，量能台美不一致不當依據。
+     跌深反彈(從下軌上來＋中線下彎)=碰上軌機率高、短打目標上軌；多頭回檔(從上軌下來＋中線上彎)=適合持有；
+     箱型盤整(中線走平)、轉弱(從上軌下來＋中線下彎)、從下軌上來＋中線走平 → 避開。
+  D 脫離K量能（回漲清單同定義，10日內先碰中線=畢業 vs 先回下軌=失敗）：
+     放量脫離 台78%/美69%畢業（最強）、洗盤完成 優於平均、量縮脫離 約4成回下軌（最弱，台股75%脫離K屬此型）、
+     量平脫離 台美不一致、爆量長影 樣本不足。觸軌期間有放量者較佳。
+  保留：只一年偏多行情、股票池偏強勢股、事件有重疊；未經空頭驗證。資料變多或空頭時可重跑。
+
+■ setup 型態（turnover_scanner.classify，依回測；隧道內低位/高位未回測不給判讀）
+  上軌外續強／上軌外鎖漲停(chg≥9.5)／下軌外初跌(第1天)／下軌外反彈窗(第2~3天)／
+  下軌外投降量(軌外最大量且量比≥1.0，或第2天起量比≥1.5)／下軌外久跌(≥4天)／下軌外鎖跌停／
+  中段(30~70%)：跌深反彈／多頭回檔／箱型盤整／轉弱。
+  投降量加「量比≥1.0」是 10/31 修正：原本 0.4× 也被叫投降量，會誤導會員。
+
+■ 推播 trading-bot/turnover_push.py（接在 turnover_scanner 同一 workflow，約16:35，台股報報）
+  只推「下軌外投降量」「下軌外反彈窗」。成交量≥500張、每型依成交金額列前12、投信連買≥2附「投信買N」。
+  最新資料超過4天不推。訊息尾附「📖 怎麼看」白話說明（投降量/反彈窗/第N天/量比/下軌/投信買N）。
+  手動 workflow：push 不勾=只印預覽。共用 active_etf_scanner.tg_push（TG_BOT_TOKEN）。
+
+■ 回漲確認清單 脫離K量能（trading-bot/cat_recover_scanner.py + SQL cat_recover_vol.sql）
+  cat_recover_list 新欄 bk_vol_ratio / touch_vol_ratio / bk_vol_type(swell/washout/shrink/burst_shadow/normal)。
+  vol_profile()：脫離K量 ÷ 觸軌前20日均量；脫離當天算、之後沿用；脫離取消清空；舊列用 breakout_date 補算。
+  日期一律錨定最近交易日（np.busday_offset roll=backward），否則週末手動補跑會多算一天。
+  推播：脫離K依量能品質排序（放量→洗盤→量平→爆量長影→量縮），附「✅量能確認／✅賣壓已洗／⚠️待補量」＋圖例。
+
+■ 前端（stockscan）
+  - diagnosis.html：renderTurnover → 容器 r-turnover（指標區下、法人卡上，僅台股）。型態標題(綠/黃/紅)、
+    建議、四格(週轉率/量比/百分位/隧道位置)、隧道三線、近20日週轉柱圖（固定64px高；今日>其他天3倍時截斷並標「今日 X% ↑」）。
+  - recover.html：「脫離量能」欄（✅/⚠️＋型態＋量比，tooltip 回測說明）。
+  - js/turnover_groups.js（新共用）：load / stats(中位數量比，週轉<0.1%不計) / industryStats(≥3檔) / badge / turnoverCell。
+    🔥≥1.5× 資金湧入、♨️≥1.15× 升溫、🧊≤0.7× 冷清。用中位數避免冷門股爆量拉高族群。
+  - concepts.html：上方「族群量比排行」（最熱6＋最冷3，點擊開概念）、按鈕附量比、表格加週轉率/量比欄。僅台股。
+  - chips.html：加「週轉率」「族群量比」(所屬概念取最熱一個)「產業量比」(官方產業別，全市場都有)三欄。
+    實用組合：投信吸籌＋族群升溫＝資金輪動到該族群；題材熱但產業冷＝資金很挑股。
+
+■ 尚未做 / 可再做
+  - 美股週轉率（需流通股數，yfinance floatShares 從 Railway 取）。
+  - 回測資料只有一年偏多；之後加空頭期間或更長歷史重驗。
+  - 反彈名單之後可追蹤命中率（推播後10日是否回隧道/碰中線）做月報。
+
