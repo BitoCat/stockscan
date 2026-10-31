@@ -150,6 +150,7 @@
       </div>
     </div>
     <div class="metrics-grid" id="r-metrics"></div>
+    <div id="r-turnover" style="margin-top:12px"></div>
     <div id="r-chips" style="margin-top:12px"></div>
     <div id="r-radar" style="margin-top:12px"></div>
     <div id="r-insider" style="margin-top:12px"></div>
@@ -561,6 +562,7 @@ function renderResult(sym, d) {
   });
   document.getElementById('r-analysis').innerHTML = analysisHtml;
   document.getElementById('r-time').textContent = '診斷：' + new Date().toLocaleString('zh-TW');
+  renderTurnover(sym);
   renderChips(sym);
   renderRadar(sym);  
   renderHolders(sym);  
@@ -999,6 +1001,80 @@ async function renderRadar(sym) {
   }
 }
   
+// ===== 週轉率 × 貓咪隧道 型態卡（讀 tw_turnover，turnover_scanner.py 每日寫入）=====
+async function renderTurnover(sym) {
+  var box = document.getElementById('r-turnover');
+  if (!box) return;
+  if (currentMkt !== 'tw') { box.innerHTML = ''; return; }
+  var code = (sym || '').replace(/[^0-9]/g, '');
+  if (!code || code.length < 4) { box.innerHTML = ''; return; }
+  var head = '<div class="sec-head">🔄 週轉率 × 貓咪隧道</div>';
+  box.innerHTML = head + '<div style="color:var(--muted);font-size:13px;padding:4px 0">載入中...</div>';
+  try {
+    var res = await sb.from('tw_turnover')
+      .select('date,close,turnover,avg20,ratio,pct_rank,level,vol_state,tunnel_pos,zone,band_lower,band_mid,band_upper,out_days,setup,signal')
+      .eq('code', code).order('date', { ascending: false }).limit(20);
+    var rows = res.data || [];
+    if (!rows.length) {
+      box.innerHTML = head + '<div style="color:var(--muted);font-size:13px;padding:4px 0">本檔尚無週轉率資料。</div>';
+      return;
+    }
+    rows.reverse();
+    var t = rows[rows.length - 1];
+    var num = function (v, d) { return (v === null || v === undefined || isNaN(Number(v))) ? '—' : Number(v).toFixed(d); };
+    var GOOD = ['上軌外續強', '上軌外鎖漲停', '下軌外投降量', '下軌外反彈窗', '多頭回檔', '跌深反彈'];
+    var WARN = ['下軌外初跌', '下軌外鎖跌停'];
+    var color = !t.setup ? '#7a90b0' : (GOOD.indexOf(t.setup) >= 0 ? '#31d071' : (WARN.indexOf(t.setup) >= 0 ? '#ffb020' : '#ff5470'));
+
+    var setupLine = t.setup
+      ? '<div style="color:' + color + ';font-weight:700;font-size:15px;margin:2px 0 4px">' + t.setup + '</div>' +
+        '<div style="font-size:13px;line-height:1.6;margin:0 0 10px">' + (t.signal || '').replace(/^[^｜]*｜/, '') + '</div>'
+      : '<div style="color:var(--muted);font-size:13px;margin:2px 0 10px">目前位置無明確型態（隧道內偏低／偏高區未經回測，不給判讀）。</div>';
+
+    var cell = function (label, val, sub) {
+      return '<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:8px 10px">' +
+        '<div style="font-size:11px;color:var(--muted)">' + label + '</div>' +
+        '<div style="font-family:monospace;font-size:16px;font-weight:700">' + val + '</div>' +
+        '<div style="font-size:11px;color:var(--muted)">' + (sub || '') + '</div></div>';
+    };
+    var posTxt = t.tunnel_pos === null ? '—' : num(t.tunnel_pos, 0) + '%';
+    var posSub = (t.zone || '') + (t.out_days ? ' · 第' + t.out_days + '天' : '');
+    var grid = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px">' +
+      cell('週轉率', num(t.turnover, 2) + '%', t.level || '') +
+      cell('量比（÷20日均）', num(t.ratio, 2) + '×', t.vol_state || '') +
+      cell('近120日百分位', t.pct_rank === null ? '—' : num(t.pct_rank, 0), '越高＝相對越熱') +
+      cell('隧道位置', posTxt, posSub) +
+      '</div>';
+
+    var bands = t.band_lower ? '<div style="display:flex;justify-content:space-between;font-size:12px;font-family:monospace;margin-bottom:8px">' +
+      '<span style="color:#ff5470">下軌 ' + num(t.band_lower, 2) + '</span>' +
+      '<span style="color:var(--muted)">中線 ' + num(t.band_mid, 2) + '</span>' +
+      '<span style="color:#31d071">上軌 ' + num(t.band_upper, 2) + '</span></div>' : '';
+
+    // 近20日週轉率柱狀（金色＝今日，虛線＝20日均）
+    var vals = rows.map(function (r) { return Number(r.turnover) || 0; });
+    var W = 340, H = 80, pad = 4, n = vals.length;
+    var maxV = Math.max.apply(null, vals.concat([Number(t.avg20) || 0])) || 1;
+    var bw = (W - pad * 2) / n;
+    var bars = vals.map(function (v, i) {
+      var h = (H - 16) * v / maxV, x = pad + i * bw;
+      return '<rect x="' + (x + 1).toFixed(1) + '" y="' + (H - 12 - h).toFixed(1) + '" width="' + Math.max(bw - 2, 1).toFixed(1) +
+        '" height="' + h.toFixed(1) + '" fill="' + (i === n - 1 ? '#ffb020' : '#33507d') + '"/>';
+    }).join('');
+    var avgY = t.avg20 ? (H - 12 - (H - 16) * Number(t.avg20) / maxV).toFixed(1) : null;
+    var avgLine = avgY ? '<line x1="' + pad + '" y1="' + avgY + '" x2="' + (W - pad) + '" y2="' + avgY + '" stroke="#00d4ff" stroke-width="1" stroke-dasharray="3 3"/>' : '';
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block">' + bars + avgLine +
+      '<text x="' + pad + '" y="' + (H - 1) + '" fill="#4a6080" font-size="9" font-family="Share Tech Mono">近' + n + '日週轉率</text>' +
+      '<text x="' + (W - pad) + '" y="' + (H - 1) + '" fill="#4a6080" font-size="9" text-anchor="end" font-family="Share Tech Mono">虛線＝20日均</text></svg>';
+
+    box.innerHTML = head + setupLine + grid + bands + svg +
+      '<div style="font-size:11px;color:#4a6080;margin-top:6px;line-height:1.5">週轉率＝成交股數÷已發行股數。型態判讀來自台美股一年日線回測的歷史傾向，非保證；資料日 ' +
+      String(t.date).replace(/(\d{4})(\d{2})(\d{2})/, '$1/$2/$3') + '。</div>';
+  } catch (e) {
+    box.innerHTML = head + '<div style="color:var(--muted);font-size:13px;padding:4px 0">週轉率資料載入失敗，稍後再試。</div>';
+  }
+}
+
 async function renderChips(sym) {
   var box = document.getElementById('r-chips');
   if (!box) return;
@@ -1319,3 +1395,4 @@ async function fetchChipContext(sym) {
 </script>
 </body>
 </html>
+
