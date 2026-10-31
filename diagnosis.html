@@ -1069,7 +1069,7 @@ async function renderTurnover(sym) {
     var avgLine = avgY ? '<line x1="0" y1="' + avgY + '" x2="' + W + '" y2="' + avgY + '" stroke="#00d4ff" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>' : '';
     var svg = '<div style="position:relative">' +
       '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="width:100%;height:64px;display:block">' + bars + avgLine + '</svg>' +
-      (clipped ? '<div style="position:absolute;right:0;top:-2px;font-size:11px;font-family:monospace;color:#ffb020">今日 ' + num(today, 2) + '% ↑</div>' : '') +
+      (clipped ? '<div style="position:absolute;right:calc(' + (100 / n).toFixed(2) + '% + 6px);top:0;font-size:11px;font-family:monospace;color:#ffb020;white-space:nowrap">今日 ' + num(today, 2) + '% ↑</div>' : '') +
       '</div><div style="display:flex;justify-content:space-between;font-size:11px;color:#4a6080;margin-top:2px">' +
       '<span>近' + n + '日週轉率</span><span>虛線＝20日均 ' + num(t.avg20, 2) + '%</span></div>';
 
@@ -1401,3 +1401,5 @@ async function fetchChipContext(sym) {
 </script>
 </body>
 </html>
+
+
