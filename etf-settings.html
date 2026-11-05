@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>ETF 輪動設定</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+<style>
+:root{
+  --bg:#f4f5f7;--card:#fff;--ink:#1c2230;--mute:#6b7385;--line:#e2e5eb;
+  --acc:#1f6feb;--acc-ink:#fff;--ok:#1a7f37;--warn:#b35900;--bad:#c62828;--chip:#eef2f8;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1218;--card:#171b23;--ink:#e6e9ef;--mute:#98a1b3;--line:#2a303c;
+  --acc:#4c8dff;--acc-ink:#fff;--ok:#3fb950;--warn:#e3a33b;--bad:#ff6b6b;--chip:#222836;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px 16px 96px}
+h1{font-size:20px;margin:8px 0 2px}
+.sub{color:var(--mute);font-size:13px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+.card h2{font-size:15px;margin:0 0 12px;display:flex;justify-content:space-between;align-items:center}
+label{display:block;font-size:13px;color:var(--mute);margin:0 0 4px}
+input,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+input:focus,select:focus{outline:2px solid var(--acc);outline-offset:-1px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.row.three{grid-template-columns:1fr 1fr 1fr}
+.field{margin-bottom:12px}
+.slot{display:grid;grid-template-columns:92px 1fr;gap:10px;align-items:start;margin-bottom:12px}
+.slot .tag{font-weight:600;font-size:14px;padding-top:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{background:var(--chip);border:0;border-radius:999px;padding:3px 10px;font-size:12px;color:var(--ink);cursor:pointer}
+.chip b{font-weight:600}
+.msg{font-size:12px;margin-top:4px}
+.msg.warn{color:var(--warn)}.msg.bad{color:var(--bad)}.msg.ok{color:var(--ok)}
+.lock{display:grid;grid-template-columns:1fr 1fr 40px;gap:8px;margin-bottom:8px}
+.btn{border:0;border-radius:8px;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer}
+.btn.pri{background:var(--acc);color:var(--acc-ink)}
+.btn.ghost{background:transparent;color:var(--acc);border:1px solid var(--line)}
+.btn.x{background:transparent;color:var(--mute);border:1px solid var(--line);padding:0}
+.btn:disabled{opacity:.5;cursor:default}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{flex:1;white-space:nowrap;border:0;background:transparent;color:var(--ink);padding:9px 6px;font:inherit;cursor:pointer}
+.seg button.on{background:var(--acc);color:var(--acc-ink)}
+.switch{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink)}
+.switch input{width:auto}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:12px 16px}
+.bar .in{max-width:640px;margin:0 auto;display:flex;gap:10px;align-items:center}
+.bar .st{flex:1;font-size:13px;color:var(--mute)}
+pre{white-space:pre-wrap;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12px;max-height:50vh;overflow:auto}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);width:min(560px,calc(100vw - 32px));padding:16px}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.diff div{font-size:13px;padding:2px 0}
+.diff .k{color:var(--mute);display:inline-block;min-width:90px}
+.hide{display:none}
+small.note{display:block;color:var(--mute);font-size:12px;margin-top:6px}
+a{color:var(--acc)}
+</style>
+</head>
+<body>
+<main>
+  <h1>ETF 輪動設定</h1>
+  <div class="sub">修改後按「儲存」,下一次執行(13:30 / 20:00)生效,Telegram 會發「設定已更新」確認。</div>
+
+  <section class="card" id="tokCard">
+    <h2>GitHub 權杖</h2>
+    <div class="field">
+      <label for="tok">Fine-grained token(只存在這台裝置的瀏覽器)</label>
+      <input id="tok" type="password" autocomplete="off" placeholder="github_pat_…">
+      <small class="note">權杖只需要 <b>BitoCat/etf-rotation</b> 的 <b>Contents:Read and write</b>。
+        <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">建立權杖</a></small>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn pri" id="tokSave">連線</button>
+      <button class="btn ghost hide" id="tokClear">移除權杖</button>
+    </div>
+    <div class="msg" id="tokMsg"></div>
+  </section>
+
+  <div id="form" class="hide">
+    <section class="card">
+      <h2>帳戶</h2>
+      <div class="row">
+        <div><label for="acct">帳戶檔</label><select id="acct"></select></div>
+        <div><label for="name">顯示名稱</label><input id="name"></div>
+      </div>
+      <div class="row" style="grid-template-columns:2fr 1fr">
+        <div><label>模式</label>
+          <div class="seg" id="mode">
+            <button data-v="signal">只通知</button><button data-v="paper">模擬</button><button data-v="live">真單</button>
+          </div>
+        </div>
+        <div><label>&nbsp;</label><label class="switch"><input type="checkbox" id="enabled"> 啟用</label></div>
+      </div>
+      <div class="msg" id="modeMsg"></div>
+    </section>
+
+    <section class="card">
+      <h2>輪動 ETF <span class="msg" id="scanDate"></span></h2>
+      <div class="slot"><div class="tag">1/4/7/10</div><div><input id="s1" inputmode="numeric" placeholder="例 0056"><div class="chips" id="c1"></div><div class="msg" id="m1"></div></div></div>
+      <div class="slot"><div class="tag">2/5/8/11</div><div><input id="s2" inputmode="numeric" placeholder="例 00690"><div class="chips" id="c2"></div><div class="msg" id="m2"></div></div></div>
+      <div class="slot"><div class="tag">3/6/9/12</div><div><input id="s0" inputmode="numeric" placeholder="例 00918"><div class="chips" id="c0"></div><div class="msg" id="m0"></div></div></div>
+      <small class="note">標籤是最近一次掃描的前三名(單次殖利率)。換掉正持有的那檔沒關係,程式會等它賣出後再接新的。</small>
+    </section>
+
+    <section class="card">
+      <h2>買賣時機與金額</h2>
+      <div class="row three">
+        <div><label for="A">A 除息前幾日買</label><input id="A" type="number" min="0" max="60"></div>
+        <div><label for="B">B 除息後幾日賣</label><input id="B" type="number" min="0" max="60"></div>
+        <div><label for="start">開始日</label><input id="start" type="date"></div>
+      </div>
+      <label>每次買進金額</label>
+      <div class="row">
+        <div class="seg" id="amtMode"><button data-v="max">全部現金</button><button data-v="num">固定金額</button></div>
+        <input id="amt" type="number" min="1" step="10000" placeholder="例 1000000">
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>長抱不賣(Locked) <button class="btn ghost" id="addLock" style="padding:4px 10px">+ 新增</button></h2>
+      <div id="locks"></div>
+      <small class="note">股數:1 張 = 1000 股。這些股數永遠不賣,也不算進輪動資金。</small>
+    </section>
+
+    <section class="card">
+      <h2>其他</h2>
+      <div class="row">
+        <div><label for="exp">永豐 API Key 到期日</label><input id="exp" type="date"></div>
+        <div><label>Telegram / 金鑰前綴</label><input id="adv" disabled></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="bar hide" id="bar"><div class="in">
+  <div class="st" id="st"></div>
+  <button class="btn ghost" id="reload">重新載入</button>
+  <button class="btn pri" id="save">儲存</button>
+</div></div>
+
+<dialog id="dlg">
+  <h2 style="font-size:16px;margin:0 0 10px">確認修改</h2>
+  <div class="diff" id="diff"></div>
+  <details style="margin-top:10px"><summary style="font-size:13px;color:var(--mute)">檢視完整設定檔</summary><pre id="yamlOut"></pre></details>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+    <button class="btn ghost" id="dlgNo">取消</button><button class="btn pri" id="dlgYes">確認儲存</button>
+  </div>
+</dialog>
+
+<script>
+const REPO = "BitoCat/etf-rotation";
+const KEY = "etfrot_token";
+const CYC = {1: "1/4/7/10", 2: "2/5/8/11", 0: "3/6/9/12"};
+const KNOWN = {"0056":1,"00713":0,"00878":2,"00690":2,"00894":2,"00918":0,"00919":0,"00929":null,"00731":2};
+const $ = id => document.getElementById(id);
+let tok = "", file = null, sha = null, orig = null, scan = null, mode = "signal", amtMode = "max";
+
+function store(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
+function load(k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }
+const b64dec = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g, "")), c => c.charCodeAt(0)));
+const b64enc = s => { const b = new TextEncoder().encode(s); let o = ""; b.forEach(x => o += String.fromCharCode(x)); return btoa(o); };
+const iso = v => v instanceof Date ? v.toISOString().slice(0, 10) : (v ? String(v).slice(0, 10) : "");
+
+async function gh(path, opt = {}) {
+  const r = await fetch(`https://api.github.com/repos/${REPO}/${path}`, {
+    ...opt, headers: {Authorization: `Bearer ${tok}`, Accept: "application/vnd.github+json", ...(opt.headers || {})}});
+  if (!r.ok) { const t = await r.text(); throw Object.assign(new Error(`${r.status} ${t.slice(0, 160)}`), {status: r.status}); }
+  return r.json();
+}
+
+function setSeg(id, v) { document.querySelectorAll(`#${id} button`).forEach(b => b.classList.toggle("on", b.dataset.v === v)); }
+function status(t, cls = "") { $("st").textContent = t; $("st").className = "st " + cls; }
+
+async function connect() {
+  tok = $("tok").value.trim() || load(KEY);
+  if (!tok) return;
+  $("tokMsg").textContent = "連線中…"; $("tokMsg").className = "msg";
+  try {
+    const list = await gh("contents/accounts");
+    store(KEY, tok);
+    $("tok").value = ""; $("tok").placeholder = "已儲存在這台裝置";
+    $("tokClear").classList.remove("hide");
+    $("tokMsg").textContent = "✓ 已連線"; $("tokMsg").className = "msg ok";
+    const files = list.filter(f => f.name.endsWith(".yaml")).map(f => f.name);
+    $("acct").innerHTML = files.map(f => `<option>${f}</option>`).join("");
+    const last = load("etfrot_acct");
+    if (files.includes(last)) $("acct").value = last;
+    try { const s = await gh("contents/state/scan.json"); scan = JSON.parse(b64dec(s.content)); } catch (e) { scan = null; }
+    $("scanDate").textContent = scan ? `掃描 ${scan.date}` : "";
+    $("form").classList.remove("hide"); $("bar").classList.remove("hide");
+    $("tokCard").querySelector("h2").textContent = "GitHub 權杖 ✓";
+    await openAcct();
+  } catch (e) {
+    $("tokMsg").textContent = e.status === 401 ? "權杖無效或已過期" : e.status === 404 ? "權杖沒有 etf-rotation 的讀取權限" : "連線失敗:" + e.message;
+    $("tokMsg").className = "msg bad";
+  }
+}
+
+async function openAcct() {
+  file = $("acct").value; store("etfrot_acct", file);
+  status("載入中…");
+  const f = await gh(`contents/accounts/${encodeURIComponent(file)}`);
+  sha = f.sha; orig = jsyaml.load(b64dec(f.content)) || {};
+  const a = orig;
+  $("name").value = a.name || "";
+  $("enabled").checked = a.enabled !== false;
+  mode = a.mode || "signal"; setSeg("mode", mode);
+  const slots = {1: "", 2: "", 0: ""};
+  (a.etfs || []).map(String).forEach(c => {
+    let k = cycOf(c);
+    if (k == null || slots[k]) k = [1, 2, 0].find(x => !slots[x]);
+    if (k != null) slots[k] = c;
+  });
+  [1, 2, 0].forEach(k => $("s" + k).value = slots[k]);
+  $("A").value = a.A ?? 30; $("B").value = a.B ?? 0; $("start").value = iso(a.start_date);
+  const amt = a.amount ?? a.max_amount ?? "max";
+  amtMode = String(amt).toLowerCase() === "max" ? "max" : "num"; setSeg("amtMode", amtMode);
+  $("amt").value = amtMode === "num" ? amt : ""; $("amt").disabled = amtMode === "max";
+  $("locks").innerHTML = "";
+  Object.entries(a.locked || {}).forEach(([c, q]) => addLock(c, q));
+  $("exp").value = iso(a.api_expires);
+  $("adv").value = `${a.telegram_chat || "-"} / ${a.secrets_prefix || "-"}`;
+  renderChips(); check();
+  status(`已載入 ${file}`);
+}
+
+function cycOf(code) {
+  const r = scan && scan.rows.find(x => x.code === code);
+  if (r) return r.cyc;
+  return code in KNOWN ? KNOWN[code] : null;
+}
+
+function renderChips() {
+  [1, 2, 0].forEach(k => {
+    const box = $("c" + k);
+    if (!scan) { box.innerHTML = ""; return; }
+    const top = scan.rows.filter(r => r.cyc === k && r.vol >= (scan.min_vol || 300)).slice(0, 3);
+    box.innerHTML = top.map(r => `<button class="chip" data-k="${k}" data-c="${r.code}"><b>${r.code}</b> ${r.name.slice(0, 6)} ${(r.single * 100).toFixed(1)}%</button>`).join("");
+  });
+}
+
+function addLock(c = "", q = "") {
+  const d = document.createElement("div"); d.className = "lock";
+  d.innerHTML = `<input class="lc" placeholder="代號 例 00919" value="${c}"><input class="lq" type="number" min="1" step="1000" placeholder="股數 例 10000" value="${q}"><button class="btn x" title="刪除">✕</button>`;
+  d.querySelector("button").onclick = () => { d.remove(); check(); };
+  d.querySelectorAll("input").forEach(i => i.oninput = check);
+  $("locks").appendChild(d);
+}
+
+function collect() {
+  const etfs = [1, 2, 0].map(k => $("s" + k).value.trim().toUpperCase()).filter(Boolean);
+  const locked = {};
+  document.querySelectorAll("#locks .lock").forEach(d => {
+    const c = d.querySelector(".lc").value.trim().toUpperCase(), q = d.querySelector(".lq").value;
+    if (c) locked[c] = q === "" ? NaN : Number(q);
+  });
+  return {
+    name: $("name").value.trim(), enabled: $("enabled").checked, mode, etfs,
+    A: $("A").value === "" ? NaN : Number($("A").value), B: $("B").value === "" ? NaN : Number($("B").value),
+    start_date: $("start").value, locked,
+    amount: amtMode === "max" ? "max" : ($("amt").value === "" ? NaN : Number($("amt").value)),
+    api_expires: $("exp").value,
+  };
+}
+
+function check() {
+  const v = collect(), err = [];
+  [1, 2, 0].forEach(k => {
+    const c = $("s" + k).value.trim().toUpperCase(), m = $("m" + k);
+    m.textContent = ""; m.className = "msg";
+    if (!c) { m.textContent = "空白:這組月份不輪動,資金會閒置"; m.className = "msg warn"; return; }
+    if (!/^\d{4,6}[A-Z]?$/.test(c)) { m.textContent = "代號格式不對"; m.className = "msg bad"; err.push(1); return; }
+    const r = scan && scan.rows.find(x => x.code === c), ck = cycOf(c);
+    if (ck != null && ck !== k) { m.textContent = `⚠️ ${c} 是 ${CYC[ck]} 月除息,不是這一組`; m.className = "msg warn"; }
+    else if (r) { m.textContent = `${r.name}|單次 ${(r.single * 100).toFixed(1)}%|年化 ${(r.ann * 100).toFixed(0)}%|填息 ${r.fill[0]}/${r.fill[1]}`; }
+    if (v.locked[c] != null) { m.textContent = `⚠️ ${c} 也在長抱清單,同投信配息帳戶會衝突`; m.className = "msg warn"; }
+  });
+  if (new Set(v.etfs).size !== v.etfs.length) err.push("輪動 ETF 重複");
+  if (!Number.isInteger(v.A) || v.A < 0 || v.A > 60) err.push("A 要是 0–60 的整數");
+  if (!Number.isInteger(v.B) || v.B < 0 || v.B > 60) err.push("B 要是 0–60 的整數");
+  if (v.amount !== "max" && !(v.amount > 0)) err.push("固定金額要大於 0");
+  Object.entries(v.locked).forEach(([c, q]) => {
+    if (!/^\d{4,6}[A-Z]?$/.test(c)) err.push(`長抱代號 ${c} 格式不對`);
+    if (!Number.isInteger(q) || q <= 0) err.push(`長抱 ${c} 的股數要是正整數`);
+  });
+  if (!v.etfs.length) err.push("至少要有一檔輪動 ETF");
+  $("modeMsg").textContent = mode === "live" ? "⚠️ 真單:程式會用真實資金自動下單" : mode === "paper" ? "模擬:永豐模擬環境下單,不動真錢" : "只通知:換股日發 Telegram,自己下單";
+  $("modeMsg").className = "msg " + (mode === "live" ? "warn" : "");
+  const e = err.filter(x => x !== 1);
+  status(err.length ? "❌ " + (e[0] || "請修正標紅的欄位") : (file ? `${file}` : ""), err.length ? "msg bad" : "");
+  $("save").disabled = !!err.length;
+  return !err.length;
+}
+
+function toYaml(v) {
+  const q = s => JSON.stringify(String(s));
+  const known = ["id", "name", "enabled", "mode", "broker", "etfs", "A", "B", "start_date", "locked", "amount", "max_amount", "telegram_chat", "secrets_prefix", "api_expires"];
+  const L = [`# 由設定頁面更新 ${new Date().toLocaleString("zh-TW", {hour12: false})}`,
+    `id: ${orig.id || file.replace(/\.yaml$/, "")}`, `name: ${q(v.name)}`, `enabled: ${v.enabled}`,
+    `mode: ${v.mode}            # signal(只通知)→ paper(模擬)→ live(真單)`, `broker: ${orig.broker || "shioaji"}`,
+    `etfs: [${v.etfs.map(q).join(", ")}]   # 1/4/7/10、2/5/8/11、3/6/9/12`,
+    `A: ${v.A}                   # 除息日前第幾個交易日買進`, `B: ${v.B}                   # 除息日後第幾個交易日賣出(0=除息當天)`];
+  if (v.start_date) L.push(`start_date: ${v.start_date}`);
+  const lk = Object.entries(v.locked);
+  if (lk.length) { L.push("locked:                 # 長抱、永遠不賣的股數"); lk.forEach(([c, n]) => L.push(`  ${q(c)}: ${n}`)); }
+  L.push(`amount: ${v.amount}             # max=全部現金 All in;數字=每次固定金額`);
+  if (orig.telegram_chat != null) L.push(`telegram_chat: ${q(orig.telegram_chat)}`);
+  if (orig.secrets_prefix) L.push(`secrets_prefix: ${orig.secrets_prefix}`);
+  if (v.api_expires) L.push(`api_expires: ${v.api_expires}`);
+  const extra = Object.fromEntries(Object.entries(orig).filter(([k]) => !known.includes(k)));
+  if (Object.keys(extra).length) L.push(jsyaml.dump(extra).trim());
+  return L.join("\n") + "\n";
+}
+
+function diffs(v) {
+  const o = orig, out = [];
+  const show = x => Array.isArray(x) ? x.join("、") : (x && typeof x === "object") ? Object.entries(x).map(([c, n]) => `${c} ${n / 1000} 張`).join("、") || "無" : String(x ?? "");
+  const pairs = [["名稱", o.name, v.name], ["啟用", o.enabled !== false, v.enabled], ["模式", o.mode || "signal", v.mode],
+    ["輪動", (o.etfs || []).map(String), v.etfs], ["A", o.A, v.A], ["B", o.B, v.B], ["開始日", iso(o.start_date), v.start_date],
+    ["長抱", o.locked || {}, v.locked], ["每次買進", String(o.amount ?? o.max_amount ?? "max"), String(v.amount)], ["API 到期", iso(o.api_expires), v.api_expires]];
+  pairs.forEach(([k, a, b]) => {
+    const sa = k === "輪動" ? [...a].sort().join() : show(a), sb = k === "輪動" ? [...b].sort().join() : show(b);
+    if (sa !== sb) out.push(`<div><span class="k">${k}</span>${show(a) || "—"} → <b>${show(b) || "—"}</b></div>`);
+  });
+  return out.join("") || "<div>沒有變更</div>";
+}
+
+async function save() {
+  if (!check()) return;
+  const v = collect();
+  $("diff").innerHTML = diffs(v) + (v.mode === "live" && orig.mode !== "live" ? `<div class="msg warn">⚠️ 切換到真單,下一次換股會用真實資金自動下單</div>` : "");
+  $("yamlOut").textContent = toYaml(v);
+  $("dlg").showModal();
+}
+
+async function commit() {
+  $("dlgYes").disabled = true;
+  try {
+    const v = collect();
+    const r = await gh(`contents/accounts/${encodeURIComponent(file)}`, {method: "PUT",
+      body: JSON.stringify({message: `設定頁面:更新 ${file}`, content: b64enc(toYaml(v)), sha})});
+    sha = r.content.sha;
+    $("dlg").close();
+    await openAcct();
+    status("✓ 已儲存。下一次執行生效,Telegram 會發「設定已更新」", "msg ok");
+  } catch (e) {
+    $("dlg").close();
+    status(e.status === 409 ? "檔案已被其他地方修改,請按「重新載入」後再改" : e.status === 403 || e.status === 404 ? "權杖沒有寫入權限(Contents: Read and write)" : "儲存失敗:" + e.message, "msg bad");
+  } finally { $("dlgYes").disabled = false; }
+}
+
+document.addEventListener("click", e => {
+  const c = e.target.closest(".chip"); if (c) { $("s" + c.dataset.k).value = c.dataset.c; check(); }
+});
+$("mode").onclick = e => { const b = e.target.closest("button"); if (b) { mode = b.dataset.v; setSeg("mode", mode); check(); } };
+$("amtMode").onclick = e => { const b = e.target.closest("button"); if (b) { amtMode = b.dataset.v; setSeg("amtMode", amtMode); $("amt").disabled = amtMode === "max"; if (amtMode === "num" && !$("amt").value) $("amt").focus(); check(); } };
+["s1", "s2", "s0", "A", "B", "start", "amt", "name", "exp", "enabled"].forEach(id => $(id).addEventListener("input", check));
+$("addLock").onclick = () => { addLock(); check(); };
+$("acct").onchange = openAcct;
+$("reload").onclick = openAcct;
+$("save").onclick = save;
+$("dlgNo").onclick = () => $("dlg").close();
+$("dlgYes").onclick = commit;
+$("tokSave").onclick = connect;
+$("tok").addEventListener("keydown", e => { if (e.key === "Enter") connect(); });
+$("tokClear").onclick = () => { store(KEY, null); store("etfrot_acct", null); location.reload(); };
+if (load(KEY)) connect();
+</script>
+</body>
+</html>
