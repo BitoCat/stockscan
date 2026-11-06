@@ -80,6 +80,10 @@ table.cand tr{cursor:pointer}
 table.cand tr.cur td{font-weight:700}
 .lock .hint{grid-column:1/-1;font-size:12px;color:var(--mute);margin-top:-4px}
 .dirty{color:var(--warn)!important}
+.slot.next .tag{color:var(--bad)}
+.slot.next input{border-color:var(--bad)}
+.slot .when{display:block;font-size:12px;font-weight:600;color:var(--bad);margin-top:2px}
+.chip .d{color:var(--mute);font-size:11px}
 @media (max-width:520px){.slot{grid-template-columns:1fr;gap:4px}.slot .tag{padding-top:0;color:var(--mute);font-size:13px}}
 </style>
 </head>
@@ -151,9 +155,9 @@ table.cand tr.cur td{font-weight:700}
 
     <section class="card">
       <h2>輪動 ETF <span class="msg" id="scanDate"></span></h2>
-      <div class="slot"><div class="tag">1/4/7/10</div><div><input id="s1" inputmode="numeric" placeholder="例 0056"><div class="chips" id="c1"></div><div class="msg" id="m1"></div><details class="more"><summary>更多候選</summary><div id="d1"></div></details></div></div>
-      <div class="slot"><div class="tag">2/5/8/11</div><div><input id="s2" inputmode="numeric" placeholder="例 00690"><div class="chips" id="c2"></div><div class="msg" id="m2"></div><details class="more"><summary>更多候選</summary><div id="d2"></div></details></div></div>
-      <div class="slot"><div class="tag">3/6/9/12</div><div><input id="s0" inputmode="numeric" placeholder="例 00918"><div class="chips" id="c0"></div><div class="msg" id="m0"></div><details class="more"><summary>更多候選</summary><div id="d0"></div></details></div></div>
+      <div class="slot" id="slot1"><div class="tag">1/4/7/10<span class="when" id="w1"></span></div><div><input id="s1" inputmode="numeric" placeholder="例 0056"><div class="chips" id="c1"></div><div class="msg" id="m1"></div><details class="more"><summary>更多候選</summary><div id="d1"></div></details></div></div>
+      <div class="slot" id="slot2"><div class="tag">2/5/8/11<span class="when" id="w2"></span></div><div><input id="s2" inputmode="numeric" placeholder="例 00690"><div class="chips" id="c2"></div><div class="msg" id="m2"></div><details class="more"><summary>更多候選</summary><div id="d2"></div></details></div></div>
+      <div class="slot" id="slot0"><div class="tag">3/6/9/12<span class="when" id="w0"></span></div><div><input id="s0" inputmode="numeric" placeholder="例 00918"><div class="chips" id="c0"></div><div class="msg" id="m0"></div><details class="more"><summary>更多候選</summary><div id="d0"></div></details></div></div>
       <small class="note">標籤是最近一次掃描的前三名(單次殖利率)。換掉正持有的那檔沒關係,程式會等它賣出後再接新的。</small>
     </section>
 
@@ -308,6 +312,11 @@ async function openAcct() {
 }
 
 const WD = "日一二三四五六";
+const exTxt = r => r && r.next_ex ? `${Number(r.next_ex.slice(5, 7))}/${Number(r.next_ex.slice(8, 10))}${r.next_est ? "約" : ""}` : "";
+let nextCyc = null, nextBuy = null;
+function markNext() {
+  [1, 2, 0].forEach(k => { $("slot" + k).classList.toggle("next", k === nextCyc); $("w" + k).textContent = k === nextCyc ? `▶ 下次買進 ${md(nextBuy)}` : ""; });
+}
 const md = d => { const x = new Date(d + "T00:00:00"); return `${x.getMonth() + 1}/${x.getDate()}(${WD[x.getDay()]})`; };
 
 async function loadStatus() {
@@ -322,9 +331,12 @@ async function loadStatus() {
   }
   let sm = null;
   try { const s = await gh(`contents/state/${encodeURIComponent(a.id || file.replace(/\.yaml$/, ""))}.json`); sm = JSON.parse(b64dec(s.content)).summary; } catch (e) {}
+  nextCyc = null; markNext();
   if (!en) { $("hold").textContent = "暫停中(程式不動作)"; $("tl").innerHTML = ""; return; }
   if (!sm) { $("hold").textContent = "下一次執行後顯示"; $("tl").innerHTML = ""; return; }
   $("hold").textContent = sm.holding || "現金";
+  const nb = sm.next.find(p => !p.skipped && p.buy > sm.today) || (!sm.holding && sm.next.find(p => !p.skipped && p.buy >= sm.today));
+  nextCyc = nb ? Number(nb.ex_date.slice(5, 7)) % 3 : null; nextBuy = nb ? nb.buy : null; markNext();
   $("tl").innerHTML = sm.next.filter(p => !p.skipped).slice(0, 3).map(p => {
     const est = p.source.startsWith("預估") ? `<span class="est">(除息日預估)</span>` : "";
     return `<li><b>${p.code}</b> ${md(p.buy)} 買 → ${md(p.sell)} 賣|除息 ${md(p.ex_date)} ${est}</li>`;
@@ -418,10 +430,10 @@ function renderChips() {
     const top = scan.rows.filter(r => r.cyc === k && r.vol >= (scan.min_vol || 300)).slice(0, 3);
     const cur = $("s" + k).value.trim().toUpperCase();
     const all = scan.rows.filter(r => r.cyc === k && (r.vol >= (scan.min_vol || 300) || r.code === cur)).slice(0, 8);
-    $("d" + k).innerHTML = `<table class="cand"><tr><th>ETF</th><th>單次</th><th>年化</th><th>填息</th><th>張/日</th></tr>` +
-      all.map(r => `<tr data-k="${k}" data-c="${r.code}" class="${r.code === cur ? "cur" : ""}"><td><b>${r.code}</b> ${r.name.slice(0, 8)}</td><td>${(r.single * 100).toFixed(1)}%</td><td>${(r.ann * 100).toFixed(0)}%</td><td>${r.fill[0]}/${r.fill[1]}</td><td>${Math.round(r.vol).toLocaleString()}</td></tr>`).join("") +
-      `</table><small class="note">點一列即可填入。單次=近 4 次平均每次配息÷股價;年化含價差(過去兩年)。</small>`;
-    box.innerHTML = top.map(r => `<button class="chip" data-k="${k}" data-c="${r.code}"><b>${r.code}</b> ${r.name.slice(0, 6)} ${(r.single * 100).toFixed(1)}%</button>`).join("");
+    $("d" + k).innerHTML = `<table class="cand"><tr><th>ETF</th><th>單次</th><th>下次除息</th><th>年化</th><th>填息</th><th>張/日</th></tr>` +
+      all.map(r => `<tr data-k="${k}" data-c="${r.code}" class="${r.code === cur ? "cur" : ""}"><td><b>${r.code}</b> ${r.name.slice(0, 8)}</td><td>${(r.single * 100).toFixed(1)}%</td><td>${exTxt(r)}</td><td>${(r.ann * 100).toFixed(0)}%</td><td>${r.fill[0]}/${r.fill[1]}</td><td>${Math.round(r.vol).toLocaleString()}</td></tr>`).join("") +
+      `</table><small class="note">點一列即可填入。單次=近 4 次平均每次配息÷股價;下次除息有「約」為依去年同季推估;年化含價差(過去兩年)。</small>`;
+    box.innerHTML = top.map(r => `<button class="chip" data-k="${k}" data-c="${r.code}"><b>${r.code}</b> ${r.name.slice(0, 6)} ${(r.single * 100).toFixed(1)}%${r.next_ex ? ` <span class="d">${exTxt(r)}</span>` : ""}</button>`).join("");
   });
 }
 
@@ -461,8 +473,11 @@ function check() {
     if (!/^\d{4,6}[A-Z]?$/.test(c)) { m.textContent = "代號格式不對"; m.className = "msg bad"; err.push(1); return; }
     const r = scan && scan.rows.find(x => x.code === c), ck = cycOf(c);
     if (ck != null && ck !== k) { m.textContent = `⚠️ ${c} 是 ${CYC[ck]} 月除息,不是這一組`; m.className = "msg warn"; }
-    else if (r) { m.textContent = `${r.name}|單次 ${(r.single * 100).toFixed(1)}%|年化 ${(r.ann * 100).toFixed(0)}%|填息 ${r.fill[0]}/${r.fill[1]}`; }
+    else if (r) { m.textContent = `${r.name}|單次 ${(r.single * 100).toFixed(1)}%|下次除息 ${exTxt(r) || "—"}|年化 ${(r.ann * 100).toFixed(0)}%|填息 ${r.fill[0]}/${r.fill[1]}`; }
+    const lockIss = Object.keys(v.locked).map(x => [x, scan && scan.rows.find(y => y.code === x)]).filter(([, y]) => y && y.issuer);
+    const clash = r && r.issuer && lockIss.find(([x, y]) => y.issuer === r.issuer && x !== c);
     if (v.locked[c] != null) { m.textContent = `⚠️ ${c} 也在長抱清單,同投信配息帳戶會衝突`; m.className = "msg warn"; }
+    else if (clash) { m.textContent = `⚠️ 和長抱的 ${clash[0]} 同屬${r.issuer}投信:配息帳戶只能設一個,會進同一個帳戶`; m.className = "msg warn"; }
   });
   if (new Set(v.etfs).size !== v.etfs.length) err.push("輪動 ETF 重複");
   if (!Number.isInteger(v.A) || v.A < 0 || v.A > 60) err.push("A 要是 0–60 的整數");
