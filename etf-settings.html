@@ -57,6 +57,27 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .hide{display:none}
 small.note{display:block;color:var(--mute);font-size:12px;margin-top:6px}
 a{color:var(--acc)}
+.badge{display:inline-block;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600}
+.badge.run{background:rgba(26,127,55,.14);color:var(--ok)}.badge.pause{background:rgba(179,89,0,.14);color:var(--warn)}
+.badge.live{background:rgba(198,40,40,.14);color:var(--bad)}
+.kv{display:grid;grid-template-columns:88px 1fr;gap:6px 10px;font-size:14px;margin-bottom:10px}
+.kv .k{color:var(--mute)}
+.tl{list-style:none;margin:0;padding:0;font-size:13px}
+.tl li{padding:6px 0;border-top:1px solid var(--line)}
+.tl li:first-child{border-top:0}
+.tl .est{color:var(--mute);font-size:12px}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+details.more{margin-top:6px}
+details.more summary{font-size:12px;color:var(--acc);cursor:pointer}
+table.cand{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+table.cand th{color:var(--mute);font-weight:500;text-align:right;padding:4px 4px;border-bottom:1px solid var(--line)}
+table.cand td{text-align:right;padding:5px 4px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.cand th:first-child,table.cand td:first-child{text-align:left;white-space:normal}
+table.cand tr{cursor:pointer}
+table.cand tr.cur td{font-weight:700}
+.lock .hint{grid-column:1/-1;font-size:12px;color:var(--mute);margin-top:-4px}
+.dirty{color:var(--warn)!important}
+@media (max-width:520px){.slot{grid-template-columns:1fr;gap:4px}.slot .tag{padding-top:0;color:var(--mute);font-size:13px}}
 </style>
 </head>
 <body>
@@ -67,9 +88,13 @@ a{color:var(--acc)}
   <section class="card" id="tokCard">
     <h2>GitHub 權杖</h2>
     <div class="field">
+      <label for="repo">Repo(帳號/名稱)</label>
+      <input id="repo" autocomplete="off" placeholder="BitoCat/etf-rotation">
+    </div>
+    <div class="field">
       <label for="tok">Fine-grained token(只存在這台裝置的瀏覽器)</label>
       <input id="tok" type="password" autocomplete="off" placeholder="github_pat_…">
-      <small class="note">權杖只需要 <b>BitoCat/etf-rotation</b> 的 <b>Contents:Read and write</b>。
+      <small class="note">權杖只開這個 repo 的 <b>Contents:Read and write</b>;想用「立即發送狀態」再加 <b>Actions:Read and write</b>。
         <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">建立權杖</a></small>
     </div>
     <div style="display:flex;gap:8px">
@@ -80,6 +105,20 @@ a{color:var(--acc)}
   </section>
 
   <div id="form" class="hide">
+    <section class="card" id="statCard">
+      <h2><span>目前狀態</span><span class="badge" id="badge"></span></h2>
+      <div class="kv">
+        <div class="k">目前持有</div><div id="hold">—</div>
+        <div class="k">最後執行</div><div id="lastRun">—</div>
+      </div>
+      <ul class="tl" id="tl"></ul>
+      <div class="acts">
+        <button class="btn ghost" id="pauseBtn">暫停</button>
+        <button class="btn ghost" id="pingBtn">立即發送狀態到 Telegram</button>
+      </div>
+      <div class="msg" id="statMsg"></div>
+    </section>
+
     <section class="card">
       <h2>帳戶</h2>
       <div class="row">
@@ -99,19 +138,20 @@ a{color:var(--acc)}
 
     <section class="card">
       <h2>輪動 ETF <span class="msg" id="scanDate"></span></h2>
-      <div class="slot"><div class="tag">1/4/7/10</div><div><input id="s1" inputmode="numeric" placeholder="例 0056"><div class="chips" id="c1"></div><div class="msg" id="m1"></div></div></div>
-      <div class="slot"><div class="tag">2/5/8/11</div><div><input id="s2" inputmode="numeric" placeholder="例 00690"><div class="chips" id="c2"></div><div class="msg" id="m2"></div></div></div>
-      <div class="slot"><div class="tag">3/6/9/12</div><div><input id="s0" inputmode="numeric" placeholder="例 00918"><div class="chips" id="c0"></div><div class="msg" id="m0"></div></div></div>
+      <div class="slot"><div class="tag">1/4/7/10</div><div><input id="s1" inputmode="numeric" placeholder="例 0056"><div class="chips" id="c1"></div><div class="msg" id="m1"></div><details class="more"><summary>更多候選</summary><div id="d1"></div></details></div></div>
+      <div class="slot"><div class="tag">2/5/8/11</div><div><input id="s2" inputmode="numeric" placeholder="例 00690"><div class="chips" id="c2"></div><div class="msg" id="m2"></div><details class="more"><summary>更多候選</summary><div id="d2"></div></details></div></div>
+      <div class="slot"><div class="tag">3/6/9/12</div><div><input id="s0" inputmode="numeric" placeholder="例 00918"><div class="chips" id="c0"></div><div class="msg" id="m0"></div><details class="more"><summary>更多候選</summary><div id="d0"></div></details></div></div>
       <small class="note">標籤是最近一次掃描的前三名(單次殖利率)。換掉正持有的那檔沒關係,程式會等它賣出後再接新的。</small>
     </section>
 
     <section class="card">
       <h2>買賣時機與金額</h2>
       <div class="row three">
-        <div><label for="A">A 除息前幾日買</label><input id="A" type="number" min="0" max="60"></div>
-        <div><label for="B">B 除息後幾日賣</label><input id="B" type="number" min="0" max="60"></div>
+        <div><label for="A">A 除息前幾個交易日買</label><input id="A" type="number" min="0" max="60"></div>
+        <div><label for="B">B 除息後幾個交易日賣</label><input id="B" type="number" min="0" max="60"></div>
         <div><label for="start">開始日</label><input id="start" type="date"></div>
       </div>
+      <small class="note" style="margin:-4px 0 12px">A 越大持有越久(會被前一檔賣出日限制);B=0 是除息當天收盤賣出。</small>
       <label>每次買進金額</label>
       <div class="row">
         <div class="seg" id="amtMode"><button data-v="max">全部現金</button><button data-v="num">固定金額</button></div>
@@ -151,12 +191,12 @@ a{color:var(--acc)}
 </dialog>
 
 <script>
-const REPO = "BitoCat/etf-rotation";
+let REPO = "BitoCat/etf-rotation";
 const KEY = "etfrot_token";
 const CYC = {1: "1/4/7/10", 2: "2/5/8/11", 0: "3/6/9/12"};
 const KNOWN = {"0056":1,"00713":0,"00878":2,"00690":2,"00894":2,"00918":0,"00919":0,"00929":null,"00731":2};
 const $ = id => document.getElementById(id);
-let tok = "", file = null, sha = null, orig = null, scan = null, mode = "signal", amtMode = "max";
+let tok = "", file = null, sha = null, orig = null, scan = null, mode = "signal", amtMode = "max", dirty = false, lastRun = null;
 
 function store(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
 function load(k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }
@@ -175,12 +215,14 @@ function setSeg(id, v) { document.querySelectorAll(`#${id} button`).forEach(b =>
 function status(t, cls = "") { $("st").textContent = t; $("st").className = "st " + cls; }
 
 async function connect() {
+  REPO = ($("repo").value.trim() || load("etfrot_repo") || "BitoCat/etf-rotation").replace(/^https?:\/\/github.com\//, "").replace(/\/$/, "");
+  $("repo").value = REPO;
   tok = $("tok").value.trim() || load(KEY);
   if (!tok) return;
   $("tokMsg").textContent = "連線中…"; $("tokMsg").className = "msg";
   try {
     const list = await gh("contents/accounts");
-    store(KEY, tok);
+    store(KEY, tok); store("etfrot_repo", REPO);
     $("tok").value = ""; $("tok").placeholder = "已儲存在這台裝置";
     $("tokClear").classList.remove("hide");
     $("tokMsg").textContent = "✓ 已連線"; $("tokMsg").className = "msg ok";
@@ -189,12 +231,13 @@ async function connect() {
     const last = load("etfrot_acct");
     if (files.includes(last)) $("acct").value = last;
     try { const s = await gh("contents/state/scan.json"); scan = JSON.parse(b64dec(s.content)); } catch (e) { scan = null; }
+    try { const s = await gh("contents/state/_last_run.json"); lastRun = JSON.parse(b64dec(s.content)); } catch (e) { lastRun = null; }
     $("scanDate").textContent = scan ? `掃描 ${scan.date}` : "";
     $("form").classList.remove("hide"); $("bar").classList.remove("hide");
     $("tokCard").querySelector("h2").textContent = "GitHub 權杖 ✓";
     await openAcct();
   } catch (e) {
-    $("tokMsg").textContent = e.status === 401 ? "權杖無效或已過期" : e.status === 404 ? "權杖沒有 etf-rotation 的讀取權限" : "連線失敗:" + e.message;
+    $("tokMsg").textContent = e.status === 401 ? "權杖無效或已過期" : e.status === 404 ? `找不到 ${REPO},或權杖沒有它的讀取權限` : "連線失敗:" + e.message;
     $("tokMsg").className = "msg bad";
   }
 }
@@ -223,8 +266,61 @@ async function openAcct() {
   Object.entries(a.locked || {}).forEach(([c, q]) => addLock(c, q));
   $("exp").value = iso(a.api_expires);
   $("adv").value = `${a.telegram_chat || "-"} / ${a.secrets_prefix || "-"}`;
-  renderChips(); check();
+  renderChips(); check(); setDirty(false);
   status(`已載入 ${file}`);
+  loadStatus();
+}
+
+const WD = "日一二三四五六";
+const md = d => { const x = new Date(d + "T00:00:00"); return `${x.getMonth() + 1}/${x.getDate()}(${WD[x.getDay()]})`; };
+
+async function loadStatus() {
+  const a = orig, en = a.enabled !== false, m = a.mode || "signal";
+  $("badge").textContent = !en ? "暫停中" : {signal: "運作中・只通知", paper: "運作中・模擬", live: "運作中・真單"}[m];
+  $("badge").className = "badge " + (!en ? "pause" : m === "live" ? "live" : "run");
+  $("pauseBtn").textContent = en ? "暫停" : "恢復";
+  if (lastRun) {
+    const t = new Date(lastRun.time), hrs = (Date.now() - t) / 36e5;
+    $("lastRun").innerHTML = `${t.toLocaleString("zh-TW", {month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false})}` +
+      (hrs > 30 ? ` <span class="msg warn">⚠️ 超過 ${Math.floor(hrs)} 小時沒執行</span>` : "");
+  }
+  let sm = null;
+  try { const s = await gh(`contents/state/${encodeURIComponent(a.id || file.replace(/\.yaml$/, ""))}.json`); sm = JSON.parse(b64dec(s.content)).summary; } catch (e) {}
+  if (!en) { $("hold").textContent = "暫停中(程式不動作)"; $("tl").innerHTML = ""; return; }
+  if (!sm) { $("hold").textContent = "下一次執行後顯示"; $("tl").innerHTML = ""; return; }
+  $("hold").textContent = sm.holding || "現金";
+  $("tl").innerHTML = sm.next.filter(p => !p.skipped).slice(0, 3).map(p => {
+    const est = p.source.startsWith("預估") ? `<span class="est">(除息日預估)</span>` : "";
+    return `<li><b>${p.code}</b> ${md(p.buy)} 買 → ${md(p.sell)} 賣|除息 ${md(p.ex_date)} ${est}</li>`;
+  }).join("") + `<li class="est">資料日 ${sm.today}</li>`;
+}
+
+let pausePending = false;
+async function togglePause() {
+  pausePending = true;
+  if (dirty) { $("statMsg").textContent = "請先儲存或重新載入目前的修改"; $("statMsg").className = "msg warn"; return; }
+  $("enabled").checked = !(orig.enabled !== false);
+  if ($("enabled").checked && $("start").value && $("start").value < new Date().toISOString().slice(0, 10)) {
+    $("start").value = new Date().toISOString().slice(0, 10);
+  }
+  check(); setDirty(true); save();
+}
+
+async function ping() {
+  const id = orig.id || file.replace(/\.yaml$/, "");
+  $("statMsg").textContent = "送出中…"; $("statMsg").className = "msg";
+  try {
+    await gh("actions/workflows/rotation.yml/dispatches", {method: "POST", body: JSON.stringify({ref: "main", inputs: {mode: "status", account: id}})});
+    $("statMsg").textContent = "✓ 已送出,約 1 分鐘後 Telegram 會收到"; $("statMsg").className = "msg ok";
+  } catch (e) {
+    $("statMsg").textContent = e.status === 403 || e.status === 404 ? "權杖沒有 Actions 權限:到 GitHub 權杖設定加上 Actions:Read and write" : "送出失敗:" + e.message;
+    $("statMsg").className = "msg bad";
+  }
+}
+
+function setDirty(v) {
+  dirty = v;
+  if (v) status("● 有未儲存的修改", "msg dirty");
 }
 
 function cycOf(code) {
@@ -238,6 +334,11 @@ function renderChips() {
     const box = $("c" + k);
     if (!scan) { box.innerHTML = ""; return; }
     const top = scan.rows.filter(r => r.cyc === k && r.vol >= (scan.min_vol || 300)).slice(0, 3);
+    const cur = $("s" + k).value.trim().toUpperCase();
+    const all = scan.rows.filter(r => r.cyc === k && (r.vol >= (scan.min_vol || 300) || r.code === cur)).slice(0, 8);
+    $("d" + k).innerHTML = `<table class="cand"><tr><th>ETF</th><th>單次</th><th>年化</th><th>填息</th><th>張/日</th></tr>` +
+      all.map(r => `<tr data-k="${k}" data-c="${r.code}" class="${r.code === cur ? "cur" : ""}"><td><b>${r.code}</b> ${r.name.slice(0, 8)}</td><td>${(r.single * 100).toFixed(1)}%</td><td>${(r.ann * 100).toFixed(0)}%</td><td>${r.fill[0]}/${r.fill[1]}</td><td>${Math.round(r.vol).toLocaleString()}</td></tr>`).join("") +
+      `</table><small class="note">點一列即可填入。單次=近 4 次平均每次配息÷股價;年化含價差(過去兩年)。</small>`;
     box.innerHTML = top.map(r => `<button class="chip" data-k="${k}" data-c="${r.code}"><b>${r.code}</b> ${r.name.slice(0, 6)} ${(r.single * 100).toFixed(1)}%</button>`).join("");
   });
 }
@@ -245,8 +346,11 @@ function renderChips() {
 function addLock(c = "", q = "") {
   const d = document.createElement("div"); d.className = "lock";
   d.innerHTML = `<input class="lc" placeholder="代號 例 00919" value="${c}"><input class="lq" type="number" min="1" step="1000" placeholder="股數 例 10000" value="${q}"><button class="btn x" title="刪除">✕</button>`;
-  d.querySelector("button").onclick = () => { d.remove(); check(); };
-  d.querySelectorAll("input").forEach(i => i.oninput = check);
+  const hint = document.createElement("div"); hint.className = "hint"; d.appendChild(hint);
+  const upd = () => { const n = Number(d.querySelector(".lq").value); hint.textContent = n > 0 ? `= ${Math.floor(n / 1000)} 張` + (n % 1000 ? ` ${n % 1000} 股` : "") : ""; };
+  d.querySelector("button").onclick = () => { d.remove(); check(); setDirty(true); };
+  d.querySelectorAll("input").forEach(i => i.oninput = () => { upd(); check(); setDirty(true); });
+  upd();
   $("locks").appendChild(d);
 }
 
@@ -290,7 +394,9 @@ function check() {
   $("modeMsg").textContent = mode === "live" ? "⚠️ 真單:程式會用真實資金自動下單" : mode === "paper" ? "模擬:永豐模擬環境下單,不動真錢" : "只通知:換股日發 Telegram,自己下單";
   $("modeMsg").className = "msg " + (mode === "live" ? "warn" : "");
   const e = err.filter(x => x !== 1);
-  status(err.length ? "❌ " + (e[0] || "請修正標紅的欄位") : (file ? `${file}` : ""), err.length ? "msg bad" : "");
+  if (err.length) status("❌ " + (e[0] || "請修正標紅的欄位"), "msg bad");
+  else if (dirty) status("● 有未儲存的修改", "msg dirty");
+  else status(file || "");
   $("save").disabled = !!err.length;
   return !err.length;
 }
@@ -317,7 +423,7 @@ function toYaml(v) {
 
 function diffs(v) {
   const o = orig, out = [];
-  const show = x => Array.isArray(x) ? x.join("、") : (x && typeof x === "object") ? Object.entries(x).map(([c, n]) => `${c} ${n / 1000} 張`).join("、") || "無" : String(x ?? "");
+  const show = x => typeof x === "boolean" ? (x ? "是" : "否") : Array.isArray(x) ? x.join("、") : (x && typeof x === "object") ? Object.entries(x).map(([c, n]) => `${c} ${n / 1000} 張`).join("、") || "無" : String(x ?? "");
   const pairs = [["名稱", o.name, v.name], ["啟用", o.enabled !== false, v.enabled], ["模式", o.mode || "signal", v.mode],
     ["輪動", (o.etfs || []).map(String), v.etfs], ["A", o.A, v.A], ["B", o.B, v.B], ["開始日", iso(o.start_date), v.start_date],
     ["長抱", o.locked || {}, v.locked], ["每次買進", String(o.amount ?? o.max_amount ?? "max"), String(v.amount)], ["API 到期", iso(o.api_expires), v.api_expires]];
@@ -342,10 +448,11 @@ async function commit() {
     const v = collect();
     const r = await gh(`contents/accounts/${encodeURIComponent(file)}`, {method: "PUT",
       body: JSON.stringify({message: `設定頁面:更新 ${file}`, content: b64enc(toYaml(v)), sha})});
-    sha = r.content.sha;
+    dirty = false;
+    sha = r.content.sha; pausePending = false; setDirty(false);
     $("dlg").close();
     await openAcct();
-    status("✓ 已儲存。下一次執行生效,Telegram 會發「設定已更新」", "msg ok");
+    status(v.enabled ? "✓ 已儲存。下一次執行生效,Telegram 會發「設定已更新」" : "✓ 已暫停。程式不再發通知或下單", "msg ok");
   } catch (e) {
     $("dlg").close();
     status(e.status === 409 ? "檔案已被其他地方修改,請按「重新載入」後再改" : e.status === 403 || e.status === 404 ? "權杖沒有寫入權限(Contents: Read and write)" : "儲存失敗:" + e.message, "msg bad");
@@ -353,20 +460,26 @@ async function commit() {
 }
 
 document.addEventListener("click", e => {
-  const c = e.target.closest(".chip"); if (c) { $("s" + c.dataset.k).value = c.dataset.c; check(); }
+  const c = e.target.closest(".chip, table.cand tr[data-c]");
+  if (c) { $("s" + c.dataset.k).value = c.dataset.c; renderChips(); check(); setDirty(true); }
 });
-$("mode").onclick = e => { const b = e.target.closest("button"); if (b) { mode = b.dataset.v; setSeg("mode", mode); check(); } };
-$("amtMode").onclick = e => { const b = e.target.closest("button"); if (b) { amtMode = b.dataset.v; setSeg("amtMode", amtMode); $("amt").disabled = amtMode === "max"; if (amtMode === "num" && !$("amt").value) $("amt").focus(); check(); } };
-["s1", "s2", "s0", "A", "B", "start", "amt", "name", "exp", "enabled"].forEach(id => $(id).addEventListener("input", check));
-$("addLock").onclick = () => { addLock(); check(); };
-$("acct").onchange = openAcct;
-$("reload").onclick = openAcct;
+window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+$("mode").onclick = e => { const b = e.target.closest("button"); if (b) { mode = b.dataset.v; setSeg("mode", mode); check(); setDirty(true); } };
+$("amtMode").onclick = e => { const b = e.target.closest("button"); if (b) { amtMode = b.dataset.v; setSeg("amtMode", amtMode); $("amt").disabled = amtMode === "max"; if (amtMode === "num" && !$("amt").value) $("amt").focus(); check(); setDirty(true); } };
+["s1", "s2", "s0", "A", "B", "start", "amt", "name", "exp", "enabled"].forEach(id => $(id).addEventListener("input", () => { check(); setDirty(true); }));
+["s1", "s2", "s0"].forEach(id => $(id).addEventListener("change", renderChips));
+$("addLock").onclick = () => { addLock(); check(); setDirty(true); };
+$("acct").onchange = () => { if (dirty && !confirm("有未儲存的修改,確定切換帳戶?")) { $("acct").value = file; return; } openAcct(); };
+$("reload").onclick = () => { if (dirty && !confirm("放棄未儲存的修改?")) return; openAcct(); };
+$("pauseBtn").onclick = togglePause;
+$("pingBtn").onclick = ping;
 $("save").onclick = save;
-$("dlgNo").onclick = () => $("dlg").close();
+$("dlgNo").onclick = () => { $("dlg").close(); if (pausePending) { pausePending = false; openAcct(); } };
 $("dlgYes").onclick = commit;
 $("tokSave").onclick = connect;
 $("tok").addEventListener("keydown", e => { if (e.key === "Enter") connect(); });
 $("tokClear").onclick = () => { store(KEY, null); store("etfrot_acct", null); location.reload(); };
+$("repo").value = load("etfrot_repo") || "BitoCat/etf-rotation";
 if (load(KEY)) connect();
 </script>
 </body>
