@@ -277,7 +277,9 @@ async function connect() {
     $("tokCard").querySelector("h2").textContent = "GitHub 權杖 ✓";
     await openAcct();
   } catch (e) {
-    $("tokMsg").textContent = e.status === 401 ? "權杖無效或已過期" : e.status === 404 ? `找不到 ${REPO},或權杖沒有它的讀取權限` : "連線失敗:" + e.message;
+    $("tokMsg").textContent = e.status === 401 ? "權杖無效或已過期" : e.status === 404 ? `找不到 ${REPO},或權杖沒有它的讀取權限`
+      : e.status === 403 ? "這組權杖沒有 Contents 權限(是不是貼成 cron-job.org 用的那組?)。請用開了 Contents: Read and write 的權杖"
+      : "連線失敗:" + e.message;
     $("tokMsg").className = "msg bad";
   }
 }
