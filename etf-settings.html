@@ -228,7 +228,7 @@ const KEY = "etfrot_token";
 const CYC = {1: "1/4/7/10", 2: "2/5/8/11", 0: "3/6/9/12"};
 const KNOWN = {"0056":1,"00713":0,"00878":2,"00690":2,"00894":2,"00918":0,"00919":0,"00929":null,"00731":2};
 const $ = id => document.getElementById(id);
-let tok = "", file = null, sha = null, orig = null, scan = null, mode = "signal", amtMode = "max", dirty = false, lastRun = null;
+let names = {}, tok = "", file = null, sha = null, orig = null, scan = null, mode = "signal", amtMode = "max", dirty = false, lastRun = null;
 
 function store(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
 function load(k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }
@@ -259,7 +259,11 @@ async function connect() {
     $("tokClear").classList.remove("hide");
     $("tokMsg").textContent = "✓ 已連線"; $("tokMsg").className = "msg ok";
     const files = list.filter(f => f.name.endsWith(".yaml")).map(f => f.name);
-    $("acct").innerHTML = files.map(f => `<option>${f}</option>`).join("");
+    names = {};
+    await Promise.all(files.map(async f => {
+      try { const x = await gh(`contents/accounts/${encodeURIComponent(f)}`); names[f] = (jsyaml.load(b64dec(x.content)) || {}).name || ""; } catch (e) { names[f] = ""; }
+    }));
+    $("acct").innerHTML = files.map(f => `<option value="${f}">${names[f] ? names[f] + "(" + f.replace(/\.yaml$/, "") + ")" : f}</option>`).join("");
     const last = load("etfrot_acct");
     if (files.includes(last)) $("acct").value = last;
     try { const s = await gh("contents/state/scan.json"); scan = JSON.parse(b64dec(s.content)); } catch (e) { scan = null; }
@@ -387,7 +391,8 @@ async function createAcct() {
   m.className = "msg"; m.textContent = "建立中…";
   try {
     await gh(`contents/accounts/${fn}`, {method: "PUT", body: JSON.stringify({message: `設定頁面:新增帳戶 ${fn}`, content: b64enc(y)})});
-    $("acct").insertAdjacentHTML("beforeend", `<option>${fn}</option>`);
+    names[fn] = name;
+    $("acct").insertAdjacentHTML("beforeend", `<option value="${fn}">${name}(${id})</option>`);
     m.className = "msg ok"; m.textContent = `✓ 已建立 ${fn}(停用中)。設定好後勾「啟用」再儲存。`;
     $("acct").value = fn;
     try { await openAcct(); } catch (e) { status("已建立,稍後按「重新載入」", "msg warn"); }
@@ -468,6 +473,8 @@ function check() {
     if (!Number.isInteger(q) || q <= 0) err.push(`長抱 ${c} 的股數要是正整數`);
   });
   if (!v.etfs.length) err.push("至少要有一檔輪動 ETF");
+  const dup = Object.entries(names).find(([f, n]) => f !== file && n && n === v.name);
+  if (dup) err.push(`顯示名稱「${v.name}」和 ${dup[0]} 重複,通知會分不清是哪個帳戶`);
   $("modeMsg").textContent = mode === "live" ? "⚠️ 真單:程式會用真實資金自動下單" : mode === "paper" ? "模擬:永豐模擬環境下單,不動真錢" : "只通知:換股日發 Telegram,自己下單";
   $("modeMsg").className = "msg " + (mode === "live" ? "warn" : "");
   const e = err.filter(x => x !== 1);
@@ -527,6 +534,8 @@ async function commit() {
       body: JSON.stringify({message: `設定頁面:更新 ${file}`, content: b64enc(toYaml(v)), sha})});
     dirty = false;
     sha = r.content.sha; pausePending = false; setDirty(false);
+    names[file] = v.name;
+    const opt = [...$("acct").options].find(o => o.value === file); if (opt) opt.textContent = `${v.name}(${file.replace(/\.yaml$/, "")})`;
     $("dlg").close();
     await openAcct();
     status(v.enabled ? "✓ 已儲存。下一次執行生效,Telegram 會發「設定已更新」" : "✓ 已暫停。程式不再發通知或下單", "msg ok");
