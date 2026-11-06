@@ -402,7 +402,7 @@ async function createAcct() {
 
 function setDirty(v) {
   dirty = v;
-  if (v) status("● 有未儲存的修改", "msg dirty");
+  if (v) check();  // check() 會顯示錯誤,沒錯誤才顯示「有未儲存的修改」
 }
 
 function cycOf(code) {
