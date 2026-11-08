@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>除息接力初次設定</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+<script>window.sodium = {onload: function (s) { window._sodiumReady = s; }};</script>
+<script src="https://cdn.jsdelivr.net/npm/libsodium@0.7.15/dist/modules/libsodium.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/libsodium-wrappers@0.7.15/dist/modules/libsodium-wrappers.js"></script>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--ink:#1c2230;--mute:#6b7385;--line:#e2e5eb;--acc:#1f6feb;--acc-ink:#fff;--ok:#1a7f37;--warn:#b35900;--bad:#c62828;--chip:#eef2f8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1218;--card:#171b23;--ink:#e6e9ef;--mute:#98a1b3;--line:#2a303c;--acc:#4c8dff;--ok:#3fb950;--warn:#e3a33b;--bad:#ff6b6b;--chip:#222836}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px 16px 64px}
+h1{font-size:20px;margin:8px 0 2px}
+.sub{color:var(--mute);font-size:13px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+.card h2{font-size:16px;margin:0 0 10px;display:flex;gap:8px;align-items:center}
+.num{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--chip);font-size:13px;font-weight:700;flex:none}
+.card.done .num{background:var(--ok);color:#fff}
+.card.lock{opacity:.5;pointer-events:none}
+label{display:block;font-size:13px;color:var(--mute);margin:0 0 4px}
+input,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+input[type=file]{padding:8px}
+input:focus{outline:2px solid var(--acc);outline-offset:-1px}
+.field{margin-bottom:12px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn{border:0;border-radius:8px;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer}
+.btn.pri{background:var(--acc);color:var(--acc-ink)}
+.btn.ghost{background:transparent;color:var(--acc);border:1px solid var(--line)}
+.btn:disabled{opacity:.5;cursor:default}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.msg{font-size:13px;margin-top:6px;white-space:pre-line}
+.msg.ok{color:var(--ok)}.msg.bad{color:var(--bad)}.msg.warn{color:var(--warn)}
+small.note{display:block;color:var(--mute);font-size:12px;margin-top:4px}
+ol.how{margin:6px 0 10px;padding-left:20px;font-size:13px;color:var(--mute)}
+ol.how b{color:var(--ink)}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px}
+.chk input{width:auto}
+ul.prog{list-style:none;padding:0;margin:8px 0 0;font-size:14px}
+ul.prog li{padding:4px 0}
+a{color:var(--acc)}
+.hide{display:none}
+.warnbox{border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--mute);margin-bottom:12px}
+.rules{font-size:13px;color:var(--mute);margin:0;padding-left:18px}
+@media (max-width:520px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <h1>除息接力初次設定</h1>
+  <div class="sub">每個帳戶(例如 MEI、品雯)各做一次。資料從你的瀏覽器直接加密送到 GitHub,不經過其他伺服器。</div>
+  <div class="warnbox">金鑰、憑證、身分證字號只輸入在<b>帳戶本人</b>知情同意的裝置上,不要交給別人代填。
+    這個頁面的程式碼是公開的,可以檢查它只連線到 GitHub 與 Telegram。</div>
+
+  <section class="card">
+    <h2>策略規則(回測 2016~2026)</h2>
+    <ul class="rules">
+      <li>候選:已公告除息、純現金配息的上市個股,股價 ≥ 10 元、均量 ≥ 200 張</li>
+      <li>門檻:現金股利 ÷ 股價 ≥ 5%,合格名單內挑哪一檔都可以</li>
+      <li>勾選後下一個交易日 14:00 盤後定價買進;除息前一個交易日一律賣出</li>
+      <li>建議同時 3~5 檔、每檔金額自己分配</li>
+    </ul>
+  </section>
+
+  <!-- 1 GitHub -->
+  <section class="card" id="c1">
+    <h2><span class="num">1</span>連結 GitHub</h2>
+    <ol class="how">
+      <li>程式放在私人 repo <b>exdiv-trader</b>(MEI、品雯等帳戶都在同一個 repo,各用自己的金鑰前綴)</li>
+      <li>到 <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">建立權杖</a>:Repository access 只選 <b>exdiv-trader</b>;
+        權限開 <b>Contents</b>、<b>Secrets</b>、<b>Actions</b> 三項,都選 <b>Read and write</b> → Generate → 複製</li>
+    </ol>
+    <div class="field"><label for="repo">repo(帳號/名稱)</label><input id="repo" placeholder="BitoCat/exdiv-trader" autocomplete="off"></div>
+    <div class="field"><label for="tok">權杖</label><input id="tok" type="password" placeholder="github_pat_…" autocomplete="off"></div>
+    <div class="acts"><button class="btn pri" id="b1">檢查</button></div>
+    <div class="msg" id="m1"></div>
+  </section>
+
+  <!-- 2 帳戶 -->
+  <section class="card lock" id="c2">
+    <h2><span class="num">2</span>帳戶</h2>
+    <div class="row">
+      <div class="field"><label for="aid">帳戶代號(英文小寫,例 mei、pinwen)</label><input id="aid" autocomplete="off" placeholder="mei"></div>
+      <div class="field"><label for="nm">通知顯示名稱</label><input id="nm" placeholder="例 MEI"></div>
+    </div>
+    <small class="note" id="aidNote">金鑰前綴會用代號的大寫,例 mei → MEI_API_KEY。</small>
+    <div class="acts"><button class="btn pri" id="b2">下一步</button></div>
+    <div class="msg" id="m2"></div>
+  </section>
+
+  <!-- 3 Telegram -->
+  <section class="card lock" id="c3">
+    <h2><span class="num">3</span>Telegram 通知</h2>
+    <ol class="how">
+      <li>可以沿用 ETF 輪動用的機器人;要新開就在 Telegram 搜尋 <b>@BotFather</b> → <b>/newbot</b> → 複製 <b>token</b></li>
+      <li>打開機器人 → 按 <b>Start</b>,再隨便傳一句話給它</li>
+    </ol>
+    <div class="field"><label for="bot">機器人 token</label><input id="bot" type="password" placeholder="1234567890:AA…" autocomplete="off"></div>
+    <div class="acts"><button class="btn ghost" id="b3a">找出我的 Chat ID</button></div>
+    <div class="field" style="margin-top:10px"><label for="chat">Chat ID</label><input id="chat" inputmode="numeric" placeholder="自動帶入,或用 @userinfobot 查 Id 後填入"></div>
+    <div class="acts"><button class="btn pri" id="b3">發送測試訊息</button></div>
+    <div class="msg" id="m3"></div>
+  </section>
+
+  <!-- 4 永豐 -->
+  <section class="card lock" id="c4">
+    <h2><span class="num">4</span>永豐 API(要自動下單才需要)</h2>
+    <label class="chk"><input type="checkbox" id="skipSino"> 先跳過,只收通知(之後再回來填)</label>
+    <div id="sino">
+      <ol class="how">
+        <li>用<b>帳戶本人</b>登入永豐金證券網站 → <b>簽署中心</b> → 簽所有 API 相關條款</li>
+        <li><a href="https://www.sinotrade.com.tw/newweb/PythonAPIKey/" target="_blank" rel="noopener">API 管理</a> → 新增 API Key:勾行情、帳務、交易(有「正式環境」也勾),<b>不要設 IP</b></li>
+        <li>同一頁按 <b>下載憑證</b>,得到 Sinopac.pfx</li>
+      </ol>
+      <div class="row">
+        <div class="field"><label for="ak">API Key</label><input id="ak" type="password" autocomplete="off"></div>
+        <div class="field"><label for="sk">Secret Key</label><input id="sk" type="password" autocomplete="off"></div>
+      </div>
+      <div class="field"><label for="pfx">憑證檔 Sinopac.pfx</label><input id="pfx" type="file" accept=".pfx,.p12"><small class="note">只在瀏覽器裡轉換,加密後直接存進 GitHub Secrets。</small></div>
+      <div class="row">
+        <div class="field"><label for="pid">身分證字號</label><input id="pid" autocomplete="off" placeholder="A123456789"></div>
+        <div class="field"><label for="cap">憑證密碼</label><input id="cap" type="password" autocomplete="off" placeholder="空白=同身分證字號"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="sacct">證券帳號(有兩個以上永豐證券戶才需要)</label><input id="sacct" inputmode="numeric" autocomplete="off" placeholder="例 品雯第二個帳戶的帳號"></div>
+        <div class="field"><label for="exp">API Key 到期日</label><input id="exp" type="date"></div>
+      </div>
+      <small class="note">同一個人在永豐有兩個證券戶(例如品雯已有 ETF 輪動帳戶),這裡<b>一定要填新帳戶的證券帳號</b>;沒填的話程式為了安全不會下單。
+        不確定帳號的話先留空,完成後按「正式環境檢查」,Telegram 會列出每個帳號末 4 碼。</small>
+    </div>
+    <div class="acts"><button class="btn pri" id="b4">下一步</button></div>
+    <div class="msg" id="m4"></div>
+  </section>
+
+  <!-- 5 寫入 -->
+  <section class="card lock" id="c5">
+    <h2><span class="num">5</span>寫入 GitHub</h2>
+    <div class="field"><label for="my">候選通知門檻:現金殖利率 ≥(%)</label><input id="my" type="number" value="5" min="0" max="20" step="0.5"></div>
+    <div class="msg" id="sum"></div>
+    <div class="acts"><button class="btn pri" id="b5">確認寫入</button></div>
+    <ul class="prog" id="prog"></ul>
+    <div id="after" class="hide">
+      <div class="msg ok">✓ 設定完成!約 1 分鐘後 Telegram 會收到「設定已啟用」。</div>
+      <div class="acts">
+        <button class="btn ghost" id="bSim">永豐模擬測試(平日 08:00–18:00)</button>
+        <button class="btn ghost" id="bLive">正式環境檢查(列出證券帳號)</button>
+      </div>
+      <div class="msg" id="m5"></div>
+      <small class="note">模式先設為「只通知」:程式只發 Telegram 提醒、不會下單。
+        之後到 <a href="exdiv.html">選股頁面</a> 勾選候選、填金額,也在那裡切換模擬或真單。</small>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let REPO = "", TOK = "", acct = null, acctSha = null, pfxB64 = "", AID = "", PFX = "";
+const store = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
+const load = k => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } };
+const b64dec = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g, "")), c => c.charCodeAt(0)));
+const b64enc = s => { const b = new TextEncoder().encode(s); let o = ""; b.forEach(x => o += String.fromCharCode(x)); return btoa(o); };
+const say = (id, t, c = "") => { $(id).textContent = t; $(id).className = "msg " + c; };
+const isoDate = v => v instanceof Date ? v.toISOString().slice(0, 10) : String(v ?? "").slice(0, 10);  // js-yaml 會把日期讀成 Date
+
+async function gh(path, opt = {}) {
+  const r = await fetch(`https://api.github.com/repos/${REPO}${path ? "/" + path : ""}`, {...opt,
+    headers: {Authorization: `Bearer ${TOK}`, Accept: "application/vnd.github+json", ...(opt.headers || {})}});
+  if (!r.ok) throw Object.assign(new Error(`${r.status} ${(await r.text()).slice(0, 120)}`), {status: r.status});
+  const t = await r.text(); return t ? JSON.parse(t) : {};
+}
+function unlock(n) { for (let i = 1; i <= 5; i++) $("c" + i).classList.toggle("lock", i > n); }
+function done(n) { $("c" + n).classList.add("done"); }
+
+// 1 GitHub
+$("b1").onclick = async () => {
+  REPO = ($("repo").value.trim() || "BitoCat/exdiv-trader").replace(/^https?:\/\/github.com\//, "").replace(/\/$/, "");
+  TOK = $("tok").value.trim();
+  if (!/^[\w.-]+\/[\w.-]+$/.test(REPO)) return say("m1", "repo 格式:帳號/名稱,例 BitoCat/exdiv-trader", "bad");
+  if (!TOK) return say("m1", "請貼上權杖", "bad");
+  say("m1", "檢查中…");
+  const miss = [];
+  try {
+    const info = await gh("");
+    if (!info.private) miss.push("⚠️ 這個 repo 是公開的,請到 Settings 改成 Private");
+    try { await gh("contents/run.py"); } catch (e) { if (e.status === 404) return say("m1", "❌ 這個 repo 裡找不到 run.py,請確認是 exdiv-trader", "bad"); miss.push("❌ 沒有 Contents 權限"); }
+    try { await gh("actions/secrets/public-key"); } catch (e) { miss.push("❌ 沒有 Secrets 權限"); }
+    try { await gh("actions/workflows"); } catch (e) { miss.push("❌ 沒有 Actions 權限"); }
+    if (miss.some(x => x.startsWith("❌"))) return say("m1", miss.join("\n") + "\n請到 GitHub 權杖設定補上(Read and write)", "bad");
+    let names = [];
+    try { names = (await gh("contents/accounts")).map(f => f.name).filter(n => n.endsWith(".yaml") && n !== "example.yaml"); } catch (e) {}
+    store("exdiv_token", TOK); store("exdiv_repo", REPO);
+    say("m1", ["✓ 已連結 " + REPO, names.length ? "已有帳戶:" + names.map(n => n.replace(".yaml", "")).join("、") + "(填同一個代號 = 更新它)" : "", ...miss].filter(Boolean).join("\n"), miss.length ? "warn" : "ok");
+    done(1); unlock(2);
+  } catch (e) {
+    say("m1", e.status === 401 ? "權杖無效或已過期" : e.status === 404 ? "找不到這個 repo,或權杖沒有選到它" : "檢查失敗:" + e.message, "bad");
+  }
+};
+
+// 2 帳戶
+$("aid").oninput = () => { const v = $("aid").value.trim().toLowerCase(); $("aidNote").textContent = v ? `金鑰前綴:${v.toUpperCase()}_API_KEY、${v.toUpperCase()}_SECRET_KEY…` : "金鑰前綴會用代號的大寫,例 mei → MEI_API_KEY。"; };
+$("b2").onclick = async () => {
+  AID = $("aid").value.trim().toLowerCase();
+  if (!/^[a-z][a-z0-9_]{1,19}$/.test(AID) || AID === "example") return say("m2", "代號只能用英文小寫、數字、底線,2~20 字,英文開頭", "bad");
+  PFX = AID.toUpperCase();
+  acct = null; acctSha = null;
+  try { const f = await gh(`contents/accounts/${AID}.yaml`); acct = jsyaml.load(b64dec(f.content)) || {}; acctSha = f.sha; }
+  catch (e) { if (e.status !== 404) return say("m2", "讀取失敗:" + e.message, "bad"); }
+  if (acct) {
+    if (!$("nm").value) $("nm").value = acct.name || "";
+    if (acct.telegram_chat) $("chat").value = acct.telegram_chat;
+    if (acct.stock_account) $("sacct").value = acct.stock_account;
+    if (acct.min_yield != null) $("my").value = +(acct.min_yield * 100).toFixed(2);
+    say("m2", `這個帳戶已存在(目前 ${({signal: "只通知", paper: "模擬", live: "真單"})[acct.mode] || acct.mode}),會保留它的選股與模式,只更新你這次填的資料。`, "warn");
+  } else say("m2", `✓ 新帳戶 ${AID}`, "ok");
+  if (!$("nm").value.trim()) $("nm").value = AID.toUpperCase();
+  done(2); unlock(3);
+};
+
+// 3 Telegram
+async function tg(method, body) {
+  const r = await fetch(`https://api.telegram.org/bot${$("bot").value.trim()}/${method}`, body ? {method: "POST",
+    headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)} : {});
+  const j = await r.json(); if (!j.ok) throw new Error(j.description || "Telegram 錯誤"); return j.result;
+}
+$("b3a").onclick = async () => {
+  if (!/^\d+:[\w-]{30,}$/.test($("bot").value.trim())) return say("m3", "token 格式不對,應該像 1234567890:AA…", "bad");
+  say("m3", "查詢中…");
+  try {
+    const me = await tg("getMe");
+    const ups = await tg("getUpdates");
+    const chats = {};
+    ups.forEach(u => { const m = u.message || u.channel_post || u.my_chat_member; if (m && m.chat) chats[m.chat.id] = m.chat.title || [m.chat.first_name, m.chat.last_name].filter(Boolean).join(" ") || m.chat.username; });
+    const ids = Object.keys(chats);
+    if (!ids.length) return say("m3", `機器人 @${me.username} 正常,但還沒收到訊息。\n請在 Telegram 打開 @${me.username} → 按 Start → 傳一句話,再按一次。`, "warn");
+    $("chat").value = ids[ids.length - 1];
+    say("m3", `✓ 機器人 @${me.username};找到:${ids.map(i => `${chats[i]}(${i})`).join("、")}`, "ok");
+  } catch (e) {
+    say("m3", `查詢失敗:${e.message}\n可以改用 Telegram 的 @userinfobot 查你的 Id,手動填入。`, "bad");
+  }
+};
+$("b3").onclick = async () => {
+  const chat = $("chat").value.trim();
+  if (!/^-?\d+$/.test(chat)) return say("m3", "Chat ID 要是數字", "bad");
+  if (!$("bot").value.trim()) return say("m3", "請填機器人 token", "bad");
+  say("m3", "發送中…");
+  try {
+    await tg("sendMessage", {chat_id: chat, text: `【除息接力|${$("nm").value.trim() || AID}】測試訊息:收到這則就代表通知設定正確 ✅`});
+    say("m3", "✓ 已發送,請確認 Telegram 有收到", "ok"); done(3); unlock(4);
+  } catch (e) {
+    say("m3", "發送失敗:" + e.message + "\n請確認已對機器人按 Start,Chat ID 正確。", "bad");
+  }
+};
+
+// 4 永豐
+$("skipSino").onchange = () => $("sino").classList.toggle("hide", $("skipSino").checked);
+$("pfx").onchange = () => {
+  const f = $("pfx").files[0]; pfxB64 = "";
+  if (!f) return;
+  if (f.size > 40000) return say("m4", "檔案太大,請確認選的是 Sinopac.pfx", "bad");
+  const rd = new FileReader();
+  rd.onload = () => { pfxB64 = rd.result.split(",")[1]; say("m4", `✓ 已讀取 ${f.name}`, "ok"); };
+  rd.readAsDataURL(f);
+};
+$("b4").onclick = () => {
+  if (!$("skipSino").checked) {
+    const pid = $("pid").value.trim().toUpperCase();
+    if (!$("ak").value.trim() || !$("sk").value.trim()) return say("m4", "請填 API Key 與 Secret Key", "bad");
+    if (!pfxB64) return say("m4", "請選擇 Sinopac.pfx", "bad");
+    if (!/^[A-Z][12489]\d{8}$/.test(pid)) return say("m4", "身分證字號格式不對", "bad");
+    if ($("sacct").value.trim() && !/^\d{5,12}$/.test($("sacct").value.trim())) return say("m4", "證券帳號只能是數字", "bad");
+    $("pid").value = pid;
+  }
+  say("m4", $("skipSino").checked ? "已跳過:只會發通知" : "✓ 已填好", "ok");
+  const sino = !$("skipSino").checked;
+  $("sum").textContent = `repo:${REPO}\n帳戶:${AID}(${$("nm").value.trim()})|金鑰前綴 ${PFX}\n通知:Chat ${$("chat").value}\n` +
+    `永豐 API:${sino ? "寫入 5 個金鑰" + ($("sacct").value.trim() ? `,指定證券帳號 …${$("sacct").value.trim().slice(-4)}` : "") : "跳過"}\n` +
+    `模式:${acct ? "保留目前設定" : "只通知(不會下單)"}`;
+  done(4); unlock(5);
+};
+
+// 5 寫入
+function toYaml() {
+  const q = s => JSON.stringify(String(s ?? "")), a = acct || {};
+  const sino = !$("skipSino").checked;
+  const my = Math.max(0, Math.min(20, Number($("my").value) || 5)) / 100;
+  const picks = Array.isArray(a.picks) ? a.picks : [];
+  const L = [`# 由初次設定頁面${acct ? "更新" : "建立"} ${new Date().toLocaleString("zh-TW", {hour12: false})}`,
+    `id: ${AID}`, `name: ${q($("nm").value.trim() || AID)}`, `enabled: ${a.enabled === false ? "false" : "true"}`,
+    `mode: ${a.mode || "signal"}            # signal(只通知)→ paper(模擬)→ live(真單)`, "broker: shioaji",
+    `stock_account: ${q(sino ? $("sacct").value.trim() : (a.stock_account || ""))}   # 同一人在永豐有多個證券戶時必填`,
+    `telegram_chat: ${q($("chat").value.trim())}`, `secrets_prefix: ${PFX}`,
+    `min_yield: ${my}         # 候選通知門檻:現金殖利率`];
+  const exp = sino ? $("exp").value : (a.api_expires ? isoDate(a.api_expires) : "");
+  if (exp) L.push(`api_expires: ${exp}`);
+  L.push(picks.length ? "picks:" : "picks: []               # 由選股頁面勾選寫入");
+  picks.forEach(p => L.push(`  - {code: ${q(p.code)}, name: ${q(p.name || "")}, ex_date: ${q(isoDate(p.ex_date))}, amount: ${Number(p.amount)}}`));
+  return L.join("\n") + "\n";
+}
+async function putSecret(key, name, value) {
+  const s = window._sodiumReady || (window.sodium && window.sodium.ready && (await window.sodium.ready, window.sodium));
+  const enc = s.crypto_box_seal(s.from_string(value), s.from_base64(key.key, s.base64_variants.ORIGINAL));
+  await gh(`actions/secrets/${name}`, {method: "PUT", body: JSON.stringify({encrypted_value: s.to_base64(enc, s.base64_variants.ORIGINAL), key_id: key.key_id})});
+}
+$("b5").onclick = async () => {
+  const sino = !$("skipSino").checked, pid = $("pid").value.trim().toUpperCase();
+  const items = [[`${PFX}_BOT_TOKEN`, $("bot").value.trim()]];
+  if (sino) items.push([`${PFX}_API_KEY`, $("ak").value.trim()], [`${PFX}_SECRET_KEY`, $("sk").value.trim()],
+    [`${PFX}_CA_BASE64`, pfxB64], [`${PFX}_CA_PASSWORD`, $("cap").value.trim() || pid], [`${PFX}_PERSON_ID`, pid]);
+  $("b5").disabled = true; $("prog").innerHTML = "";
+  const line = t => { const li = document.createElement("li"); li.textContent = t; $("prog").appendChild(li); return li; };
+  try {
+    if (!window._sodiumReady && !(window.sodium && window.sodium.crypto_box_seal)) {
+      const w = line("⏳ 載入加密元件…"); for (let i = 0; i < 50 && !window._sodiumReady; i++) await new Promise(r => setTimeout(r, 200));
+      if (!window._sodiumReady) throw new Error("加密元件載入失敗,請重新整理頁面"); w.textContent = "✅ 加密元件";
+    }
+    const key = await gh("actions/secrets/public-key");
+    for (const [n, val] of items) { if (!val) continue; const li = line(`⏳ ${n}`); await putSecret(key, n, val); li.textContent = `✅ ${n}`; }
+    const li = line(`⏳ 帳戶設定 accounts/${AID}.yaml`);
+    let sha = acctSha;
+    try { sha = (await gh(`contents/accounts/${AID}.yaml`)).sha; } catch (e) { if (e.status !== 404) throw e; sha = null; }
+    await gh(`contents/accounts/${AID}.yaml`, {method: "PUT", body: JSON.stringify({message: `初次設定頁面:${acct ? "更新" : "建立"}帳戶 ${AID}`,
+      content: b64enc(toYaml()), ...(sha ? {sha} : {})})});
+    li.textContent = "✅ 帳戶設定";
+    const l2 = line("⏳ 發送目前狀態");
+    try { await gh("actions/workflows/exdiv.yml/dispatches", {method: "POST", body: JSON.stringify({ref: "main", inputs: {mode: "status", account: AID}})}); l2.textContent = "✅ 已請程式發送目前狀態"; }
+    catch (e) { l2.textContent = "⚠️ 無法自動執行(可到 GitHub Actions 手動按 Run workflow)"; }
+    ["ak", "sk", "pid", "cap", "bot"].forEach(i => $(i).value = ""); pfxB64 = ""; $("pfx").value = "";
+    store("exdiv_account", AID);
+    done(5); $("after").classList.remove("hide"); $("bSim").disabled = $("bLive").disabled = !sino && !(acct && acct.secrets_prefix);
+  } catch (e) {
+    line("❌ " + (e.status === 403 ? "權杖權限不足(需要 Contents / Secrets / Actions 的 Read and write)" : e.message));
+    $("b5").disabled = false;
+  }
+};
+async function run(mode) {
+  try { await gh("actions/workflows/exdiv.yml/dispatches", {method: "POST", body: JSON.stringify({ref: "main", inputs: {mode, account: AID}})});
+    say("m5", "✓ 已送出,約 1–2 分鐘後 Telegram 會收到結果", "ok"); }
+  catch (e) { say("m5", "送出失敗:" + e.message, "bad"); }
+}
+$("bSim").onclick = () => run("simtest");
+$("bLive").onclick = () => run("livecheck");
+$("repo").value = load("exdiv_repo") || "BitoCat/exdiv-trader";
+</script>
+</body>
+</html>

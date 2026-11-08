@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>除息接力選股</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--ink:#1c2230;--mute:#6b7385;--line:#e2e5eb;--acc:#1f6feb;--acc-ink:#fff;--ok:#1a7f37;--warn:#b35900;--bad:#c62828;--chip:#eef2f8;--sel:#e8f0fe}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1218;--card:#171b23;--ink:#e6e9ef;--mute:#98a1b3;--line:#2a303c;--acc:#4c8dff;--ok:#3fb950;--warn:#e3a33b;--bad:#ff6b6b;--chip:#222836;--sel:#1b2638}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
+main{max-width:720px;margin:0 auto;padding:16px 16px 120px}
+h1{font-size:20px;margin:8px 0 2px}
+.sub{color:var(--mute);font-size:13px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+.card h2{font-size:16px;margin:0 0 10px;display:flex;gap:8px;align-items:center;justify-content:space-between}
+label{display:block;font-size:13px;color:var(--mute);margin:0 0 4px}
+input,select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+input:focus,select:focus{outline:2px solid var(--acc);outline-offset:-1px}
+.field{margin-bottom:10px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.btn{border:0;border-radius:8px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn.pri{background:var(--acc);color:var(--acc-ink)}
+.btn.ghost{background:transparent;color:var(--acc);border:1px solid var(--line)}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:default}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center}
+.msg{font-size:13px;margin-top:6px;white-space:pre-line}
+.msg.ok{color:var(--ok)}.msg.bad{color:var(--bad)}.msg.warn{color:var(--warn)}
+small.note{display:block;color:var(--mute);font-size:12px;margin-top:4px}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{flex:1;white-space:nowrap;border:0;background:transparent;color:var(--ink);padding:8px 6px;font:inherit;cursor:pointer}
+.seg button.on{background:var(--acc);color:var(--acc-ink)}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;margin:0;color:var(--ink)}
+.chk input{width:auto;margin:0}
+a{color:var(--acc)}
+.hide{display:none}
+.pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;background:var(--chip);color:var(--mute);font-weight:500}
+.pill.ok{color:var(--ok)}.pill.warn{color:var(--warn)}.pill.bad{color:var(--bad)}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.kpi{background:var(--bg);border-radius:8px;padding:8px 10px}
+.kpi b{display:block;font-size:17px}
+.kpi span{font-size:12px;color:var(--mute)}
+.cand{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center}
+.cand.on{background:var(--sel);border-color:var(--acc)}
+.cand.lockd{opacity:.85}
+.cand input[type=checkbox]{width:20px;height:20px;margin:0}
+.cand .nm{font-weight:700}
+.cand .y{font-size:18px;font-weight:700;text-align:right}
+.cand .det{grid-column:2/4;font-size:13px;color:var(--mute)}
+.cand .amt{grid-column:2/4;display:flex;gap:8px;align-items:center}
+.cand .amt input{max-width:170px}
+.cand .amt span{font-size:13px;color:var(--mute)}
+.cand .amt.hide{display:none}
+.pos{border-bottom:1px solid var(--line);padding:8px 0;display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:14px}
+.pos:last-child{border-bottom:0}
+.pos .d{font-size:12px;color:var(--mute)}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 16px}
+.bar .in{max-width:720px;margin:0 auto;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.bar .t{font-size:14px}
+.empty{color:var(--mute);font-size:14px;padding:6px 0}
+.diff{font-size:13px;white-space:pre-line;background:var(--bg);border-radius:8px;padding:8px 10px;margin-top:8px}
+@media (max-width:520px){.row,.row3{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<main>
+  <h1>除息接力選股</h1>
+  <div class="sub">勾選要買的股票、填每檔金額 → 儲存。下一個交易日 14:00 盤後定價買進,除息前一個交易日自動賣出。
+    第一次使用請先完成 <a href="exdiv-setup.html">初次設定</a>。</div>
+
+  <!-- 連線 -->
+  <section class="card" id="cConn">
+    <h2>連線</h2>
+    <div class="row">
+      <div class="field"><label for="repo">repo</label><input id="repo" autocomplete="off" placeholder="BitoCat/exdiv-trader"></div>
+      <div class="field"><label for="tok">GitHub 權杖(只存在這台裝置)</label><input id="tok" type="password" autocomplete="off" placeholder="github_pat_…"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="acctSel">帳戶</label><select id="acctSel"><option value="">先按「連線」</option></select></div>
+      <div class="field"><label>&nbsp;</label><div class="acts" style="margin:0"><button class="btn pri" id="bConn">連線</button><button class="btn ghost" id="bForget">忘記權杖</button></div></div>
+    </div>
+    <div class="msg" id="mConn"></div>
+  </section>
+
+  <div id="app" class="hide">
+    <!-- 狀態 -->
+    <section class="card">
+      <h2><span>帳戶狀態</span><span class="pill" id="lastRun"></span></h2>
+      <div class="kpis">
+        <div class="kpi"><b id="kAct">-</b><span>持有/待買</span></div>
+        <div class="kpi"><b id="kAmt">-</b><span>已選總金額</span></div>
+        <div class="kpi"><b id="kPnl">-</b><span>已出場累計損益</span></div>
+      </div>
+      <div class="msg" id="mkt"></div>
+      <div class="row" style="margin-top:10px">
+        <div class="field"><label>模式</label>
+          <div class="seg" id="mode"><button data-v="signal">只通知</button><button data-v="paper">模擬</button><button data-v="live">真單</button></div>
+          <div class="msg" id="modeMsg"></div></div>
+        <div class="field"><label for="my">候選門檻:現金殖利率 ≥(%)</label><input id="my" type="number" min="0" max="20" step="0.5">
+          <label class="chk" style="margin-top:8px"><input type="checkbox" id="enabled"> 啟用(取消 = 暫停,不通知也不下單)</label></div>
+      </div>
+      <div class="acts"><button class="btn ghost sm" id="bStatus">立即發送狀態到 Telegram</button><span class="msg" id="mStatus"></span></div>
+    </section>
+
+    <!-- 候選 -->
+    <section class="card">
+      <h2><span>除息候選</span><span class="pill" id="candDate"></span></h2>
+      <div class="row3">
+        <div class="field"><label for="defAmt">每檔預設金額(元)</label><input id="defAmt" type="number" min="1000" step="10000" placeholder="例 100000"></div>
+        <div class="field"><label>&nbsp;</label><label class="chk"><input type="checkbox" id="showLate" checked> 顯示距除息較近(3~14 日)</label></div>
+        <div class="field"><label>&nbsp;</label><label class="chk"><input type="checkbox" id="showEarly"> 顯示較遠(> 40 日)</label></div>
+      </div>
+      <small class="note">回測:殖利率 ≥ 5% 的合格名單內挑哪一檔都可以;除息前 15~40 個交易日進場最好;建議同時 3~5 檔分散。
+        <span class="pill ok">建議區間</span> 15~40 日 <span class="pill warn">較近</span> 3~14 日(效果較弱)</small>
+      <div id="cands" style="margin-top:10px"></div>
+    </section>
+
+    <!-- 持倉 -->
+    <section class="card">
+      <h2>我的選股與持倉</h2>
+      <div id="active"></div>
+      <details style="margin-top:8px"><summary style="cursor:pointer;font-size:14px">已出場紀錄</summary><div id="closed"></div></details>
+    </section>
+
+    <section class="card hide" id="cConfirm">
+      <h2>確認儲存</h2>
+      <div class="diff" id="diff"></div>
+      <div class="acts"><button class="btn pri" id="bSave2">確認儲存</button><button class="btn ghost" id="bCancel">再改一下</button></div>
+      <div class="msg" id="mSave"></div>
+    </section>
+  </div>
+</main>
+
+<div class="bar hide" id="bar"><div class="in">
+  <div class="t" id="barTxt"></div>
+  <button class="btn pri" id="bSave">儲存</button>
+</div></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const store = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
+const load = k => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } };
+const b64dec = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g, "")), c => c.charCodeAt(0)));
+const b64enc = s => { const b = new TextEncoder().encode(s); let o = ""; b.forEach(x => o += String.fromCharCode(x)); return btoa(o); };
+const say = (id, t, c = "") => { $(id).textContent = t; $(id).className = "msg " + c; };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c]);
+const WD = "日一二三四五六";
+const md = s => { if (!s) return "-"; const d = new Date(isoDate(s) + "T00:00:00"); return `${d.getMonth() + 1}/${d.getDate()}(${WD[d.getDay()]})`; };
+const money = n => Math.round(n).toLocaleString("zh-TW");
+const pct = x => (x * 100).toFixed(1) + "%";
+const isoDate = v => v instanceof Date ? v.toISOString().slice(0, 10) : String(v ?? "").slice(0, 10);  // js-yaml 會把日期讀成 Date
+const keyOf = (c, ex) => `${c}@${isoDate(ex)}`;
+
+let REPO = "", TOK = "", FILE = "", acct = null, sha = null, cands = null, state = null, mode = "signal";
+let sel = {};        // key -> {code, name, ex_date, amount}  (目前勾選/保留的選股)
+let orig = {};       // 儲存時比較用
+let lockedKeys = new Set();   // 已買進的(不能取消)
+let dirty = false;
+
+async function gh(path, opt = {}) {
+  const r = await fetch(`https://api.github.com/repos/${REPO}${path ? "/" + path : ""}`, {...opt, cache: "no-store",
+    headers: {Authorization: `Bearer ${TOK}`, Accept: "application/vnd.github+json", ...(opt.headers || {})}});
+  if (!r.ok) throw Object.assign(new Error(`${r.status} ${(await r.text()).slice(0, 120)}`), {status: r.status});
+  const t = await r.text(); return t ? JSON.parse(t) : {};
+}
+async function getJson(path) {
+  try { const f = await gh(`contents/${path}`); return JSON.parse(b64dec(f.content)); }
+  catch (e) { if (e.status === 404) return null; throw e; }
+}
+
+// ---------- 連線
+$("bConn").onclick = async () => {
+  REPO = ($("repo").value.trim() || "BitoCat/exdiv-trader").replace(/^https?:\/\/github.com\//, "").replace(/\/$/, "");
+  TOK = $("tok").value.trim() || load("exdiv_token");
+  if (!TOK) return say("mConn", "請貼上 GitHub 權杖(Contents: Read and write;要用「立即發送狀態」再加 Actions)", "bad");
+  say("mConn", "連線中…");
+  try {
+    const list = (await gh("contents/accounts")).map(f => f.name).filter(n => n.endsWith(".yaml") && n !== "example.yaml");
+    if (!list.length) return say("mConn", "repo 裡還沒有帳戶,請先完成初次設定", "warn");
+    store("exdiv_token", TOK); store("exdiv_repo", REPO); $("tok").value = "";
+    const want = $("acctSel").value || load("exdiv_account");
+    $("acctSel").innerHTML = list.map(n => `<option value="${esc(n)}">${esc(n.replace(".yaml", ""))}</option>`).join("");
+    $("acctSel").value = list.includes(want) ? want : (list.includes(want + ".yaml") ? want + ".yaml" : list[0]);
+    await openAccount($("acctSel").value);
+  } catch (e) {
+    say("mConn", e.status === 401 ? "權杖無效或已過期" : e.status === 404 ? "找不到 repo,或權杖沒有選到它" : "連線失敗:" + e.message, "bad");
+  }
+};
+$("acctSel").onchange = () => { if (dirty && !confirm("有尚未儲存的變更,確定切換帳戶?")) return; openAccount($("acctSel").value); };
+$("bForget").onclick = () => { store("exdiv_token", null); $("tok").value = ""; say("mConn", "已刪除這台裝置記住的權杖", "ok"); };
+
+async function openAccount(file) {
+  FILE = file; store("exdiv_account", file);
+  say("mConn", "讀取中…");
+  const f = await gh(`contents/accounts/${encodeURIComponent(file)}`);
+  acct = jsyaml.load(b64dec(f.content)) || {}; sha = f.sha;
+  const id = acct.id || file.replace(".yaml", "");
+  [cands, state] = await Promise.all([getJson("state/candidates.json"), getJson(`state/${id}.json`)]);
+  const last = await getJson("state/_last_run.json");
+  sel = {}; lockedKeys = new Set();
+  const posAll = (state && state.positions) || {};
+  (acct.picks || []).forEach(p => { const k = keyOf(p.code, p.ex_date), s = posAll[k];
+    if (s && ["closed", "expired"].includes(s.status)) return;   // 已出場/過期的選股不再顯示,下次儲存時順便清掉
+    sel[k] = {code: String(p.code), name: p.name || "", ex_date: isoDate(p.ex_date), amount: Number(p.amount)}; });
+  Object.values((state && state.positions) || {}).forEach(p => { if ((p.bought - p.sold) > 0) lockedKeys.add(p.key); });
+  orig = JSON.parse(JSON.stringify(sel));
+  mode = acct.mode || "signal"; setSeg(mode);
+  $("enabled").checked = acct.enabled !== false;
+  $("my").value = +((acct.min_yield ?? 0.05) * 100).toFixed(2);
+  if (!$("defAmt").value) $("defAmt").value = load("exdiv_defamt") || "";
+  const age = last ? (Date.now() - new Date(last.time).getTime()) / 36e5 : null;
+  $("lastRun").textContent = last ? `最後執行 ${new Date(last.time).toLocaleString("zh-TW", {hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit"})}` : "尚未執行";
+  $("lastRun").className = "pill " + (age == null || age > 30 ? "warn" : "ok");
+  $("app").classList.remove("hide"); $("bar").classList.remove("hide"); $("cConfirm").classList.add("hide");
+  say("mConn", `✓ ${acct.name || id}(${id})`, "ok");
+  setDirty(false); render();
+}
+
+// ---------- 狀態列
+function setSeg(v) {
+  document.querySelectorAll("#mode button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  $("modeMsg").textContent = v === "live" ? "⚠️ 真單:程式會用真實資金自動下單" : v === "paper" ? "模擬:永豐模擬環境下單,不動真錢" : "只通知:Telegram 提醒,自己在 App 下單";
+  $("modeMsg").className = "msg " + (v === "live" ? "warn" : "");
+}
+$("mode").onclick = e => { const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.v === "live" && mode !== "live" && !acct.secrets_prefix) return alert("這個帳戶還沒設定永豐 API,請先到初次設定填寫");
+  mode = b.dataset.v; setSeg(mode); setDirty(true); };
+$("my").oninput = () => { setDirty(true); render(); };
+$("enabled").onchange = () => setDirty(true);
+["showLate", "showEarly"].forEach(i => $(i).onchange = render);
+$("defAmt").onchange = () => store("exdiv_defamt", $("defAmt").value);
+$("bStatus").onclick = async () => {
+  try { await gh("actions/workflows/exdiv.yml/dispatches", {method: "POST", body: JSON.stringify({ref: "main", inputs: {mode: "status", account: acct.id}})});
+    say("mStatus", "✓ 已送出,約 1–2 分鐘後收到", "ok"); }
+  catch (e) { say("mStatus", e.status === 403 ? "權杖沒有 Actions 權限" : "送出失敗:" + e.message, "bad"); }
+};
+
+// ---------- 畫面
+function render() {
+  const my = (Number($("my").value) || 0) / 100;
+  const mk = (cands && cands.market) || {};
+  $("mkt").innerHTML = mk.twii ? `加權指數 ${money(mk.twii)},季線 ${money(mk.ma60)} → ` +
+    (mk.up ? `<span class="pill ok">季線之上</span>` : `<span class="pill bad">季線之下</span> 回測顯示這時新進場風險較高,可少量或觀望`) : "";
+  $("candDate").textContent = cands ? `${md(cands.date)} 掃描` : "尚未掃描";
+  // 候選
+  const rows = ((cands && cands.rows) || []).filter(r => r.zone !== "closed" && r.yield >= my - 1e-9
+    && (r.zone !== "late" || $("showLate").checked) && (r.zone !== "early" || $("showEarly").checked));
+  const shown = new Set(rows.map(r => keyOf(r.code, r.ex_date)));
+  const html = rows.sort((a, b) => b.yield - a.yield).map(r => {
+    const k = keyOf(r.code, r.ex_date), on = !!sel[k], lk = lockedKeys.has(k);
+    const z = r.zone === "ok" ? `<span class="pill ok">建議區間</span>` : r.zone === "late" ? `<span class="pill warn">較近</span>` : `<span class="pill">較遠</span>`;
+    const amt = on ? sel[k].amount : "";
+    const sh = on && r.close ? Math.floor(sel[k].amount / r.close) : 0;
+    return `<div class="cand ${on ? "on" : ""} ${lk ? "lockd" : ""}" data-k="${esc(k)}">
+      <input type="checkbox" ${on ? "checked" : ""} ${lk ? "disabled" : ""} aria-label="選 ${esc(r.code)}">
+      <div><span class="nm">${esc(r.code)} ${esc(r.name)}</span> ${z}${lk ? ' <span class="pill ok">已買進</span>' : ""}</div>
+      <div class="y">${pct(r.yield)}</div>
+      <div class="det">現金 ${r.cash} 元|收盤 ${r.close}|均量 ${money(r.vol20)} 張<br>${md(r.ex_date)} 除息、${md(r.exit_date)} 賣出(距除息 ${r.td} 個交易日)</div>
+      <div class="amt ${on ? "" : "hide"}"><input type="number" min="1000" step="10000" value="${amt}" placeholder="金額" ${lk ? "disabled" : ""}>
+        <span>${sh ? `約 ${Math.floor(sh / 1000)} 張 ${sh % 1000} 股` : ""}</span></div>
+    </div>`;
+  }).join("");
+  $("cands").innerHTML = html || `<div class="empty">目前沒有符合門檻的候選。除息集中在 6~9 月,其他月份可以降低門檻看看,或等新的公告。</div>`;
+  $("cands").querySelectorAll(".cand").forEach(el => {
+    const k = el.dataset.k, r = rows.find(x => keyOf(x.code, x.ex_date) === k);
+    const cb = el.querySelector("input[type=checkbox]"), ai = el.querySelector(".amt input");
+    cb.onchange = () => {
+      if (cb.checked) {
+        const d = Number($("defAmt").value) || 0;
+        sel[k] = {code: r.code, name: r.name, ex_date: r.ex_date, amount: d};
+      } else delete sel[k];
+      setDirty(true); render();
+      if (cb.checked && !sel[k].amount) setTimeout(() => { const x = document.querySelector(`.cand[data-k="${CSS.escape(k)}"] .amt input`); x && x.focus(); }, 0);
+    };
+    if (ai) ai.oninput = () => { if (sel[k]) { sel[k].amount = Number(ai.value) || 0; setDirty(true); updateBar();
+      const sh = r.close ? Math.floor(sel[k].amount / r.close) : 0; el.querySelector(".amt span").textContent = sh ? `約 ${Math.floor(sh / 1000)} 張 ${sh % 1000} 股` : ""; } };
+  });
+  // 我的選股與持倉
+  const pos = (state && state.positions) || {};
+  const items = [];
+  Object.entries(sel).forEach(([k, p]) => {
+    const s = pos[k];
+    items.push({k, code: p.code, name: p.name, ex: p.ex_date, exit: s ? s.exit_date : null, amount: p.amount,
+      held: s ? s.bought - s.sold : 0, status: s ? s.status : "new", inCands: shown.has(k)});
+  });
+  Object.values(pos).forEach(s => { if (!sel[s.key] && s.bought - s.sold > 0)
+    items.push({k: s.key, code: s.code, name: s.name, ex: s.ex_date, exit: s.exit_date, amount: s.amount, held: s.bought - s.sold, status: s.status, removed: true}); });
+  items.sort((a, b) => String(a.exit || a.ex).localeCompare(String(b.exit || b.ex)));
+  $("active").innerHTML = items.length ? items.map(i => {
+    const tag = i.held > 0 ? `<span class="pill ok">持有 ${money(i.held)} 股</span>` : i.status === "new" ? `<span class="pill warn">${orig[i.k] ? "待買" : "新選(未儲存)"}</span>` : `<span class="pill warn">待買</span>`;
+    const canCancel = !(i.held > 0);
+    return `<div class="pos"><div><b>${esc(i.code)} ${esc(i.name)}</b> ${tag}<div class="d">${md(i.ex)} 除息、${i.exit ? md(i.exit) : "前一交易日"} 賣出|${money(i.amount)} 元${i.removed ? "|已移除,仍會照出場日賣出" : ""}</div></div>
+      ${canCancel ? `<button class="btn ghost sm" data-x="${esc(i.k)}">取消</button>` : ""}</div>`;
+  }).join("") : `<div class="empty">還沒有選股。到上面勾選候選、填金額後按「儲存」。</div>`;
+  $("active").querySelectorAll("button[data-x]").forEach(b => b.onclick = () => { delete sel[b.dataset.x]; setDirty(true); render(); });
+  const closed = Object.values(pos).filter(p => p.status === "closed").sort((a, b) => b.exit_date.localeCompare(a.exit_date));
+  $("closed").innerHTML = closed.length ? closed.slice(0, 30).map(p => `<div class="pos"><div><b>${esc(p.code)} ${esc(p.name)}</b><div class="d">${(p.buy_dates || [])[0] ? md(p.buy_dates[0]) : ""} 買 → ${md((p.sell_dates || [])[0] || p.exit_date)} 賣</div></div>
+    <div style="text-align:right;color:${(p.pnl || 0) >= 0 ? "var(--ok)" : "var(--bad)"}">${(p.pnl || 0) >= 0 ? "+" : ""}${money(p.pnl || 0)}<div class="d">${p.ret != null ? ((p.ret >= 0 ? "+" : "") + (p.ret * 100).toFixed(1) + "%") : ""}</div></div></div>`).join("")
+    : `<div class="empty">還沒有出場紀錄。</div>`;
+  const held = Object.values(pos).filter(p => p.bought - p.sold > 0).length;
+  const pend = Object.keys(sel).filter(k => !(pos[k] && pos[k].bought - pos[k].sold > 0)).length;
+  $("kAct").textContent = `${held} / ${pend}`;
+  const pnl = closed.reduce((s, p) => s + (p.pnl || 0), 0);
+  $("kPnl").textContent = closed.length ? (pnl >= 0 ? "+" : "") + money(pnl) : "-";
+  $("kPnl").style.color = closed.length ? (pnl >= 0 ? "var(--ok)" : "var(--bad)") : "";
+  updateBar();
+}
+function updateBar() {
+  const v = Object.values(sel), tot = v.reduce((s, p) => s + (p.amount || 0), 0);
+  $("kAmt").textContent = tot ? money(tot) : "-";
+  $("barTxt").innerHTML = `已選 <b>${v.length}</b> 檔,共 <b>${money(tot)}</b> 元` + (dirty ? ` <span class="pill warn">未儲存</span>` : "");
+  $("bSave").disabled = !dirty;
+}
+function setDirty(v) { dirty = v; updateBar(); }
+
+// ---------- 儲存
+function collectErrors() {
+  const err = [], warn = [];
+  const closeOf = k => { const r = ((cands && cands.rows) || []).find(x => keyOf(x.code, x.ex_date) === k); return r ? r.close : null; };
+  Object.entries(sel).forEach(([k, p]) => {
+    if (lockedKeys.has(k)) return;
+    if (!(p.amount >= 1000)) err.push(`${p.code} 請填金額(至少 1,000 元)`);
+    const c = closeOf(k); if (c && p.amount < c) err.push(`${p.code} 金額 ${money(p.amount)} 元買不到 1 股(收盤 ${c})`);
+  });
+  const n = Object.keys(sel).length;
+  if (n && n < 3) warn.push(`目前只選 ${n} 檔;回測建議同時 3~5 檔分散風險`);
+  if (n > 8) warn.push(`目前選了 ${n} 檔,請確認資金足夠`);
+  if (cands && cands.market && cands.market.up === false && Object.keys(sel).some(k => !orig[k])) warn.push("加權指數在季線以下,新進場風險較高");
+  return [err, warn];
+}
+$("bSave").onclick = () => {
+  const [err, warn] = collectErrors();
+  if (err.length) { alert(err.join("\n")); return; }
+  const lines = [];
+  const add = Object.keys(sel).filter(k => !orig[k]), del = Object.keys(orig).filter(k => !sel[k]);
+  const chg = Object.keys(sel).filter(k => orig[k] && orig[k].amount !== sel[k].amount);
+  add.forEach(k => lines.push(`＋ 新增 ${sel[k].code} ${sel[k].name} ${money(sel[k].amount)} 元(${md(sel[k].ex_date)} 除息)`));
+  chg.forEach(k => lines.push(`✎ ${sel[k].code} 金額 ${money(orig[k].amount)} → ${money(sel[k].amount)} 元`));
+  del.forEach(k => lines.push(`－ 取消 ${orig[k].code} ${orig[k].name}`));
+  const om = acct.mode || "signal";
+  if (om !== mode) lines.push(`模式:${({signal: "只通知", paper: "模擬", live: "真單"})[om]} → ${({signal: "只通知", paper: "模擬", live: "真單"})[mode]}`);
+  const omy = +(((acct.min_yield ?? 0.05) * 100).toFixed(2)), nmy = Number($("my").value) || 0;
+  if (omy !== nmy) lines.push(`候選門檻:${omy}% → ${nmy}%`);
+  if ((acct.enabled !== false) !== $("enabled").checked) lines.push($("enabled").checked ? "恢復執行" : "⏸ 暫停");
+  if (!lines.length) { setDirty(false); return; }
+  if (mode === "live" && om !== "live") lines.push("\n⚠️ 切換到真單,下一個交易日起會用真實資金自動下單");
+  if (add.length) lines.push(`\n新增的選股會在下一個交易日 14:00 盤後定價${mode === "signal" ? "提醒你下單" : "自動買進"}。`);
+  $("diff").textContent = lines.join("\n") + (warn.length ? "\n\n⚠️ " + warn.join("\n⚠️ ") : "");
+  $("cConfirm").classList.remove("hide"); say("mSave", "");
+  $("cConfirm").scrollIntoView({behavior: "smooth"});
+};
+$("bCancel").onclick = () => $("cConfirm").classList.add("hide");
+function toYaml() {
+  const q = s => JSON.stringify(String(s ?? "")), a = acct;
+  const my = Math.max(0, Math.min(20, Number($("my").value) || 0)) / 100;
+  const picks = Object.values(sel).sort((x, y) => x.ex_date.localeCompare(y.ex_date));
+  const known = ["id", "name", "enabled", "mode", "broker", "stock_account", "telegram_chat", "secrets_prefix", "min_yield", "api_expires", "picks"];
+  const L = [`# 由選股頁面更新 ${new Date().toLocaleString("zh-TW", {hour12: false})}`,
+    `id: ${a.id}`, `name: ${q(a.name)}`, `enabled: ${$("enabled").checked}`,
+    `mode: ${mode}            # signal(只通知)→ paper(模擬)→ live(真單)`, `broker: ${a.broker || "shioaji"}`,
+    `stock_account: ${q(a.stock_account || "")}   # 同一人在永豐有多個證券戶時必填`,
+    `telegram_chat: ${q(a.telegram_chat)}`];
+  if (a.secrets_prefix) L.push(`secrets_prefix: ${a.secrets_prefix}`);
+  L.push(`min_yield: ${my}         # 候選通知門檻:現金殖利率`);
+  if (a.api_expires) L.push(`api_expires: ${isoDate(a.api_expires)}`);
+  const extra = Object.fromEntries(Object.entries(a).filter(([k]) => !known.includes(k)));
+  if (Object.keys(extra).length) L.push(jsyaml.dump(extra).trim());
+  L.push(picks.length ? "picks:" : "picks: []");
+  picks.forEach(p => L.push(`  - {code: ${q(p.code)}, name: ${q(p.name)}, ex_date: ${q(isoDate(p.ex_date))}, amount: ${Math.round(p.amount)}}`));
+  return L.join("\n") + "\n";
+}
+$("bSave2").onclick = async () => {
+  $("bSave2").disabled = true; say("mSave", "儲存中…");
+  try {
+    const cur = await gh(`contents/accounts/${encodeURIComponent(FILE)}`);
+    if (cur.sha !== sha) { say("mSave", "這個帳戶在別的地方被改過了,請重新整理頁面再改一次", "bad"); $("bSave2").disabled = false; return; }
+    const r = await gh(`contents/accounts/${encodeURIComponent(FILE)}`, {method: "PUT",
+      body: JSON.stringify({message: `選股頁面:更新 ${acct.id}`, content: b64enc(toYaml()), sha})});
+    sha = r.content.sha;
+    acct = jsyaml.load(toYaml());
+    orig = JSON.parse(JSON.stringify(sel));
+    setDirty(false); render();
+    say("mSave", "✓ 已儲存。下一次執行(13:25 或 20:00)生效,Telegram 會通知變更。", "ok");
+    setTimeout(() => $("cConfirm").classList.add("hide"), 4000);
+  } catch (e) {
+    say("mSave", e.status === 403 ? "權杖沒有 Contents 寫入權限" : "儲存失敗:" + e.message, "bad");
+  }
+  $("bSave2").disabled = false;
+};
+window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+$("repo").value = load("exdiv_repo") || "BitoCat/exdiv-trader";
+if (load("exdiv_token")) $("bConn").click();
+</script>
+</body>
+</html>
