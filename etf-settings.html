@@ -317,7 +317,7 @@ const WD = "日一二三四五六";
 const exTxt = r => r && r.next_ex ? `${Number(r.next_ex.slice(5, 7))}/${Number(r.next_ex.slice(8, 10))}${r.next_est ? "約" : ""}` : "";
 let nextCyc = null, nextBuy = null;
 function markNext() {
-  [1, 2, 0].forEach(k => { $("slot" + k).classList.toggle("next", k === nextCyc); $("w" + k).textContent = k === nextCyc ? `▶ 下次買進 ${md(nextBuy)}` : ""; });
+  [1, 2, 0].forEach(k => { $("slot" + k).classList.toggle("next", k === nextCyc); $("w" + k).textContent = k === nextCyc ? (nextBuy === nextTrading(0) ? "▶ 今天買進" : `▶ 下次買進 ${md(nextBuy)}`) : ""; });
 }
 const md = d => { const x = new Date(d + "T00:00:00"); return `${x.getMonth() + 1}/${x.getDate()}(${WD[x.getDay()]})`; };
 
@@ -337,7 +337,7 @@ async function loadStatus() {
   if (!en) { $("hold").textContent = "暫停中(程式不動作)"; $("tl").innerHTML = ""; return; }
   if (!sm) { $("hold").textContent = "下一次執行後顯示"; $("tl").innerHTML = ""; return; }
   $("hold").textContent = sm.holding || "現金";
-  const nb = sm.next.find(p => !p.skipped && p.buy > sm.today) || (!sm.holding && sm.next.find(p => !p.skipped && p.buy >= sm.today));
+  const nb = sm.next.find(p => !p.skipped && p.buy >= sm.today) || sm.next.find(p => !p.skipped && p.buy > sm.today);
   nextCyc = nb ? Number(nb.ex_date.slice(5, 7)) % 3 : null; nextBuy = nb ? nb.buy : null; markNext();
   $("tl").innerHTML = sm.next.filter(p => !p.skipped).slice(0, 3).map(p => {
     const est = p.source.startsWith("預估") ? `<span class="est">(除息日預估)</span>` : "";
