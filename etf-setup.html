@@ -140,6 +140,9 @@ a{color:var(--acc)}
   <section class="card lock" id="c5">
     <h2><span class="num">5</span>寫入 GitHub</h2>
     <div class="msg" id="sum"></div>
+    <div class="field"><label for="tkey">程式自動更新金鑰(選填,分享者另外私下給你的)</label>
+      <textarea id="tkey" rows="3" placeholder="-----BEGIN OPENSSH PRIVATE KEY----- …" autocomplete="off" style="width:100%;font-family:monospace;font-size:12px"></textarea>
+      <small class="note">填了之後,每週日會自動從範本更新到最新程式(只更新程式,不動你的設定與金鑰)。沒有就留空,之後也能補。</small></div>
     <div class="acts"><button class="btn pri" id="b5">確認寫入</button></div>
     <ul class="prog" id="prog"></ul>
     <div id="after" class="hide">
@@ -303,6 +306,7 @@ async function putSecret(key, name, value) {
   const enc = s.crypto_box_seal(s.from_string(value), s.from_base64(key.key, s.base64_variants.ORIGINAL));
   await gh(`actions/secrets/${name}`, {method: "PUT", body: JSON.stringify({encrypted_value: s.to_base64(enc, s.base64_variants.ORIGINAL), key_id: key.key_id})});
 }
+const line0 = t => { $("prog").innerHTML = ""; const li = document.createElement("li"); li.textContent = t; $("prog").appendChild(li); };
 $("b5").onclick = async () => {
   const [v, err] = strategy(); if (err.length) return;
   const P = (acct && acct.secrets_prefix) || "MAIN", sino = !$("skipSino").checked;
@@ -310,6 +314,11 @@ $("b5").onclick = async () => {
   const items = [["BOT_TOKEN", $("bot").value.trim()]];
   if (sino) items.push([`${P}_API_KEY`, $("ak").value.trim()], [`${P}_SECRET_KEY`, $("sk").value.trim()],
     [`${P}_CA_BASE64`, pfxB64], [`${P}_CA_PASSWORD`, $("cap").value.trim() || pid], [`${P}_PERSON_ID`, pid]);
+  const tk = $("tkey").value.trim();
+  if (tk) {
+    if (!/^-----BEGIN OPENSSH PRIVATE KEY-----[\s\S]+-----END OPENSSH PRIVATE KEY-----$/.test(tk)) { line0("❌ 自動更新金鑰格式不對,請整段完整貼上(含 BEGIN / END 兩行)"); return; }
+    items.push(["TEMPLATE_KEY", tk + "\n"]);
+  }
   $("b5").disabled = true; $("prog").innerHTML = "";
   const line = t => { const li = document.createElement("li"); li.textContent = t; $("prog").appendChild(li); return li; };
   try {
@@ -326,7 +335,7 @@ $("b5").onclick = async () => {
     const l2 = line("⏳ 發送目前狀態");
     try { await gh("actions/workflows/rotation.yml/dispatches", {method: "POST", body: JSON.stringify({ref: "main", inputs: {mode: "status", account: "main"}})}); l2.textContent = "✅ 已請程式發送目前狀態"; }
     catch (e) { l2.textContent = "⚠️ 無法自動執行(可到 GitHub Actions 手動按 Run workflow)"; }
-    ["ak", "sk", "pid", "cap", "bot"].forEach(i => $(i).value = ""); pfxB64 = ""; $("pfx").value = "";
+    ["ak", "sk", "pid", "cap", "bot", "tkey"].forEach(i => $(i).value = ""); pfxB64 = ""; $("pfx").value = "";
     done(5); $("after").classList.remove("hide"); $("bSim").disabled = $("bLive").disabled = !sino;
   } catch (e) {
     line("❌ " + (e.status === 403 ? "權杖權限不足(需要 Contents / Secrets / Actions 的 Read and write)" : e.message));
