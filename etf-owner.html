@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>ETF 輪動分享者步驟</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--ink:#1c2230;--mute:#6b7385;--line:#e2e5eb;--acc:#1f6feb;--ok:#1a7f37;--warn:#b35900;--chip:#eef2f8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1218;--card:#171b23;--ink:#e6e9ef;--mute:#98a1b3;--line:#2a303c;--acc:#4c8dff;--ok:#3fb950;--warn:#e3a33b;--chip:#222836}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px 16px 64px}
+h1{font-size:21px;margin:8px 0 2px}
+.sub{color:var(--mute);font-size:13px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.card h2{font-size:16px;margin:0 0 6px;display:flex;gap:10px;align-items:center}
+.num{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--chip);font-size:13px;font-weight:700;flex:none}
+.card.done{opacity:.6}
+.card.done .num{background:var(--ok);color:#fff}
+.tick{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;color:var(--mute);cursor:pointer;white-space:nowrap}
+.tick input{width:18px;height:18px}
+ul,ol{margin:4px 0;padding-left:22px}
+li{margin:3px 0}
+b{font-weight:600}
+code{background:var(--chip);border-radius:5px;padding:1px 6px;font-size:13px;word-break:break-all}
+a{color:var(--acc);word-break:break-all}
+.note{color:var(--mute);font-size:13px;margin-top:6px}
+.warn{border-left:4px solid var(--warn);background:var(--card);border-radius:8px;padding:10px 12px;font-size:13px;margin:8px 0}
+.go{display:inline-block;margin-top:8px;background:var(--acc);color:#fff;text-decoration:none;border-radius:8px;padding:8px 14px;font-weight:600}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:6px 0 14px}
+.bar i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+</style>
+</head>
+<body>
+<main>
+  <h1>ETF 輪動・分享者步驟(毛哥用)</h1>
+  <div class="sub">分享給一位朋友時照這頁做;朋友那邊看 <a href="etf-guide.html" target="_blank" rel="noopener">設定步驟頁</a>。勾選只記在這台裝置,換下一位朋友時按最下面「全部清除」。</div>
+  <div class="bar"><i id="bar"></i></div>
+
+  <section class="card" data-s="0">
+    <h2><span class="num">0</span>一次性:範本加部署金鑰<label class="tick"><input type="checkbox">完成</label></h2>
+    <div class="note" style="margin-top:0">只要做一次,所有朋友共用。已經加過就勾完成。</div>
+    <ol>
+      <li>打開範本 Deploy keys 頁 → <b>Add deploy key</b></li>
+      <li>Title:<code>朋友自動更新</code>;Key:貼「範本自動更新金鑰-<b>公鑰</b>.txt」那一行(<code>ssh-ed25519</code> 開頭)</li>
+      <li><b>不要勾</b> Allow write access → <b>Add key</b></li>
+    </ol>
+    <a class="go" href="https://github.com/BitoCat/etf-rotation-template/settings/keys" target="_blank" rel="noopener">打開 Deploy keys</a>
+    <div class="warn">私鑰(BEGIN OPENSSH PRIVATE KEY 那段)不要貼在這裡,GitHub 也會拒收。私鑰自己保存好,只私下給朋友。</div>
+  </section>
+
+  <section class="card" data-s="1">
+    <h2><span class="num">1</span>開範本權限給朋友<label class="tick"><input type="checkbox">完成</label></h2>
+    <ol>
+      <li>範本 → <b>Settings</b> → <b>Collaborators</b> → <b>Add people</b> → 輸入朋友的 GitHub 帳號 → 送出邀請</li>
+      <li>請朋友到 Email 或 <a href="https://github.com/notifications" target="_blank" rel="noopener">GitHub 通知</a> 按 <b>Accept invitation</b></li>
+    </ol>
+    <a class="go" href="https://github.com/BitoCat/etf-rotation-template/settings/access" target="_blank" rel="noopener">打開 Collaborators</a>
+    <div class="note">這個權限只是讓她能「從範本建立 repo」,建好就收回。</div>
+  </section>
+
+  <section class="card" data-s="2">
+    <h2><span class="num">2</span>傳給朋友兩樣東西<label class="tick"><input type="checkbox">完成</label></h2>
+    <ul>
+      <li>設定步驟頁連結:<code>https://bitocat.github.io/stockscan/etf-guide.html</code></li>
+      <li>程式自動更新金鑰:「範本自動更新金鑰-<b>私鑰</b>.txt」的全部內容,用 LINE 私訊等方式傳(不要貼在群組)</li>
+    </ul>
+    <div class="note">重新設定的朋友(已有舊 repo)也傳同樣的東西,她照頁面從第 0 步做。</div>
+  </section>
+
+  <section class="card" data-s="3">
+    <h2><span class="num">3</span>朋友建好 repo 後收回權限<label class="tick"><input type="checkbox">完成</label></h2>
+    <ol>
+      <li>朋友說「第 2 步完成」後,範本 → Settings → Collaborators → 她的帳號旁 <b>Remove</b></li>
+    </ol>
+    <a class="go" href="https://github.com/BitoCat/etf-rotation-template/settings/access" target="_blank" rel="noopener">打開 Collaborators</a>
+    <div class="note">收回後她的 repo 照常運作;程式更新改靠部署金鑰,不需要協作者權限。</div>
+  </section>
+
+  <section class="card" data-s="4">
+    <h2><span class="num">4</span>確認朋友設定成功<label class="tick"><input type="checkbox">完成</label></h2>
+    <p class="note" style="margin-top:0">請她截圖這幾則 Telegram 給你:</p>
+    <ul>
+      <li>「設定已啟用」(第 4 步寫入後約 1 分鐘)</li>
+      <li>「程式更新」或 Actions 的<b>程式自動更新</b>綠勾(第 5 步)</li>
+      <li>永豐模擬測試、正式環境檢查都成功(第 6 步,平日 08:00–18:00)</li>
+    </ul>
+    <div class="note">只要截圖,不要請她傳金鑰、憑證或身分證字號。</div>
+  </section>
+
+  <section class="card" data-s="5">
+    <h2><span class="num">5</span>朋友先跑「只通知」<label class="tick"><input type="checkbox">完成</label></h2>
+    <ul>
+      <li>第一次換股前一天晚上 20:00 她應該收到「明天換股預告」,當天 13:25 收到換股通知</li>
+      <li>沒收到:多半是 cron-job.org 權杖或網址錯(第 7 步),請她截 cron-job.org 的執行紀錄</li>
+      <li>確認一兩次換股正常後,她再到設定頁改「模擬」或「真單」</li>
+    </ul>
+  </section>
+
+  <h1 style="font-size:17px;margin:22px 0 8px">平常維護</h1>
+
+  <section class="card">
+    <h2>程式更新怎麼到朋友那邊</h2>
+    <ul>
+      <li>你請 Claude 改程式 → Claude 會同時更新你的 etf-rotation 和範本</li>
+      <li>朋友的 repo 每週日 09:17 自動從範本更新,有更新時她會收到「程式更新」通知;急的話請她到 Actions → 程式自動更新 → Run workflow</li>
+      <li>排程檔(<code>.github/workflows/</code>)GitHub 不允許自動更新;有改時她會收到提醒,需要手動複製(或請 Claude 寫步驟)</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>私鑰外流或想換一組</h2>
+    <ol>
+      <li>範本 → Settings → Deploy keys → 刪除「朋友自動更新」(立刻失效)</li>
+      <li>請 Claude 產生新的一組,把新公鑰加回 Deploy keys</li>
+      <li>新私鑰私下傳給每位朋友,請她們到自己 repo → Settings → Secrets and variables → Actions → <code>TEMPLATE_KEY</code> → Update,貼上新的</li>
+    </ol>
+    <div class="note">外流的影響只有「範本程式碼被看到」,看不到任何人的設定、金鑰或帳戶。</div>
+  </section>
+
+  <section class="card">
+    <h2>朋友不用了</h2>
+    <ul>
+      <li>她到設定頁按暫停,或直接刪除自己的 repo;你這邊不需要做什麼</li>
+      <li>如果在意她還能更新程式,換一組部署金鑰(上一張卡片)</li>
+    </ul>
+  </section>
+
+  <div style="text-align:center;margin-top:10px"><button id="reset" style="border:1px solid var(--line);background:transparent;color:var(--acc);border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer">全部清除(換下一位朋友)</button></div>
+</main>
+<script>
+const K = "etfowner_done";
+let done = {};
+try { done = JSON.parse(localStorage.getItem(K) || "{}"); } catch (e) {}
+const cards = [...document.querySelectorAll(".card[data-s]")];
+function paint() {
+  cards.forEach(c => { const v = !!done[c.dataset.s]; c.classList.toggle("done", v); c.querySelector(".tick input").checked = v; });
+  document.getElementById("bar").style.width = (cards.filter(c => done[c.dataset.s]).length / cards.length * 100) + "%";
+}
+cards.forEach(c => c.querySelector(".tick input").onchange = e => {
+  done[c.dataset.s] = e.target.checked;
+  try { localStorage.setItem(K, JSON.stringify(done)); } catch (e) {}
+  paint();
+});
+paint();
+document.getElementById("reset").onclick = () => { done = {}; try { localStorage.removeItem(K); } catch (e) {} paint(); };
+</script>
+</body>
+</html>
