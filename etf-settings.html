@@ -179,11 +179,13 @@ table.cand tr.cur td{font-weight:700}
         <div class="seg" id="amtMode"><button data-v="max">全部現金</button><button data-v="num">固定金額</button></div>
         <input id="amt" type="number" min="1" step="10000" placeholder="例 1000000">
       </div>
-      <div class="row">
-        <div><label for="rsv">保留現金(元,不投入)</label><input id="rsv" type="number" min="0" step="10000" placeholder="0"></div>
-        <div><label for="ppct">獲利提撥給零用錢(%)</label><input id="ppct" type="number" min="0" max="100" step="10" placeholder="0"></div>
+      <label style="margin-top:4px">留給零用錢(擇一)</label>
+      <div class="seg" id="keepMode"><button data-v="none">不保留</button><button data-v="rsv">固定保留金額</button><button data-v="pct">獲利提撥 %</button></div>
+      <div class="row" style="margin-top:8px">
+        <div id="rsvBox"><label for="rsv">保留現金(元,不投入)</label><input id="rsv" type="number" min="0" step="10000" placeholder="例 40000"></div>
+        <div id="pctBox"><label for="ppct">每輪已實現獲利提撥(%)</label><input id="ppct" type="number" min="0" max="100" step="10" placeholder="例 50"></div>
       </div>
-      <small class="note">每輪賣出時,依成本算出已實現獲利,提撥這個比例留在交割帳戶並通知你轉帳(券商 API 不能自動轉帳)。</small>
+      <small class="note" id="keepNote"></small>
     </section>
 
     <section class="card">
@@ -320,6 +322,7 @@ async function openAcct() {
   Object.entries(a.locked || {}).forEach(([c, q]) => addLock(c, q));
   $("exp").value = iso(a.api_expires);
   $("rsv").value = a.reserve || ""; $("ppct").value = a.payout_pct || "";
+  keepMode = a.payout_pct > 0 ? "pct" : a.reserve > 0 ? "rsv" : "none"; showKeep();
   $("adv").value = `${a.telegram_chat || "-"} / ${a.secrets_prefix || "-"}`;
   renderChips(); check(); setDirty(false);
   status(`已載入 ${file}`);
@@ -483,7 +486,15 @@ function addLock(c = "", q = "") {
   $("locks").appendChild(d);
 }
 
-let paidAdd = 0;
+let paidAdd = 0, keepMode = "none";
+function showKeep() {
+  setSeg("keepMode", keepMode);
+  $("rsvBox").style.opacity = keepMode === "rsv" ? 1 : .35; $("rsv").disabled = keepMode !== "rsv";
+  $("pctBox").style.opacity = keepMode === "pct" ? 1 : .35; $("ppct").disabled = keepMode !== "pct";
+  $("keepNote").textContent = {none: "交割帳戶的錢全部投入輪動。",
+    rsv: "交割帳戶固定留這筆錢不投入;轉給零用錢後記得改回 0,否則下次還會再留。",
+    pct: "每輪賣出時依成本算出已實現獲利,提撥這個比例留在交割帳戶並通知你轉帳(虧損不提撥;券商 API 不能自動轉帳)。轉完在上方按「已轉帳」。"}[keepMode];
+}
 function collect() {
   const etfs = [1, 2, 0].map(k => $("s" + k).value.trim().toUpperCase()).filter(Boolean);
   const locked = {};
@@ -497,8 +508,8 @@ function collect() {
     start_date: $("start").value, locked,
     amount: amtMode === "max" ? "max" : ($("amt").value === "" ? NaN : Number($("amt").value)),
     api_expires: $("exp").value,
-    reserve: $("rsv").value === "" ? 0 : Number($("rsv").value),
-    payout_pct: $("ppct").value === "" ? 0 : Number($("ppct").value),
+    reserve: keepMode !== "rsv" || $("rsv").value === "" ? 0 : Number($("rsv").value),
+    payout_pct: keepMode !== "pct" || $("ppct").value === "" ? 0 : Number($("ppct").value),
     payout_paid: Number(orig.payout_paid || 0) + paidAdd,
     b_by: Object.fromEntries([1, 2, 0].map(k => [$("s" + k).value.trim().toUpperCase(), document.querySelector(`#b${k} button.on`)?.dataset.v])
       .filter(([c, b]) => c && b === "-1").map(([c]) => [c, -1])),
@@ -529,6 +540,8 @@ function check() {
   if (!Number.isInteger(v.B) || v.B < 0 || v.B > 60) err.push("B 要是 0–60 的整數");
   if (v.amount !== "max" && !(v.amount > 0)) err.push("固定金額要大於 0");
   if (!(v.reserve >= 0)) err.push("保留現金不能是負數");
+  if (keepMode === "rsv" && !(v.reserve > 0)) err.push("請填保留金額");
+  if (keepMode === "pct" && !(v.payout_pct > 0)) err.push("請填提撥比例");
   if (!(v.payout_pct >= 0 && v.payout_pct <= 100)) err.push("獲利提撥要是 0–100");
   Object.entries(v.locked).forEach(([c, q]) => {
     if (!/^\d{4,6}[A-Z]?$/.test(c)) err.push(`長抱代號 ${c} 格式不對`);
@@ -628,6 +641,7 @@ $("addLock").onclick = () => { addLock(); check(); setDirty(true); };
 $("acct").onchange = () => { if (dirty && !confirm("有未儲存的修改,確定切換帳戶?")) { $("acct").value = file; return; } openAcct(); };
 $("reload").onclick = () => { if (dirty && !confirm("放棄未儲存的修改?")) return; openAcct(); };
 $("pauseBtn").onclick = togglePause;
+$("keepMode").onclick = e => { const b = e.target.closest("button"); if (!b) return; keepMode = b.dataset.v; showKeep(); check(); setDirty(true); };
 $("payBtn").onclick = () => {
   if (dirty) { $("statMsg").textContent = "請先儲存或重新載入目前的修改"; $("statMsg").className = "msg warn"; return; }
   const v = prompt("這次轉給零用錢的金額(元)", String(window._due || 0));
