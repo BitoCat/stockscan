@@ -211,7 +211,7 @@ table.cand tr.cur td{font-weight:700}
         <ul class="tl" style="margin-top:8px">
           <li><b>輪動</b>:每組月份一檔。除息前第 A 個交易日買進、除息後第 B 個交易日賣出,接著換下一檔。</li>
           <li><b>賣出時機</b>:「除息當天賣」領得到配息(B 依上方設定);「除息前一天賣」在除息前一天收盤賣出、<b>不領配息</b>,避開除息日的漲跌,但這一檔就沒有零用錢。</li>
-          <li><b>個股</b>:也可以填股票代號(例 2330),依它的除息月份放進對應的那一組;單一個股波動比 ETF 大,建議小心使用。</li>
+          <li><b>個股</b>:任一欄都可以填股票代號(例 2330)。程式不看它自己的除息日,而是使用那一欄的時段(該月 20 日當參考除息日),固定在前一天收盤賣出、只賺價差;單一個股波動比 ETF 大,請小心使用。</li>
           <li><b>開始日</b>:程式從這天起接手,會自動判斷當天應該持有哪一檔。開始前帳上的其他股票要自己先處理。</li>
           <li><b>每次買進金額</b>:「全部現金」會把交割帳戶可用現金全部投入;固定金額則每次最多買這麼多。</li>
           <li><b>長抱不賣</b>:這些股數永遠不賣、不算進輪動資金。和輪動 ETF 同一家投信時,配息帳戶會衝突。</li>
@@ -528,6 +528,8 @@ function check() {
     m.textContent = ""; m.className = "msg";
     if (!c) { m.textContent = "空白:這組月份不輪動,資金會閒置"; m.className = "msg warn"; return; }
     if (!/^\d{4,6}[A-Z]?$/.test(c)) { m.textContent = "代號格式不對"; m.className = "msg bad"; err.push(1); return; }
+    $("b" + k).style.display = c.startsWith("00") ? "" : "none";
+    if (!c.startsWith("00")) { m.textContent = `個股:使用這一欄的時段(${CYC[k]} 月 20 日前後),除息前一天收盤賣出,只賺價差、不領股利`; m.className = "msg warn"; return; }
     const r = scan && scan.rows.find(x => x.code === c), ck = cycOf(c);
     if (ck != null && ck !== k) { m.textContent = `⚠️ ${c} 是 ${CYC[ck]} 月除息,不是這一組`; m.className = "msg warn"; }
     else if (r) { m.textContent = `${r.name}|單次 ${(r.single * 100).toFixed(1)}%|息日平均 ${exdTxt(r)}|下次除息 ${exTxt(r) || "—"}|年化 ${(r.ann * 100).toFixed(0)}%|填息 ${r.fill[0]}/${r.fill[1]}`; }
