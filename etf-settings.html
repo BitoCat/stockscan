@@ -80,6 +80,7 @@ table.cand tr{cursor:pointer}
 table.cand tr.cur td{font-weight:700}
 .lock .hint{grid-column:1/-1;font-size:12px;color:var(--mute);margin-top:-4px}
 .dirty{color:var(--warn)!important}
+.seg.bsel button{font-size:12px;padding:6px 4px}
 .slot.next .tag{color:var(--bad)}
 .slot.next input{border-color:var(--bad)}
 .slot .when{display:block;font-size:12px;font-weight:600;color:var(--bad);margin-top:2px}
@@ -155,9 +156,9 @@ table.cand tr.cur td{font-weight:700}
 
     <section class="card">
       <h2>輪動 ETF <span class="msg" id="scanDate"></span></h2>
-      <div class="slot" id="slot1"><div class="tag">1/4/7/10<span class="when" id="w1"></span></div><div><input id="s1" inputmode="numeric" placeholder="例 0056"><div class="chips" id="c1"></div><div class="msg" id="m1"></div><details class="more"><summary>更多候選</summary><div id="d1"></div></details></div></div>
-      <div class="slot" id="slot2"><div class="tag">2/5/8/11<span class="when" id="w2"></span></div><div><input id="s2" inputmode="numeric" placeholder="例 00690"><div class="chips" id="c2"></div><div class="msg" id="m2"></div><details class="more"><summary>更多候選</summary><div id="d2"></div></details></div></div>
-      <div class="slot" id="slot0"><div class="tag">3/6/9/12<span class="when" id="w0"></span></div><div><input id="s0" inputmode="numeric" placeholder="例 00918"><div class="chips" id="c0"></div><div class="msg" id="m0"></div><details class="more"><summary>更多候選</summary><div id="d0"></div></details></div></div>
+      <div class="slot" id="slot1"><div class="tag">1/4/7/10<span class="when" id="w1"></span></div><div><input id="s1" inputmode="numeric" placeholder="例 0056"><div class="chips" id="c1"></div><div class="msg" id="m1"></div><div class="seg bsel" id="b1" style="margin-top:6px"><button data-v="">除息當天賣(領息)</button><button data-v="-1">除息前一天賣(不領息)</button></div><details class="more"><summary>更多候選</summary><div id="d1"></div></details></div></div>
+      <div class="slot" id="slot2"><div class="tag">2/5/8/11<span class="when" id="w2"></span></div><div><input id="s2" inputmode="numeric" placeholder="例 00690"><div class="chips" id="c2"></div><div class="msg" id="m2"></div><div class="seg bsel" id="b2" style="margin-top:6px"><button data-v="">除息當天賣(領息)</button><button data-v="-1">除息前一天賣(不領息)</button></div><details class="more"><summary>更多候選</summary><div id="d2"></div></details></div></div>
+      <div class="slot" id="slot0"><div class="tag">3/6/9/12<span class="when" id="w0"></span></div><div><input id="s0" inputmode="numeric" placeholder="例 00918"><div class="chips" id="c0"></div><div class="msg" id="m0"></div><div class="seg bsel" id="b0" style="margin-top:6px"><button data-v="">除息當天賣(領息)</button><button data-v="-1">除息前一天賣(不領息)</button></div><details class="more"><summary>更多候選</summary><div id="d0"></div></details></div></div>
       <small class="note">標籤是最近一次掃描的前三名(單次殖利率)。換掉正持有的那檔沒關係,程式會等它賣出後再接新的。</small>
     </section>
 
@@ -199,6 +200,7 @@ table.cand tr.cur td{font-weight:700}
       <details><summary style="font-weight:600;cursor:pointer">說明</summary>
         <ul class="tl" style="margin-top:8px">
           <li><b>輪動</b>:每組月份一檔。除息前第 A 個交易日買進、除息後第 B 個交易日賣出,接著換下一檔。</li>
+          <li><b>賣出時機</b>:「除息當天賣」領得到配息(B 依上方設定);「除息前一天賣」在除息前一天收盤賣出、<b>不領配息</b>,避開除息日的漲跌,但這一檔就沒有零用錢。</li>
           <li><b>開始日</b>:程式從這天起接手,會自動判斷當天應該持有哪一檔。開始前帳上的其他股票要自己先處理。</li>
           <li><b>每次買進金額</b>:「全部現金」會把交割帳戶可用現金全部投入;固定金額則每次最多買這麼多。</li>
           <li><b>長抱不賣</b>:這些股數永遠不賣、不算進輪動資金。和輪動 ETF 同一家投信時,配息帳戶會衝突。</li>
@@ -300,6 +302,8 @@ async function openAcct() {
     if (k != null) slots[k] = c;
   });
   [1, 2, 0].forEach(k => $("s" + k).value = slots[k]);
+  const bby = a.b_by || {};
+  [1, 2, 0].forEach(k => setSeg("b" + k, String(bby[slots[k]] ?? "") === "-1" ? "-1" : ""));
   $("A").value = a.A ?? 30; $("B").value = a.B ?? 0; $("start").value = iso(a.start_date);
   const amt = a.amount ?? a.max_amount ?? "max";
   amtMode = String(amt).toLowerCase() === "max" ? "max" : "num"; setSeg("amtMode", amtMode);
@@ -463,6 +467,8 @@ function collect() {
     start_date: $("start").value, locked,
     amount: amtMode === "max" ? "max" : ($("amt").value === "" ? NaN : Number($("amt").value)),
     api_expires: $("exp").value,
+    b_by: Object.fromEntries([1, 2, 0].map(k => [$("s" + k).value.trim().toUpperCase(), document.querySelector(`#b${k} button.on`)?.dataset.v])
+      .filter(([c, b]) => c && b === "-1").map(([c]) => [c, -1])),
   };
 }
 
@@ -504,12 +510,13 @@ function check() {
 
 function toYaml(v) {
   const q = s => JSON.stringify(String(s));
-  const known = ["id", "name", "enabled", "mode", "broker", "etfs", "A", "B", "start_date", "locked", "amount", "max_amount", "telegram_chat", "secrets_prefix", "api_expires"];
+  const known = ["id", "name", "enabled", "mode", "broker", "etfs", "A", "B", "b_by", "start_date", "locked", "amount", "max_amount", "telegram_chat", "secrets_prefix", "api_expires"];
   const L = [`# 由設定頁面更新 ${new Date().toLocaleString("zh-TW", {hour12: false})}`,
     `id: ${orig.id || file.replace(/\.yaml$/, "")}`, `name: ${q(v.name)}`, `enabled: ${v.enabled}`,
     `mode: ${v.mode}            # signal(只通知)→ paper(模擬)→ live(真單)`, `broker: ${orig.broker || "shioaji"}`,
     `etfs: [${v.etfs.map(q).join(", ")}]   # 1/4/7/10、2/5/8/11、3/6/9/12`,
     `A: ${v.A}                   # 除息日前第幾個交易日買進`, `B: ${v.B}                   # 除息日後第幾個交易日賣出(0=除息當天)`];
+  if (Object.keys(v.b_by).length) { L.push("b_by:                   # 個別 ETF 的 B(-1=除息前一天收盤賣出,不領息)"); Object.entries(v.b_by).forEach(([c, b]) => L.push(`  ${q(c)}: ${b}`)); }
   if (v.start_date) L.push(`start_date: ${v.start_date}`);
   const lk = Object.entries(v.locked);
   if (lk.length) { L.push("locked:                 # 長抱、永遠不賣的股數"); lk.forEach(([c, n]) => L.push(`  ${q(c)}: ${n}`)); }
@@ -526,7 +533,7 @@ function diffs(v) {
   const o = orig, out = [];
   const show = x => typeof x === "boolean" ? (x ? "是" : "否") : Array.isArray(x) ? x.join("、") : (x && typeof x === "object") ? Object.entries(x).map(([c, n]) => `${c} ${n / 1000} 張`).join("、") || "無" : String(x ?? "");
   const pairs = [["名稱", o.name, v.name], ["啟用", o.enabled !== false, v.enabled], ["模式", o.mode || "signal", v.mode],
-    ["輪動", (o.etfs || []).map(String), v.etfs], ["A", o.A, v.A], ["B", o.B, v.B], ["開始日", iso(o.start_date), v.start_date],
+    ["輪動", (o.etfs || []).map(String), v.etfs], ["A", o.A, v.A], ["B", o.B, v.B], ["除息前一天賣", Object.keys(o.b_by || {}), Object.keys(v.b_by)], ["開始日", iso(o.start_date), v.start_date],
     ["長抱", o.locked || {}, v.locked], ["每次買進", String(o.amount ?? o.max_amount ?? "max"), String(v.amount)], ["API 到期", iso(o.api_expires), v.api_expires]];
   pairs.forEach(([k, a, b]) => {
     const sa = k === "輪動" ? [...a].sort().join() : show(a), sb = k === "輪動" ? [...b].sort().join() : show(b);
@@ -568,6 +575,8 @@ document.addEventListener("click", e => {
 });
 window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
 $("mode").onclick = e => { const b = e.target.closest("button"); if (b) { mode = b.dataset.v; setSeg("mode", mode); check(); setDirty(true); } };
+document.querySelectorAll(".bsel").forEach(g => g.onclick = e => { const b = e.target.closest("button"); if (!b) return;
+  setSeg(g.id, b.dataset.v); check(); setDirty(true); });
 $("amtMode").onclick = e => { const b = e.target.closest("button"); if (b) { amtMode = b.dataset.v; setSeg("amtMode", amtMode); $("amt").disabled = amtMode === "max"; if (amtMode === "num" && !$("amt").value) $("amt").focus(); check(); setDirty(true); } };
 ["s1", "s2", "s0", "A", "B", "start", "amt", "name", "exp", "enabled"].forEach(id => $(id).addEventListener("input", () => { check(); setDirty(true); }));
 ["s1", "s2", "s0"].forEach(id => $(id).addEventListener("change", renderChips));
