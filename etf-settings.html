@@ -120,6 +120,8 @@ table.cand tr.cur td{font-weight:700}
         <div class="k">最後執行</div><div id="lastRun">—</div>
       </div>
       <div class="msg warn" id="decide" style="margin:-4px 0 8px"></div>
+      <div id="payBox" class="hide" style="margin:-2px 0 10px;font-size:14px">💰 待轉給零用錢:<b id="payDue"></b> 元
+        <button class="btn ghost" id="payBtn" style="padding:4px 10px;margin-left:6px">已轉帳</button></div>
       <ul class="tl" id="tl"></ul>
       <div class="acts">
         <button class="btn ghost" id="pauseBtn">暫停</button>
@@ -177,6 +179,13 @@ table.cand tr.cur td{font-weight:700}
         <div class="seg" id="amtMode"><button data-v="max">全部現金</button><button data-v="num">固定金額</button></div>
         <input id="amt" type="number" min="1" step="10000" placeholder="例 1000000">
       </div>
+      <label style="margin-top:4px">留給零用錢(擇一)</label>
+      <div class="seg" id="keepMode"><button data-v="none">不保留</button><button data-v="rsv">固定保留金額</button><button data-v="pct">獲利提撥 %</button></div>
+      <div class="row" style="margin-top:8px">
+        <div id="rsvBox"><label for="rsv">保留現金(元,不投入)</label><input id="rsv" type="number" min="0" step="10000" placeholder="例 40000"></div>
+        <div id="pctBox"><label for="ppct">每輪已實現獲利提撥(%)</label><input id="ppct" type="number" min="0" max="100" step="10" placeholder="例 50"></div>
+      </div>
+      <small class="note" id="keepNote"></small>
     </section>
 
     <section class="card">
@@ -312,6 +321,8 @@ async function openAcct() {
   $("locks").innerHTML = "";
   Object.entries(a.locked || {}).forEach(([c, q]) => addLock(c, q));
   $("exp").value = iso(a.api_expires);
+  $("rsv").value = a.reserve || ""; $("ppct").value = a.payout_pct || "";
+  keepMode = a.payout_pct > 0 ? "pct" : a.reserve > 0 ? "rsv" : "none"; showKeep();
   $("adv").value = `${a.telegram_chat || "-"} / ${a.secrets_prefix || "-"}`;
   renderChips(); check(); setDirty(false);
   status(`已載入 ${file}`);
@@ -343,6 +354,8 @@ async function loadStatus() {
   if (!en) { $("hold").textContent = "暫停中(程式不動作)"; $("tl").innerHTML = ""; return; }
   if (!sm) { $("hold").textContent = "下一次執行後顯示"; $("tl").innerHTML = ""; return; }
   $("hold").textContent = sm.holding || "現金";
+  $("payBox").classList.toggle("hide", !(sm.payout_due > 0));
+  $("payDue").textContent = (sm.payout_due || 0).toLocaleString(); window._due = sm.payout_due || 0;
   $("decide").innerHTML = "";
   if (sm.holding && sm.decide_by && sm.decide_by >= nextTrading(0)) {
     const r = scan && scan.rows.find(x => x.code === sm.holding);
@@ -473,6 +486,15 @@ function addLock(c = "", q = "") {
   $("locks").appendChild(d);
 }
 
+let paidAdd = 0, keepMode = "none";
+function showKeep() {
+  setSeg("keepMode", keepMode);
+  $("rsvBox").style.opacity = keepMode === "rsv" ? 1 : .35; $("rsv").disabled = keepMode !== "rsv";
+  $("pctBox").style.opacity = keepMode === "pct" ? 1 : .35; $("ppct").disabled = keepMode !== "pct";
+  $("keepNote").textContent = {none: "交割帳戶的錢全部投入輪動。",
+    rsv: "交割帳戶固定留這筆錢不投入;轉給零用錢後記得改回 0,否則下次還會再留。",
+    pct: "每輪賣出時依成本算出已實現獲利,提撥這個比例留在交割帳戶並通知你轉帳(虧損不提撥;券商 API 不能自動轉帳)。轉完在上方按「已轉帳」。"}[keepMode];
+}
 function collect() {
   const etfs = [1, 2, 0].map(k => $("s" + k).value.trim().toUpperCase()).filter(Boolean);
   const locked = {};
@@ -480,15 +502,22 @@ function collect() {
     const c = d.querySelector(".lc").value.trim().toUpperCase(), q = d.querySelector(".lq").value;
     if (c) locked[c] = q === "" ? NaN : Number(q);
   });
-  return {
+  const out = {
     name: $("name").value.trim(), enabled: $("enabled").checked, mode, etfs,
     A: $("A").value === "" ? NaN : Number($("A").value), B: $("B").value === "" ? NaN : Number($("B").value),
     start_date: $("start").value, locked,
     amount: amtMode === "max" ? "max" : ($("amt").value === "" ? NaN : Number($("amt").value)),
     api_expires: $("exp").value,
+    reserve: keepMode !== "rsv" || $("rsv").value === "" ? 0 : Number($("rsv").value),
+    payout_pct: keepMode !== "pct" || $("ppct").value === "" ? 0 : Number($("ppct").value),
+    payout_paid: Number(orig.payout_paid || 0) + paidAdd,
     b_by: Object.fromEntries([1, 2, 0].map(k => [$("s" + k).value.trim().toUpperCase(), document.querySelector(`#b${k} button.on`)?.dataset.v])
       .filter(([c, b]) => c && b === "-1").map(([c]) => [c, -1])),
   };
+  // 不在三格裡、但還在 b_by 的(例如換掉後還持有的那檔)保留原設定
+  const slotsNow = [1, 2, 0].map(k => $("s" + k).value.trim().toUpperCase());
+  Object.entries(orig.b_by || {}).forEach(([c, b]) => { if (!slotsNow.includes(c)) out.b_by[c] = b; });
+  return out;
 }
 
 function check() {
@@ -510,6 +539,10 @@ function check() {
   if (!Number.isInteger(v.A) || v.A < 0 || v.A > 60) err.push("A 要是 0–60 的整數");
   if (!Number.isInteger(v.B) || v.B < 0 || v.B > 60) err.push("B 要是 0–60 的整數");
   if (v.amount !== "max" && !(v.amount > 0)) err.push("固定金額要大於 0");
+  if (!(v.reserve >= 0)) err.push("保留現金不能是負數");
+  if (keepMode === "rsv" && !(v.reserve > 0)) err.push("請填保留金額");
+  if (keepMode === "pct" && !(v.payout_pct > 0)) err.push("請填提撥比例");
+  if (!(v.payout_pct >= 0 && v.payout_pct <= 100)) err.push("獲利提撥要是 0–100");
   Object.entries(v.locked).forEach(([c, q]) => {
     if (!/^\d{4,6}[A-Z]?$/.test(c)) err.push(`長抱代號 ${c} 格式不對`);
     if (!Number.isInteger(q) || q <= 0) err.push(`長抱 ${c} 的股數要是正整數`);
@@ -529,7 +562,7 @@ function check() {
 
 function toYaml(v) {
   const q = s => JSON.stringify(String(s));
-  const known = ["id", "name", "enabled", "mode", "broker", "etfs", "A", "B", "b_by", "start_date", "locked", "amount", "max_amount", "telegram_chat", "secrets_prefix", "api_expires"];
+  const known = ["id", "name", "enabled", "mode", "broker", "etfs", "A", "B", "b_by", "start_date", "locked", "amount", "max_amount", "reserve", "payout_pct", "payout_paid", "telegram_chat", "secrets_prefix", "api_expires"];
   const L = [`# 由設定頁面更新 ${new Date().toLocaleString("zh-TW", {hour12: false})}`,
     `id: ${orig.id || file.replace(/\.yaml$/, "")}`, `name: ${q(v.name)}`, `enabled: ${v.enabled}`,
     `mode: ${v.mode}            # signal(只通知)→ paper(模擬)→ live(真單)`, `broker: ${orig.broker || "shioaji"}`,
@@ -540,6 +573,9 @@ function toYaml(v) {
   const lk = Object.entries(v.locked);
   if (lk.length) { L.push("locked:                 # 長抱、永遠不賣的股數"); lk.forEach(([c, n]) => L.push(`  ${q(c)}: ${n}`)); }
   L.push(`amount: ${v.amount}             # max=全部現金 All in;數字=每次固定金額`);
+  L.push(`reserve: ${v.reserve || 0}              # 保留現金:交割帳戶留這麼多不投入`);
+  L.push(`payout_pct: ${v.payout_pct || 0}          # 獲利提撥:每輪已實現獲利的這個比例留給零用錢`);
+  L.push(`payout_paid: ${Math.round(v.payout_paid || 0)}          # 已轉給零用錢的累計金額`);
   if (orig.telegram_chat != null) L.push(`telegram_chat: ${q(orig.telegram_chat)}`);
   if (orig.secrets_prefix) L.push(`secrets_prefix: ${orig.secrets_prefix}`);
   if (v.api_expires) L.push(`api_expires: ${v.api_expires}`);
@@ -553,7 +589,9 @@ function diffs(v) {
   const show = x => typeof x === "boolean" ? (x ? "是" : "否") : Array.isArray(x) ? x.join("、") : (x && typeof x === "object") ? Object.entries(x).map(([c, n]) => `${c} ${n / 1000} 張`).join("、") || "無" : String(x ?? "");
   const pairs = [["名稱", o.name, v.name], ["啟用", o.enabled !== false, v.enabled], ["模式", o.mode || "signal", v.mode],
     ["輪動", (o.etfs || []).map(String), v.etfs], ["A", o.A, v.A], ["B", o.B, v.B], ["除息前一天賣", Object.keys(o.b_by || {}), Object.keys(v.b_by)], ["開始日", iso(o.start_date), v.start_date],
-    ["長抱", o.locked || {}, v.locked], ["每次買進", String(o.amount ?? o.max_amount ?? "max"), String(v.amount)], ["API 到期", iso(o.api_expires), v.api_expires]];
+    ["長抱", o.locked || {}, v.locked], ["每次買進", String(o.amount ?? o.max_amount ?? "max"), String(v.amount)], ["API 到期", iso(o.api_expires), v.api_expires],
+    ["保留現金", String(o.reserve || 0), String(v.reserve || 0)], ["獲利提撥%", String(o.payout_pct || 0), String(v.payout_pct || 0)],
+    ["已轉帳累計", String(o.payout_paid || 0), String(Math.round(v.payout_paid || 0))]];
   pairs.forEach(([k, a, b]) => {
     const sa = k === "輪動" ? [...a].sort().join() : show(a), sb = k === "輪動" ? [...b].sort().join() : show(b);
     if (sa !== sb) out.push(`<div><span class="k">${k}</span>${show(a) || "—"} → <b>${show(b) || "—"}</b></div>`);
@@ -576,7 +614,7 @@ async function commit() {
     const r = await gh(`contents/accounts/${encodeURIComponent(file)}`, {method: "PUT",
       body: JSON.stringify({message: `設定頁面:更新 ${file}`, content: b64enc(toYaml(v)), sha})});
     dirty = false;
-    sha = r.content.sha; pausePending = false; setDirty(false);
+    sha = r.content.sha; pausePending = false; paidAdd = 0; setDirty(false);
     names[file] = v.name;
     const opt = [...$("acct").options].find(o => o.value === file); if (opt) opt.textContent = `${v.name}(${file.replace(/\.yaml$/, "")})`;
     $("dlg").close();
@@ -597,17 +635,25 @@ $("mode").onclick = e => { const b = e.target.closest("button"); if (b) { mode =
 document.querySelectorAll(".bsel").forEach(g => g.onclick = e => { const b = e.target.closest("button"); if (!b) return;
   setSeg(g.id, b.dataset.v); check(); setDirty(true); });
 $("amtMode").onclick = e => { const b = e.target.closest("button"); if (b) { amtMode = b.dataset.v; setSeg("amtMode", amtMode); $("amt").disabled = amtMode === "max"; if (amtMode === "num" && !$("amt").value) $("amt").focus(); check(); setDirty(true); } };
-["s1", "s2", "s0", "A", "B", "start", "amt", "name", "exp", "enabled"].forEach(id => $(id).addEventListener("input", () => { check(); setDirty(true); }));
+["s1", "s2", "s0", "A", "B", "start", "amt", "name", "exp", "enabled", "rsv", "ppct"].forEach(id => $(id).addEventListener("input", () => { check(); setDirty(true); }));
 ["s1", "s2", "s0"].forEach(id => $(id).addEventListener("change", renderChips));
 $("addLock").onclick = () => { addLock(); check(); setDirty(true); };
 $("acct").onchange = () => { if (dirty && !confirm("有未儲存的修改,確定切換帳戶?")) { $("acct").value = file; return; } openAcct(); };
 $("reload").onclick = () => { if (dirty && !confirm("放棄未儲存的修改?")) return; openAcct(); };
 $("pauseBtn").onclick = togglePause;
+$("keepMode").onclick = e => { const b = e.target.closest("button"); if (!b) return; keepMode = b.dataset.v; showKeep(); check(); setDirty(true); };
+$("payBtn").onclick = () => {
+  if (dirty) { $("statMsg").textContent = "請先儲存或重新載入目前的修改"; $("statMsg").className = "msg warn"; return; }
+  const v = prompt("這次轉給零用錢的金額(元)", String(window._due || 0));
+  const n = Number(String(v || "").replace(/,/g, ""));
+  if (!(n > 0)) return;
+  paidAdd = n; setDirty(true); save();
+};
 $("nCreate").onclick = createAcct;
 document.querySelectorAll("[data-d]").forEach(b => b.onclick = e => { e.preventDefault(); $("start").value = nextTrading(Number(b.dataset.d)); check(); setDirty(true); });
 $("pingBtn").onclick = ping;
 $("save").onclick = save;
-$("dlgNo").onclick = () => { $("dlg").close(); if (pausePending) { pausePending = false; openAcct(); } };
+$("dlgNo").onclick = () => { $("dlg").close(); if (pausePending || paidAdd) { pausePending = false; paidAdd = 0; openAcct(); } };
 $("dlgYes").onclick = commit;
 $("tokSave").onclick = connect;
 $("tok").addEventListener("keydown", e => { if (e.key === "Enter") connect(); });
