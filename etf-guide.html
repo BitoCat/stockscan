@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>ETF 輪動設定步驟</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--ink:#1c2230;--mute:#6b7385;--line:#e2e5eb;--acc:#1f6feb;--ok:#1a7f37;--warn:#b35900;--chip:#eef2f8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1218;--card:#171b23;--ink:#e6e9ef;--mute:#98a1b3;--line:#2a303c;--acc:#4c8dff;--ok:#3fb950;--warn:#e3a33b;--chip:#222836}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px 16px 64px}
+h1{font-size:21px;margin:8px 0 2px}
+.sub{color:var(--mute);font-size:13px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.card h2{font-size:16px;margin:0 0 6px;display:flex;gap:10px;align-items:center}
+.num{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--chip);font-size:13px;font-weight:700;flex:none}
+.card.done{opacity:.6}
+.card.done .num{background:var(--ok);color:#fff}
+.tick{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;color:var(--mute);cursor:pointer;white-space:nowrap}
+.tick input{width:18px;height:18px}
+ul,ol{margin:4px 0;padding-left:22px}
+li{margin:3px 0}
+b{font-weight:600}
+code{background:var(--chip);border-radius:5px;padding:1px 6px;font-size:13px;word-break:break-all}
+a{color:var(--acc);word-break:break-all}
+.note{color:var(--mute);font-size:13px;margin-top:6px}
+.warn{border-left:4px solid var(--warn);background:var(--card);border-radius:8px;padding:10px 12px;font-size:13px;margin:8px 0}
+.go{display:inline-block;margin-top:8px;background:var(--acc);color:#fff;text-decoration:none;border-radius:8px;padding:8px 14px;font-weight:600}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:6px 0 14px}
+.bar i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+</style>
+</head>
+<body>
+<main>
+  <h1>ETF 輪動設定步驟</h1>
+  <div class="sub">照順序做完 8 步,每做完一步勾右邊的「完成」(會記在這台裝置)。大約 30 分鐘;第 6 步要平日 08:00–18:00。</div>
+  <div class="bar"><i id="bar"></i></div>
+
+  <section class="card" data-s="0">
+    <h2><span class="num">0</span>先準備好這些<label class="tick"><input type="checkbox">完成</label></h2>
+    <ul>
+      <li><b>GitHub 帳號</b>,而且分享者已開權限讓你看得到範本(打開 <a href="https://github.com/BitoCat/etf-rotation-template" target="_blank" rel="noopener">範本</a> 看得到就 OK)</li>
+      <li><b>Telegram 機器人 Token</b>:Telegram 找 <b>@BotFather</b> → <code>/mybots</code> → 選你的機器人 → <b>API Token</b>
+        (沒有機器人:<code>/newbot</code> 建一個)</li>
+      <li><b>Telegram 通知 ID</b>:舊版 repo 的 <code>accounts/main.yaml</code> 裡 <code>telegram_chat</code> 那串數字(第一次設定的話,第 4 步的設定頁會教你查)</li>
+      <li><b>永豐 API Key、Secret Key</b>:Secret Key 只在建立時顯示一次;沒存下來就到永豐 API 管理頁刪掉舊的、重建一組
+        (勾 行情、帳務、交易、正式環境,<b>不設 IP</b>)</li>
+      <li><b>憑證檔 Sinopac.pfx</b>(在電腦裡)與憑證密碼(預設是身分證字號)</li>
+      <li><b>程式自動更新金鑰</b>:分享者私下給你的一段文字(開頭是 <code>-----BEGIN OPENSSH PRIVATE KEY-----</code>)</li>
+    </ul>
+    <div class="note">建議用電腦操作(第 4 步要上傳憑證檔)。</div>
+  </section>
+
+  <section class="card" data-s="1">
+    <h2><span class="num">1</span>刪除舊的 repo<label class="tick"><input type="checkbox">完成</label></h2>
+    <div class="note" style="margin-top:0">第一次設定、沒有舊 repo 的話直接勾完成。</div>
+    <ol>
+      <li>打開你的 <b>etf-rotation</b> repo → 上方 <b>Settings</b></li>
+      <li>拉到最下面 <b>Danger Zone</b> → <b>Delete this repository</b></li>
+      <li>照畫面指示輸入 repo 名稱確認刪除</li>
+    </ol>
+    <div class="warn">刪除前確認第 0 步的資料都準備好了;刪除後舊的金鑰和設定都拿不回來。</div>
+  </section>
+
+  <section class="card" data-s="2">
+    <h2><span class="num">2</span>從範本建立新的 repo<label class="tick"><input type="checkbox">完成</label></h2>
+    <ol>
+      <li>打開範本 → 右上角綠色 <b>Use this template</b> → <b>Create a new repository</b></li>
+      <li>Owner 選你自己;Repository name 填 <code>etf-rotation</code></li>
+      <li>選 <b>Private</b> → <b>Create repository</b></li>
+    </ol>
+    <a class="go" href="https://github.com/BitoCat/etf-rotation-template" target="_blank" rel="noopener">打開範本</a>
+    <div class="note">建好後告訴分享者,他會收回範本的權限(不影響你的 repo)。</div>
+  </section>
+
+  <section class="card" data-s="3">
+    <h2><span class="num">3</span>建立設定用的權杖<label class="tick"><input type="checkbox">完成</label></h2>
+    <ol>
+      <li>打開權杖頁面;有舊的 etf-rotation 權杖先刪掉</li>
+      <li><b>Generate new token</b>:名稱隨意(例「ETF 設定」),到期日選 1 年</li>
+      <li>Repository access:<b>Only select repositories</b> → 選 <code>etf-rotation</code></li>
+      <li>Permissions → Repository permissions,三項都選 <b>Read and write</b>:<b>Contents</b>、<b>Secrets</b>、<b>Actions</b></li>
+      <li><b>Generate token</b> → 複製(只會顯示一次,先貼在記事本)</li>
+    </ol>
+    <a class="go" href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener">打開權杖頁面</a>
+  </section>
+
+  <section class="card" data-s="4">
+    <h2><span class="num">4</span>初次設定頁(一頁填完)<label class="tick"><input type="checkbox">完成</label></h2>
+    <ol>
+      <li><b>GitHub</b>:repo 填 <code>你的帳號/etf-rotation</code>,貼第 3 步的權杖 → 檢查</li>
+      <li><b>Telegram</b>:貼機器人 Token 與通知 ID</li>
+      <li><b>永豐</b>:API Key、Secret Key、上傳 Sinopac.pfx、憑證密碼、身分證字號</li>
+      <li><b>策略</b>:三組各選一檔 ETF、A=30、B=0;模式先選「<b>只通知</b>」</li>
+      <li><b>寫入</b>:「程式自動更新金鑰」整段貼上(含 BEGIN、END 兩行)→ <b>確認寫入</b></li>
+    </ol>
+    <a class="go" href="etf-setup.html" target="_blank" rel="noopener">打開初次設定頁</a>
+    <div class="note">約 1 分鐘後 Telegram 會收到「設定已啟用」。金鑰在你的瀏覽器加密後直接存進你自己的 GitHub,不經過其他人。</div>
+  </section>
+
+  <section class="card" data-s="5">
+    <h2><span class="num">5</span>更新到最新程式<label class="tick"><input type="checkbox">完成</label></h2>
+    <ol>
+      <li>你的 repo → 上方 <b>Actions</b> → 左邊 <b>程式自動更新</b> → 右邊 <b>Run workflow</b> → 綠色 Run workflow</li>
+      <li>約 1 分鐘,出現綠色勾勾就完成(沒有新版時也是綠勾)</li>
+    </ol>
+    <div class="note">之後每週日 09:17 會自動檢查更新,有更新時 Telegram 會通知。出現紅色叉叉多半是金鑰沒貼完整,回第 4 步重新貼。</div>
+  </section>
+
+  <section class="card" data-s="6">
+    <h2><span class="num">6</span>測試永豐(平日 08:00–18:00)<label class="tick"><input type="checkbox">完成</label></h2>
+    <ol>
+      <li>初次設定頁最下面按「<b>永豐模擬測試</b>」→ 等 Telegram 回報成功</li>
+      <li>再按「<b>正式環境檢查</b>」→ 回報已開通就 OK</li>
+    </ol>
+    <div class="note">也可以在 repo 的 Actions → <b>ETF 輪動通知</b> → Run workflow,mode 選 simtest / livecheck,account 填 <code>main</code>。</div>
+  </section>
+
+  <section class="card" data-s="7">
+    <h2><span class="num">7</span>準時觸發(cron-job.org)<label class="tick"><input type="checkbox">完成</label></h2>
+    <div class="note" style="margin-top:0">GitHub 自己的排程常延遲好幾小時,換股要準時就需要這步。</div>
+    <ol>
+      <li>到權杖頁面再建一個:只選 <code>etf-rotation</code>、只開 <b>Actions: Read and write</b>(不要開 Contents)</li>
+      <li>登入 <a href="https://cron-job.org" target="_blank" rel="noopener">cron-job.org</a>。已有兩個排程的話,只要把 Headers 的 <code>Bearer</code> 後面換成新權杖;沒有的話建兩個:
+        <ul>
+          <li>URL:<code>https://api.github.com/repos/你的帳號/etf-rotation/actions/workflows/rotation.yml/dispatches</code></li>
+          <li>Method <b>POST</b>;Headers:<code>Authorization: Bearer 新權杖</code>、<code>Accept: application/vnd.github+json</code>、<code>Content-Type: application/json</code></li>
+          <li>午盤:週一~五 13:25,Body <code>{"ref":"main","inputs":{"mode":"noon","account":"all"}}</code></li>
+          <li>晚間:每天 20:00,Body 把 <code>noon</code> 改成 <code>evening</code></li>
+          <li>時區選 Asia/Taipei</li>
+        </ul>
+      </li>
+    </ol>
+    <div class="note">cron-job.org 的「Test run」可能顯示 404,不用理它,以實際排程時間的執行為準。</div>
+  </section>
+
+  <section class="card" data-s="8">
+    <h2><span class="num">8</span>日常使用<label class="tick"><input type="checkbox">完成</label></h2>
+    <ul>
+      <li>換 ETF、加個股、改 A/B、改賣出時機、改模式、暫停:都在設定頁(第一次要貼第 3 步的權杖)</li>
+      <li>先用「只通知」跑一兩次換股,確認通知正常,再改「模擬」或「真單」</li>
+      <li>每輪賣出後 Telegram 會發「本輪結算」,週日有週報</li>
+    </ul>
+    <a class="go" id="setLink" href="etf-settings.html" target="_blank" rel="noopener">打開設定頁</a>
+    <div class="note">把設定頁加到手機主畫面,之後隨時可以查看。</div>
+  </section>
+
+  <div class="note" style="text-align:center">有問題截圖給分享者;金鑰、憑證、身分證字號不要傳給任何人。</div>
+</main>
+<script>
+const K = "etfguide_done";
+let done = {};
+try { done = JSON.parse(localStorage.getItem(K) || "{}"); } catch (e) {}
+const cards = [...document.querySelectorAll(".card[data-s]")];
+function paint() {
+  cards.forEach(c => { const v = !!done[c.dataset.s]; c.classList.toggle("done", v); c.querySelector(".tick input").checked = v; });
+  document.getElementById("bar").style.width = (cards.filter(c => done[c.dataset.s]).length / cards.length * 100) + "%";
+}
+cards.forEach(c => c.querySelector(".tick input").onchange = e => {
+  done[c.dataset.s] = e.target.checked;
+  try { localStorage.setItem(K, JSON.stringify(done)); } catch (e) {}
+  paint();
+});
+paint();
+</script>
+</body>
+</html>
