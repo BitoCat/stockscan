@@ -166,6 +166,18 @@ table.cand tr.cur td{font-weight:700}
     </section>
 
     <section class="card">
+      <h2>個股(選用:替換單一輪)</h2>
+      <small class="note" style="display:block;margin:-4px 0 10px">以 ETF 為主。加入的個股只在它<b>自己除息的那個月</b>替換同月那一輪 ETF,除息前一天收盤賣出、只賺價差;其他輪照用 ETF。</small>
+      <div id="stkRec"></div>
+      <div id="stks" style="margin-top:8px"></div>
+      <div class="row" style="grid-template-columns:2fr 1fr;margin-top:6px">
+        <input id="stkIn" inputmode="numeric" placeholder="輸入個股代號 例 1712">
+        <button class="btn ghost" id="stkAdd">加入</button>
+      </div>
+      <small class="note">推薦=2016 年起每次「除息前 30 個交易日買、前一天賣」回測:至少 6 次、勝率 ≥75%、平均贏 0050、最差一次不超過 −12%。每組列 3 檔;冬天(9~2 月)個股幾乎不除息,通常沒有推薦。</small>
+    </section>
+
+    <section class="card">
       <h2>買賣時機與金額</h2>
       <div class="row three">
         <div><label for="A">A 除息前幾個交易日買</label><input id="A" type="number" min="0" max="60"></div>
@@ -211,7 +223,7 @@ table.cand tr.cur td{font-weight:700}
         <ul class="tl" style="margin-top:8px">
           <li><b>輪動</b>:每組月份一檔。除息前第 A 個交易日買進、除息後第 B 個交易日賣出,接著換下一檔。</li>
           <li><b>賣出時機</b>:「除息當天賣」領得到配息(B 依上方設定);「除息前一天賣」在除息前一天收盤賣出、<b>不領配息</b>,避開除息日的漲跌,但這一檔就沒有零用錢。</li>
-          <li><b>個股</b>:任一欄都可以填股票代號(例 2330)。程式不看它自己的除息日,而是使用那一欄的時段(該月 20 日當參考除息日),固定在前一天收盤賣出、只賺價差;單一個股波動比 ETF 大,請小心使用。</li>
+          <li><b>個股</b>:加在「個股」區,不放進 ETF 欄位。程式用它自己真正的除息日:除息前第 A 個交易日買、除息前一天收盤賣,只賺價差、不領股利;它除息那個月,同月的 ETF 那一輪由它替換。不用了記得移除(年配股明年同月還會再買)。單一個股波動比 ETF 大,請小心使用。</li>
           <li><b>開始日</b>:程式從這天起接手,會自動判斷當天應該持有哪一檔。開始前帳上的其他股票要自己先處理。</li>
           <li><b>每次買進金額</b>:「全部現金」會把交割帳戶可用現金全部投入;固定金額則每次最多買這麼多。</li>
           <li><b>長抱不賣</b>:這些股數永遠不賣、不算進輪動資金。和輪動 ETF 同一家投信時,配息帳戶會衝突。</li>
@@ -313,6 +325,7 @@ async function openAcct() {
     if (k != null) slots[k] = c;
   });
   [1, 2, 0].forEach(k => $("s" + k).value = slots[k]);
+  stocks = (a.stocks || []).map(String);
   const bby = a.b_by || {};
   [1, 2, 0].forEach(k => setSeg("b" + k, String(bby[slots[k]] ?? "") === "-1" ? "-1" : ""));
   $("A").value = a.A ?? 30; $("B").value = a.B ?? 0; $("start").value = iso(a.start_date);
@@ -476,6 +489,43 @@ function renderChips() {
   });
 }
 
+let stocks = [];
+const pct = x => `${x >= 0 ? "+" : ""}${(x * 100).toFixed(1)}%`;
+function roundMonth(k) {  // 這一組下一輪的除息月份:今天 25 天後起,第一個屬於這組的月份
+  const d = new Date(); d.setDate(d.getDate() + 25);
+  let y = d.getFullYear(), m = d.getMonth() + 1;
+  while (m % 3 !== k) { m++; if (m > 12) { m = 1; y++; } }
+  return `${y}-${String(m).padStart(2, "0")}`;
+}
+function stkInfo(c) {
+  const r = scan && (scan.stocks || []).find(x => x.code === c);
+  if (!r) return {txt: "不在推薦名單(回測不合格,或 200 天內沒有除息)", bad: true};
+  const m = Number(r.next_ex.slice(5, 7));
+  return {txt: `${r.name}|除息 ${exTxt(r)} → 替換 ${m} 月那一輪(${CYC[m % 3]} 組)|回測 ${r.n} 次 勝率 ${(r.win * 100).toFixed(0)}% 平均 ${pct(r.avg)} 比 0050 ${pct(r.exc)}`, bad: false};
+}
+function renderStocks() {
+  const rec = $("stkRec");
+  if (!scan || !scan.stocks) { rec.innerHTML = `<span class="msg">還沒有個股掃描資料(下次掃描後會出現)</span>`; }
+  else {
+    const yms = [1, 2, 0].map(roundMonth).sort();
+    const later = [...new Set(scan.stocks.map(r => r.next_ex.slice(0, 7)))].sort().find(x => x > yms[2]);
+    if (later) yms.push(later);
+    rec.innerHTML = yms.map((ym, i) => {
+      const m = Number(ym.slice(5)), rs = scan.stocks.filter(r => r.next_ex.slice(0, 7) === ym).slice(0, 3);
+      return `<div style="margin:4px 0"><span class="tag" style="display:inline-block;min-width:110px">${i === 3 ? "之後 " : ""}${ym.slice(0, 4) != new Date().getFullYear() ? ym.slice(0, 4) + "/" : ""}${m} 月<span class="d">(${CYC[m % 3]})</span></span> ` +
+        (rs.map(r => `<button class="chip stk" data-c="${r.code}"><b>${r.code}</b> ${r.name.slice(0, 5)} <span class="d">勝率${(r.win * 100).toFixed(0)}% ${pct(r.avg)} 除息${exTxt(r)}</span></button>`).join("") || `<span class="msg">沒有合格個股,用 ETF</span>`) + `</div>`;
+    }).join("");
+  }
+  $("stks").innerHTML = stocks.map(c => { const i = stkInfo(c);
+    return `<div class="lock" style="grid-template-columns:auto 1fr auto;align-items:center"><b>${c}</b><span class="msg ${i.bad ? "warn" : ""}" style="margin:0">${i.txt}</span><button class="btn x" data-c="${c}" title="移除">✕</button></div>`; }).join("");
+}
+function addStock(c) {
+  c = String(c || "").trim();
+  if (!/^[1-9]\d{3}$/.test(c)) { status("❌ 個股代號是 4 位數字,不是 00 開頭", "msg bad"); return; }
+  if (!stocks.includes(c)) stocks.push(c);
+  $("stkIn").value = ""; setDirty(true); check();
+}
+
 function addLock(c = "", q = "") {
   const d = document.createElement("div"); d.className = "lock";
   d.innerHTML = `<input class="lc" placeholder="代號 例 00919" value="${c}"><input class="lq" type="number" min="1" step="1000" placeholder="股數 例 10000" value="${q}"><button class="btn x" title="刪除">✕</button>`;
@@ -504,7 +554,7 @@ function collect() {
     if (c) locked[c] = q === "" ? NaN : Number(q);
   });
   const out = {
-    name: $("name").value.trim(), enabled: $("enabled").checked, mode, etfs,
+    name: $("name").value.trim(), enabled: $("enabled").checked, mode, etfs, stocks: [...stocks],
     A: $("A").value === "" ? NaN : Number($("A").value), B: $("B").value === "" ? NaN : Number($("B").value),
     start_date: $("start").value, locked,
     amount: amtMode === "max" ? "max" : ($("amt").value === "" ? NaN : Number($("amt").value)),
@@ -528,8 +578,7 @@ function check() {
     m.textContent = ""; m.className = "msg";
     if (!c) { m.textContent = "空白:這組月份不輪動,資金會閒置"; m.className = "msg warn"; return; }
     if (!/^\d{4,6}[A-Z]?$/.test(c)) { m.textContent = "代號格式不對"; m.className = "msg bad"; err.push(1); return; }
-    $("b" + k).style.display = c.startsWith("00") ? "" : "none";
-    if (!c.startsWith("00")) { m.textContent = `個股:使用這一欄的時段(${CYC[k]} 月 20 日前後),除息前一天收盤賣出,只賺價差、不領股利`; m.className = "msg warn"; return; }
+    if (!c.startsWith("00")) { m.textContent = "這是個股:ETF 欄位只放 ETF,個股請加在下方「個股」區"; m.className = "msg bad"; err.push(1); return; }
     const r = scan && scan.rows.find(x => x.code === c), ck = cycOf(c);
     if (ck != null && ck !== k) { m.textContent = `⚠️ ${c} 是 ${CYC[ck]} 月除息,不是這一組`; m.className = "msg warn"; }
     else if (r) { m.textContent = `${r.name}|單次 ${(r.single * 100).toFixed(1)}%|息日平均 ${exdTxt(r)}|下次除息 ${exTxt(r) || "—"}|年化 ${(r.ann * 100).toFixed(0)}%|填息 ${r.fill[0]}/${r.fill[1]}`; }
@@ -539,6 +588,8 @@ function check() {
     else if (clash) { m.textContent = `⚠️ 和長抱的 ${clash[0]} 同屬${r.issuer}投信:配息帳戶只能設一個,會進同一個帳戶`; m.className = "msg warn"; }
   });
   if (new Set(v.etfs).size !== v.etfs.length) err.push("輪動 ETF 重複");
+  v.stocks.forEach(c => { if (!/^[1-9]\d{3}$/.test(c)) err.push(`個股代號 ${c} 格式不對(4 位數字)`); });
+  renderStocks();
   if (!Number.isInteger(v.A) || v.A < 0 || v.A > 60) err.push("A 要是 0–60 的整數");
   if (!Number.isInteger(v.B) || v.B < 0 || v.B > 60) err.push("B 要是 0–60 的整數");
   if (v.amount !== "max" && !(v.amount > 0)) err.push("固定金額要大於 0");
@@ -565,11 +616,12 @@ function check() {
 
 function toYaml(v) {
   const q = s => JSON.stringify(String(s));
-  const known = ["id", "name", "enabled", "mode", "broker", "etfs", "A", "B", "b_by", "start_date", "locked", "amount", "max_amount", "reserve", "payout_pct", "payout_paid", "telegram_chat", "secrets_prefix", "api_expires"];
+  const known = ["id", "name", "enabled", "mode", "broker", "etfs", "stocks", "A", "B", "b_by", "start_date", "locked", "amount", "max_amount", "reserve", "payout_pct", "payout_paid", "telegram_chat", "secrets_prefix", "api_expires"];
   const L = [`# 由設定頁面更新 ${new Date().toLocaleString("zh-TW", {hour12: false})}`,
     `id: ${orig.id || file.replace(/\.yaml$/, "")}`, `name: ${q(v.name)}`, `enabled: ${v.enabled}`,
     `mode: ${v.mode}            # signal(只通知)→ paper(模擬)→ live(真單)`, `broker: ${orig.broker || "shioaji"}`,
     `etfs: [${v.etfs.map(q).join(", ")}]   # 1/4/7/10、2/5/8/11、3/6/9/12`,
+    ...(v.stocks.length ? [`stocks: [${v.stocks.map(q).join(", ")}]   # 個股:只替換它除息那個月的那一輪,除息前一天賣`] : []),
     `A: ${v.A}                   # 除息日前第幾個交易日買進`, `B: ${v.B}                   # 除息日後第幾個交易日賣出(0=除息當天)`];
   if (Object.keys(v.b_by).length) { L.push("b_by:                   # 個別 ETF 的 B(-1=除息前一天收盤賣出,不領息)"); Object.entries(v.b_by).forEach(([c, b]) => L.push(`  ${q(c)}: ${b}`)); }
   if (v.start_date) L.push(`start_date: ${v.start_date}`);
@@ -591,7 +643,7 @@ function diffs(v) {
   const o = orig, out = [];
   const show = x => typeof x === "boolean" ? (x ? "是" : "否") : Array.isArray(x) ? x.join("、") : (x && typeof x === "object") ? Object.entries(x).map(([c, n]) => `${c} ${n / 1000} 張`).join("、") || "無" : String(x ?? "");
   const pairs = [["名稱", o.name, v.name], ["啟用", o.enabled !== false, v.enabled], ["模式", o.mode || "signal", v.mode],
-    ["輪動", (o.etfs || []).map(String), v.etfs], ["A", o.A, v.A], ["B", o.B, v.B], ["除息前一天賣", Object.keys(o.b_by || {}), Object.keys(v.b_by)], ["開始日", iso(o.start_date), v.start_date],
+    ["輪動", (o.etfs || []).map(String), v.etfs], ["個股", (o.stocks || []).map(String), v.stocks], ["A", o.A, v.A], ["B", o.B, v.B], ["除息前一天賣", Object.keys(o.b_by || {}), Object.keys(v.b_by)], ["開始日", iso(o.start_date), v.start_date],
     ["長抱", o.locked || {}, v.locked], ["每次買進", String(o.amount ?? o.max_amount ?? "max"), String(v.amount)], ["API 到期", iso(o.api_expires), v.api_expires],
     ["保留現金", String(o.reserve || 0), String(v.reserve || 0)], ["獲利提撥%", String(o.payout_pct || 0), String(v.payout_pct || 0)],
     ["已轉帳累計", String(o.payout_paid || 0), String(Math.round(v.payout_paid || 0))]];
@@ -630,7 +682,11 @@ async function commit() {
 }
 
 document.addEventListener("click", e => {
-  const c = e.target.closest(".chip[data-c], table.cand tr[data-c]");
+  const sk = e.target.closest(".chip.stk");
+  if (sk) { addStock(sk.dataset.c); return; }
+  const sx = e.target.closest("#stks button[data-c]");
+  if (sx) { stocks = stocks.filter(x => x !== sx.dataset.c); setDirty(true); check(); return; }
+  const c = e.target.closest(".chip[data-k][data-c], table.cand tr[data-c]");
   if (c) { $("s" + c.dataset.k).value = c.dataset.c; renderChips(); check(); setDirty(true); }
 });
 window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
@@ -641,6 +697,8 @@ $("amtMode").onclick = e => { const b = e.target.closest("button"); if (b) { amt
 ["s1", "s2", "s0", "A", "B", "start", "amt", "name", "exp", "enabled", "rsv", "ppct"].forEach(id => $(id).addEventListener("input", () => { check(); setDirty(true); }));
 ["s1", "s2", "s0"].forEach(id => $(id).addEventListener("change", renderChips));
 $("addLock").onclick = () => { addLock(); check(); setDirty(true); };
+$("stkAdd").onclick = () => addStock($("stkIn").value);
+$("stkIn").addEventListener("keydown", e => { if (e.key === "Enter") addStock($("stkIn").value); });
 $("acct").onchange = () => { if (dirty && !confirm("有未儲存的修改,確定切換帳戶?")) { $("acct").value = file; return; } openAcct(); };
 $("reload").onclick = () => { if (dirty && !confirm("放棄未儲存的修改?")) return; openAcct(); };
 $("pauseBtn").onclick = togglePause;
