@@ -584,8 +584,14 @@ $("dlgYes").onclick = commit;
 $("tokSave").onclick = connect;
 $("tok").addEventListener("keydown", e => { if (e.key === "Enter") connect(); });
 $("tokClear").onclick = () => { store(KEY, null); store("etfrot_acct", null); location.reload(); };
-$("repo").value = load("etfrot_repo") || "BitoCat/etf-rotation";
-if (load(KEY)) connect();
+// 推播裡的連結會帶 ?repo=…&acct=…,直接開到該帳戶
+const QS = new URLSearchParams(location.search);
+$("repo").value = QS.get("repo") || load("etfrot_repo") || "BitoCat/etf-rotation";
+if (QS.get("acct")) store("etfrot_acct", QS.get("acct").replace(/\.yaml$/, "") + ".yaml");
+if (QS.get("repo") && load("etfrot_repo") && QS.get("repo") !== load("etfrot_repo")) {
+  $("tokMsg").textContent = `連結是 ${QS.get("repo")} 的設定,這台裝置記住的是 ${load("etfrot_repo")}:請貼上 ${QS.get("repo")} 的權杖後按「連線」`;
+  $("tokMsg").className = "msg warn";
+} else if (load(KEY)) connect();
 </script>
 </body>
 </html>
