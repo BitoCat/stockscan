@@ -123,6 +123,8 @@ table.cand tr.cur td{font-weight:700}
       <div id="payBox" class="hide" style="margin:-2px 0 10px;font-size:14px">💰 待轉給零用錢:<b id="payDue"></b> 元
         <button class="btn ghost" id="payBtn" style="padding:4px 10px;margin-left:6px">已轉帳</button></div>
       <ul class="tl" id="tl"></ul>
+      <div class="msg" id="mkt" style="margin:4px 0"></div>
+      <details id="perfBox" class="more hide" style="margin:6px 0 4px"><summary id="perfSum">績效</summary><div id="perf"></div></details>
       <div class="acts">
         <button class="btn ghost" id="pauseBtn">暫停</button>
         <button class="btn ghost" id="pingBtn">立即發送狀態到 Telegram</button>
@@ -385,6 +387,18 @@ async function loadStatus() {
     const est = p.source.startsWith("預估") ? `<span class="est">(除息日預估)</span>` : "";
     return `<li><b>${p.code}</b> ${md(p.buy)} 買 → ${md(p.sell)} 賣|除息 ${md(p.ex_date)} ${est}</li>`;
   }).join("") + `<li class="est">資料日 ${sm.today}</li>`;
+  const g = sm.market && sm.market.gap;
+  $("mkt").textContent = g == null ? "" : g <= -0.05 ? `⚠️ 大盤:0050 在季線下 ${(-g * 100).toFixed(1)}%(回測季線下 5% 以上進場明顯變差,換股前考慮減碼)` : `大盤:0050 ${g >= 0 ? "在季線上" : "在季線下"} ${Math.abs(g * 100).toFixed(1)}%`;
+  $("mkt").className = "msg" + (g != null && g <= -0.05 ? " warn" : "");
+  const pf = sm.perf;
+  $("perfBox").classList.toggle("hide", !pf);
+  if (pf) {
+    const P = x => x == null ? "—" : `<span style="color:${x >= 0 ? "var(--ok)" : "var(--bad)"}">${x >= 0 ? "+" : ""}${(x * 100).toFixed(2)}%</span>`;
+    $("perfSum").innerHTML = `📈 績效:${pf.n} 輪 累計 ${P(pf.cum)}|0050 同期 ${P(pf.cum50)}` + (pf.pnl != null ? `|實際 ${pf.pnl >= 0 ? "+" : ""}${pf.pnl.toLocaleString()} 元` : "");
+    $("perf").innerHTML = `<table class="cand"><tr><th>標的</th><th>買 → 賣</th><th>策略</th><th>0050</th><th>實際損益</th></tr>` +
+      pf.rounds.slice().reverse().map(r => `<tr><td><b>${r.code}</b>${r.bm1 ? "" : " 領息"}</td><td>${md(r.buy)} → ${md(r.sell)}</td><td>${P(r.ret)}</td><td>${P(r.m50)}</td><td>${r.pnl != null ? (r.pnl >= 0 ? "+" : "") + r.pnl.toLocaleString() : "—"}</td></tr>`).join("") +
+      `</table><small class="note">策略=買進日收盤到賣出日收盤(除息當天以後賣含配息),扣手續費 6 折與交易稅;實際損益=券商成本均價計算(模擬/真單)。自 ${pf.since} 起,共 ${pf.win}/${pf.n} 輪賺。</small>`;
+  }
 }
 
 let pausePending = false;
