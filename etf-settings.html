@@ -119,6 +119,7 @@ table.cand tr.cur td{font-weight:700}
         <div class="k">目前持有</div><div id="hold">—</div>
         <div class="k">最後執行</div><div id="lastRun">—</div>
       </div>
+      <div class="msg warn" id="decide" style="margin:-4px 0 8px"></div>
       <ul class="tl" id="tl"></ul>
       <div class="acts">
         <button class="btn ghost" id="pauseBtn">暫停</button>
@@ -338,9 +339,17 @@ async function loadStatus() {
   let sm = null;
   try { const s = await gh(`contents/state/${encodeURIComponent(a.id || file.replace(/\.yaml$/, ""))}.json`); sm = JSON.parse(b64dec(s.content)).summary; } catch (e) {}
   nextCyc = null; markNext();
+  $("decide").innerHTML = "";
   if (!en) { $("hold").textContent = "暫停中(程式不動作)"; $("tl").innerHTML = ""; return; }
   if (!sm) { $("hold").textContent = "下一次執行後顯示"; $("tl").innerHTML = ""; return; }
   $("hold").textContent = sm.holding || "現金";
+  $("decide").innerHTML = "";
+  if (sm.holding && sm.decide_by && sm.decide_by >= nextTrading(0)) {
+    const r = scan && scan.rows.find(x => x.code === sm.holding);
+    $("decide").innerHTML = `⏰ ${sm.holding} 賣出時機最後決定:<b>${md(sm.decide_by)} 13:25 前</b>(除息 ${md(sm.hold_ex)})<br>` +
+      `目前:${sm.hold_bm1 ? "除息前一天賣(不領息)" : "除息當天賣(領息)"}` + (r && r.exday != null ? `|息日平均 ${exdTxt(r)}(${r.exday_neg}/${r.exday_n} 次賠)` : "") +
+      `<br><small>要改:到下方「輪動 ETF」該組選賣出時機後儲存</small>`;
+  }
   const nb = sm.next.find(p => !p.skipped && p.buy >= sm.today) || sm.next.find(p => !p.skipped && p.buy > sm.today);
   nextCyc = nb ? Number(nb.ex_date.slice(5, 7)) % 3 : null; nextBuy = nb ? nb.buy : null; markNext();
   $("tl").innerHTML = sm.next.filter(p => !p.skipped).slice(0, 3).map(p => {
@@ -429,17 +438,27 @@ function cycOf(code) {
   return code in KNOWN ? KNOWN[code] : null;
 }
 
+const FOREIGN = ["美國","日本","日經","全球","REIT","特別股","不動產","地產","航運","美股","US","中國","印度","越南"];
+const exdTxt = r => r && r.exday != null ? `${r.exday >= 0 ? "+" : ""}${(r.exday * 100).toFixed(2)}%` : "—";
+function sugg(k, cur) {
+  const mv = scan.min_vol || 300, g = scan.rows.filter(r => r.cyc === k);
+  const act = g.filter(r => (r.active || /A$/.test(r.code)) && r.vol >= mv).sort((a, b) => b.single - a.single).slice(0, 3);
+  const low = g.filter(r => r.sigma && r.vol >= mv && !act.includes(r) && !(r.foreign ?? FOREIGN.some(w => r.name.includes(w)))).sort((a, b) => a.sigma - b.sigma).slice(0, 3);
+  return {act, low, all: g.filter(r => r.vol >= mv || r.code === cur)};
+}
 function renderChips() {
   [1, 2, 0].forEach(k => {
     const box = $("c" + k);
     if (!scan) { box.innerHTML = ""; return; }
-    const top = scan.rows.filter(r => r.cyc === k && r.vol >= (scan.min_vol || 300)).slice(0, 3);
     const cur = $("s" + k).value.trim().toUpperCase();
-    const all = scan.rows.filter(r => r.cyc === k && (r.vol >= (scan.min_vol || 300) || r.code === cur)).slice(0, 8);
-    $("d" + k).innerHTML = `<table class="cand"><tr><th>ETF</th><th>單次</th><th>下次除息</th><th>年化</th><th>填息</th><th>張/日</th></tr>` +
-      all.map(r => `<tr data-k="${k}" data-c="${r.code}" class="${r.code === cur ? "cur" : ""}"><td><b>${r.code}</b> ${r.name.slice(0, 8)}</td><td>${(r.single * 100).toFixed(1)}%</td><td>${exTxt(r)}</td><td>${(r.ann * 100).toFixed(0)}%</td><td>${r.fill[0]}/${r.fill[1]}</td><td>${Math.round(r.vol).toLocaleString()}</td></tr>`).join("") +
-      `</table><small class="note">點一列即可填入。單次=近 4 次平均每次配息÷股價;下次除息有「約」為依去年同季推估;年化含價差(過去兩年)。</small>`;
-    box.innerHTML = top.map(r => `<button class="chip" data-k="${k}" data-c="${r.code}"><b>${r.code}</b> ${r.name.slice(0, 6)} ${(r.single * 100).toFixed(1)}%${r.next_ex ? ` <span class="d">${exTxt(r)}</span>` : ""}</button>`).join("");
+    const {act, low, all} = sugg(k, cur);
+    const chip = (r, t) => `<button class="chip" data-k="${k}" data-c="${r.code}"><span class="d">${t}</span> <b>${r.code}</b> ${r.name.replace(/^主動/, "").slice(0, 6)} ${(r.single * 100).toFixed(1)}%` +
+      (r.exday != null ? ` <span class="d" style="color:${r.exday < 0 ? "var(--bad)" : "var(--ok)"}">息日${exdTxt(r)}</span>` : "") + (r.next_ex ? ` <span class="d">${exTxt(r)}</span>` : "") + `</button>`;
+    box.innerHTML = act.map(r => chip(r, "主動")).join("") + low.map(r => chip(r, "低波")).join("") || `<span class="msg">無建議</span>`;
+    const rows = [...all].sort((a, b) => (a.sigma ?? 9) - (b.sigma ?? 9));
+    $("d" + k).innerHTML = `<table class="cand"><tr><th>ETF</th><th>單次</th><th>息日平均</th><th>波動</th><th>下次除息</th><th>張/日</th></tr>` +
+      rows.map(r => `<tr data-k="${k}" data-c="${r.code}" class="${r.code === cur ? "cur" : ""}"><td><b>${r.code}</b> ${r.name.slice(0, 8)}</td><td>${(r.single * 100).toFixed(1)}%</td><td style="color:${(r.exday ?? 0) < 0 ? "var(--bad)" : "inherit"}">${exdTxt(r)}</td><td>${r.sigma ? (r.sigma * 100).toFixed(0) + "%" : "—"}</td><td>${exTxt(r)}</td><td>${Math.round(r.vol).toLocaleString()}</td></tr>`).join("") +
+      `</table><small class="note">依波動由低到高。息日平均=近 8 次除息日收盤相對參考價,負值(紅)=除息當天跌得比股利多,可考慮「除息前一天賣」。單次=近 4 次平均配息÷股價。</small>`;
   });
 }
 
@@ -481,7 +500,7 @@ function check() {
     if (!/^\d{4,6}[A-Z]?$/.test(c)) { m.textContent = "代號格式不對"; m.className = "msg bad"; err.push(1); return; }
     const r = scan && scan.rows.find(x => x.code === c), ck = cycOf(c);
     if (ck != null && ck !== k) { m.textContent = `⚠️ ${c} 是 ${CYC[ck]} 月除息,不是這一組`; m.className = "msg warn"; }
-    else if (r) { m.textContent = `${r.name}|單次 ${(r.single * 100).toFixed(1)}%|下次除息 ${exTxt(r) || "—"}|年化 ${(r.ann * 100).toFixed(0)}%|填息 ${r.fill[0]}/${r.fill[1]}`; }
+    else if (r) { m.textContent = `${r.name}|單次 ${(r.single * 100).toFixed(1)}%|息日平均 ${exdTxt(r)}|下次除息 ${exTxt(r) || "—"}|年化 ${(r.ann * 100).toFixed(0)}%|填息 ${r.fill[0]}/${r.fill[1]}`; }
     const lockIss = Object.keys(v.locked).map(x => [x, scan && scan.rows.find(y => y.code === x)]).filter(([, y]) => y && y.issuer);
     const clash = r && r.issuer && lockIss.find(([x, y]) => y.issuer === r.issuer && x !== c);
     if (v.locked[c] != null) { m.textContent = `⚠️ ${c} 也在長抱清單,同投信配息帳戶會衝突`; m.className = "msg warn"; }
