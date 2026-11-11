@@ -177,7 +177,7 @@ table.cand tr.cur td{font-weight:700}
         <input id="stkIn" inputmode="numeric" placeholder="輸入個股代號 例 1712">
         <button class="btn ghost" id="stkAdd">加入</button>
       </div>
-      <small class="note"><b>回測精選</b>=2016 年起每次「除息前 30 個交易日買、前一天賣」回測:至少 6 次、勝率 ≥75%、平均贏 0050、最差一次不超過 −12%。<b>產業龍頭</b>=各產業市值前 3 名(成交量 ≥500 張),依殖利率排序,附回測勝率供參考。各列 3 檔;冬天(9~2 月)個股幾乎不除息,通常沒有推薦。</small>
+      <small class="note"><b>回測精選</b>=2016 年起每次「除息前 30 個交易日買、前一天賣」回測:至少 6 次、勝率 ≥75%、平均贏 0050、最差一次不超過 −12%。<b>產業龍頭</b>=各產業市值前 3 名(成交量 ≥500 張)中,殖利率 ≥4%、回測(若有)平均贏 0050 的,依殖利率排序。殖利率低的(例如台積電)回測沒有除息前效應,不列入。各列 3 檔;冬天(9~2 月)個股幾乎不除息,通常沒有推薦。</small>
       <div class="msg warn" style="margin-top:6px">⚠️ 推薦名單僅依過去紀錄回測挑選,不代表未來仍能保持優勢,請謹慎選擇。單一個股波動比 ETF 大。</div>
     </section>
 
@@ -541,7 +541,7 @@ function renderStocks() {
         (rs.map(r => `<button class="chip stk" data-c="${r.code}"><b>${r.code}</b> ${r.name.slice(0, 5)} <span class="d">勝率${(r.win * 100).toFixed(0)}% ${pct(r.avg)} 除息${exTxt(r)}</span></button>`).join("") || `<span class="msg">沒有</span>`) +
         `<br><span class="d" style="font-size:12px">產業龍頭 </span>` +
         (ls.map(r => `<button class="chip stk" data-c="${r.code}"><b>${r.code}</b> ${r.name.slice(0, 5)} <span class="d">${r.ind}|殖利率${(r.yield * 100).toFixed(1)}%${r.n ? `|勝率${(r.win * 100).toFixed(0)}%` : ""} 除息${exTxt(r)}</span></button>`).join("") || `<span class="msg">沒有</span>`) +
-        (!rs.length && !ls.length ? ` <span class="msg">→ 這輪用 ETF</span>` : "") + `</div>`;
+        (!rs.length && !ls.length ? `<br><span class="msg warn">→ 這一輪沒有適合的個股,建議照用 ETF${$("s" + (m % 3)).value ? "(" + $("s" + (m % 3)).value.trim() + ")" : ""}</span>` : "") + `</div>`;
     }).join("");
   }
   $("stks").innerHTML = stocks.map(c => { const i = stkInfo(c);
