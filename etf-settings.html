@@ -177,7 +177,7 @@ table.cand tr.cur td{font-weight:700}
         <input id="stkIn" inputmode="numeric" placeholder="輸入個股代號 例 1712">
         <button class="btn ghost" id="stkAdd">加入</button>
       </div>
-      <small class="note">推薦=2016 年起每次「除息前 30 個交易日買、前一天賣」回測:至少 6 次、勝率 ≥75%、平均贏 0050、最差一次不超過 −12%。每組列 3 檔;冬天(9~2 月)個股幾乎不除息,通常沒有推薦。</small>
+      <small class="note"><b>回測精選</b>=2016 年起每次「除息前 30 個交易日買、前一天賣」回測:至少 6 次、勝率 ≥75%、平均贏 0050、最差一次不超過 −12%。<b>產業龍頭</b>=各產業市值前 3 名(成交量 ≥500 張),依殖利率排序,附回測勝率供參考。各列 3 檔;冬天(9~2 月)個股幾乎不除息,通常沒有推薦。</small>
       <div class="msg warn" style="margin-top:6px">⚠️ 推薦名單僅依過去紀錄回測挑選,不代表未來仍能保持優勢,請謹慎選擇。單一個股波動比 ETF 大。</div>
     </section>
 
@@ -516,6 +516,12 @@ function roundMonth(k) {  // 這一組下一輪的除息月份:今天 25 天後�
 }
 function stkInfo(c) {
   const r = scan && (scan.stocks || []).find(x => x.code === c);
+  const ld = scan && (scan.leaders || []).find(x => x.code === c);
+  if (!r && ld) {
+    const m = Number(ld.next_ex.slice(5, 7));
+    return {txt: `${ld.name}(${ld.ind}龍頭)|殖利率 ${(ld.yield * 100).toFixed(1)}%(${ld.ysrc})|除息 ${exTxt(ld)} → 替換 ${m} 月那一輪` +
+      (ld.n ? `|回測 ${ld.n} 次 勝率 ${(ld.win * 100).toFixed(0)}% 平均 ${pct(ld.avg)}` : "|無回測資料") + (ld.ok ? "" : "(回測未達精選標準)"), bad: !ld.ok};
+  }
   if (!r) return {txt: "不在推薦名單(回測不合格,或 200 天內沒有除息)", bad: true};
   const m = Number(r.next_ex.slice(5, 7));
   return {txt: `${r.name}|除息 ${exTxt(r)} → 替換 ${m} 月那一輪(${CYC[m % 3]} 組)|回測 ${r.n} 次 勝率 ${(r.win * 100).toFixed(0)}% 平均 ${pct(r.avg)} 比 0050 ${pct(r.exc)}`, bad: false};
@@ -525,12 +531,17 @@ function renderStocks() {
   if (!scan || !scan.stocks) { rec.innerHTML = `<span class="msg">還沒有個股掃描資料(下次掃描後會出現)</span>`; }
   else {
     const yms = [1, 2, 0].map(roundMonth).sort();
-    const later = [...new Set(scan.stocks.map(r => r.next_ex.slice(0, 7)))].sort().find(x => x > yms[2]);
+    const later = [...new Set(scan.stocks.concat(scan.leaders || []).map(r => r.next_ex.slice(0, 7)))].sort().find(x => x > yms[2]);
     if (later) yms.push(later);
     rec.innerHTML = yms.map((ym, i) => {
       const m = Number(ym.slice(5)), rs = scan.stocks.filter(r => r.next_ex.slice(0, 7) === ym).slice(0, 3);
-      return `<div style="margin:4px 0"><span class="tag" style="display:inline-block;min-width:110px">${i === 3 ? "之後 " : ""}${ym.slice(0, 4) != new Date().getFullYear() ? ym.slice(0, 4) + "/" : ""}${m} 月<span class="d">(${CYC[m % 3]})</span></span> ` +
-        (rs.map(r => `<button class="chip stk" data-c="${r.code}"><b>${r.code}</b> ${r.name.slice(0, 5)} <span class="d">勝率${(r.win * 100).toFixed(0)}% ${pct(r.avg)} 除息${exTxt(r)}</span></button>`).join("") || `<span class="msg">沒有合格個股,用 ETF</span>`) + `</div>`;
+      const ls = (scan.leaders || []).filter(r => r.next_ex.slice(0, 7) === ym).slice(0, 3);
+      return `<div style="margin:6px 0"><span class="tag" style="display:inline-block;min-width:110px">${i === 3 ? "之後 " : ""}${ym.slice(0, 4) != new Date().getFullYear() ? ym.slice(0, 4) + "/" : ""}${m} 月<span class="d">(${CYC[m % 3]})</span></span><br>` +
+        `<span class="d" style="font-size:12px">回測精選 </span>` +
+        (rs.map(r => `<button class="chip stk" data-c="${r.code}"><b>${r.code}</b> ${r.name.slice(0, 5)} <span class="d">勝率${(r.win * 100).toFixed(0)}% ${pct(r.avg)} 除息${exTxt(r)}</span></button>`).join("") || `<span class="msg">沒有</span>`) +
+        `<br><span class="d" style="font-size:12px">產業龍頭 </span>` +
+        (ls.map(r => `<button class="chip stk" data-c="${r.code}"><b>${r.code}</b> ${r.name.slice(0, 5)} <span class="d">${r.ind}|殖利率${(r.yield * 100).toFixed(1)}%${r.n ? `|勝率${(r.win * 100).toFixed(0)}%` : ""} 除息${exTxt(r)}</span></button>`).join("") || `<span class="msg">沒有</span>`) +
+        (!rs.length && !ls.length ? ` <span class="msg">→ 這輪用 ETF</span>` : "") + `</div>`;
     }).join("");
   }
   $("stks").innerHTML = stocks.map(c => { const i = stkInfo(c);
