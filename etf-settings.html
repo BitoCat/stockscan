@@ -227,6 +227,7 @@ table.cand tr.cur td{font-weight:700}
         <ul class="tl" style="margin-top:8px">
           <li><b>輪動</b>:每組月份一檔。除息前第 A 個交易日買進、除息後第 B 個交易日賣出,接著換下一檔。</li>
           <li><b>賣出時機</b>:「除息當天賣」領得到配息(B 依上方設定);「除息前一天賣」在除息前一天收盤賣出、<b>不領配息</b>,避開除息日的漲跌,但這一檔就沒有零用錢。</li>
+          <li><b>建議名單以外的代號</b>:都可以填。ETF 欄位可填任何 ETF(含月配息,只會用這組月份的那幾次除息);個股區可填任何個股,沒回測過的會標「不在推薦名單」。請自行確認除息月份與成交量。</li>
           <li><b>個股</b>:加在「個股」區,不放進 ETF 欄位。程式用它自己真正的除息日:除息前第 A 個交易日買、除息前一天收盤賣,只賺價差、不領股利;它除息那個月,同月的 ETF 那一輪由它替換。不用了記得移除(年配股明年同月還會再買)。單一個股波動比 ETF 大,請小心使用。</li>
           <li><b>開始日</b>:程式從這天起接手,會自動判斷當天應該持有哪一檔。開始前帳上的其他股票要自己先處理。</li>
           <li><b>每次買進金額</b>:「全部現金」會把交割帳戶可用現金全部投入;固定金額則每次最多買這麼多。</li>
@@ -597,6 +598,7 @@ function check() {
     if (!c.startsWith("00")) { m.textContent = "這是個股:ETF 欄位只放 ETF,個股請加在下方「個股」區"; m.className = "msg bad"; err.push(1); return; }
     const r = scan && scan.rows.find(x => x.code === c), ck = cycOf(c);
     if (ck != null && ck !== k) { m.textContent = `⚠️ ${c} 是 ${CYC[ck]} 月除息,不是這一組`; m.className = "msg warn"; }
+    else if (!r) { m.textContent = `${c} 不在掃描名單(月配息、新上市或成交量小):程式照它實際公告的除息日運作;月配息的只用這組月份(${CYC[k]})那幾次,請自行確認流動性`; m.className = "msg warn"; }
     else if (r) { m.textContent = `${r.name}|單次 ${(r.single * 100).toFixed(1)}%|息日平均 ${exdTxt(r)}|下次除息 ${exTxt(r) || "—"}|年化 ${(r.ann * 100).toFixed(0)}%|填息 ${r.fill[0]}/${r.fill[1]}`; }
     const lockIss = Object.keys(v.locked).map(x => [x, scan && scan.rows.find(y => y.code === x)]).filter(([, y]) => y && y.issuer);
     const clash = r && r.issuer && lockIss.find(([x, y]) => y.issuer === r.issuer && x !== c);
