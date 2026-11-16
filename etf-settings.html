@@ -127,6 +127,7 @@ table.cand tr.cur td{font-weight:700}
       <details id="perfBox" class="more hide" style="margin:6px 0 4px"><summary id="perfSum">績效</summary><div id="perf"></div></details>
       <div class="acts">
         <button class="btn ghost" id="pauseBtn">暫停</button>
+        <button class="btn ghost" id="holdBtn" title="賣出照做、先不買,錢留在交割戶;取消後下一個交易日 13:25 自動買進">⏸ 暫緩買進</button>
         <button class="btn ghost" id="pingBtn">立即發送狀態到 Telegram</button>
       </div>
       <div class="msg" id="statMsg"></div>
@@ -331,6 +332,7 @@ async function openAcct() {
   });
   [1, 2, 0].forEach(k => $("s" + k).value = slots[k]);
   stocks = (a.stocks || []).map(String);
+  holdBuy = a.hold_buy === true;
   const bby = a.b_by || {};
   [1, 2, 0].forEach(k => setSeg("b" + k, String(bby[slots[k]] ?? "") === "-1" ? "-1" : ""));
   $("A").value = a.A ?? 30; $("B").value = a.B ?? 0; $("start").value = iso(a.start_date);
@@ -361,6 +363,8 @@ async function loadStatus() {
   $("badge").textContent = !en ? "暫停中" : {signal: "運作中・只通知", paper: "運作中・模擬", live: "運作中・真單"}[m];
   $("badge").className = "badge " + (!en ? "pause" : m === "live" ? "live" : "run");
   $("pauseBtn").textContent = en ? "暫停" : "恢復";
+  $("holdBtn").textContent = a.hold_buy ? "▶ 恢復買進" : "⏸ 暫緩買進";
+  if (a.hold_buy && en) $("badge").textContent += "・暫緩買進";
   if (lastRun) {
     const t = new Date(lastRun.time), hrs = (Date.now() - t) / 36e5;
     $("lastRun").innerHTML = `${t.toLocaleString("zh-TW", {month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false})}` +
@@ -403,6 +407,13 @@ async function loadStatus() {
 }
 
 let pausePending = false;
+let holdBuy = false;
+async function toggleHold() {
+  if (dirty) { $("statMsg").textContent = "請先儲存或重新載入目前的修改"; $("statMsg").className = "msg warn"; return; }
+  holdBuy = !(orig.hold_buy === true);
+  check(); setDirty(true); save();
+}
+
 async function togglePause() {
   pausePending = true;
   if (dirty) { $("statMsg").textContent = "請先儲存或重新載入目前的修改"; $("statMsg").className = "msg warn"; return; }
@@ -590,6 +601,7 @@ function collect() {
     reserve: keepMode !== "rsv" || $("rsv").value === "" ? 0 : Number($("rsv").value),
     payout_pct: keepMode !== "pct" || $("ppct").value === "" ? 0 : Number($("ppct").value),
     payout_paid: Number(orig.payout_paid || 0) + paidAdd,
+    hold_buy: holdBuy,
     b_by: Object.fromEntries([1, 2, 0].map(k => [$("s" + k).value.trim().toUpperCase(), document.querySelector(`#b${k} button.on`)?.dataset.v])
       .filter(([c, b]) => c && b === "-1").map(([c]) => [c, -1])),
   };
@@ -645,7 +657,7 @@ function check() {
 
 function toYaml(v) {
   const q = s => JSON.stringify(String(s));
-  const known = ["id", "name", "enabled", "mode", "broker", "etfs", "stocks", "A", "B", "b_by", "start_date", "locked", "amount", "max_amount", "reserve", "payout_pct", "payout_paid", "telegram_chat", "secrets_prefix", "api_expires"];
+  const known = ["id", "name", "enabled", "mode", "broker", "etfs", "stocks", "A", "B", "b_by", "start_date", "locked", "amount", "max_amount", "reserve", "payout_pct", "payout_paid", "hold_buy", "telegram_chat", "secrets_prefix", "api_expires"];
   const L = [`# 由設定頁面更新 ${new Date().toLocaleString("zh-TW", {hour12: false})}`,
     `id: ${orig.id || file.replace(/\.yaml$/, "")}`, `name: ${q(v.name)}`, `enabled: ${v.enabled}`,
     `mode: ${v.mode}            # signal(只通知)→ paper(模擬)→ live(真單)`, `broker: ${orig.broker || "shioaji"}`,
@@ -660,6 +672,7 @@ function toYaml(v) {
   L.push(`reserve: ${v.reserve || 0}              # 保留現金:交割帳戶留這麼多不投入`);
   L.push(`payout_pct: ${v.payout_pct || 0}          # 獲利提撥:每輪已實現獲利的這個比例留給零用錢`);
   L.push(`payout_paid: ${Math.round(v.payout_paid || 0)}          # 已轉給零用錢的累計金額`);
+  if (v.hold_buy) L.push(`hold_buy: true          # 暫緩買進:賣出照做、先不買,錢留在交割戶(設定頁按「恢復買進」取消)`);
   if (orig.telegram_chat != null) L.push(`telegram_chat: ${q(orig.telegram_chat)}`);
   if (orig.secrets_prefix) L.push(`secrets_prefix: ${orig.secrets_prefix}`);
   if (v.api_expires) L.push(`api_expires: ${v.api_expires}`);
@@ -675,7 +688,8 @@ function diffs(v) {
     ["輪動", (o.etfs || []).map(String), v.etfs], ["個股", (o.stocks || []).map(String), v.stocks], ["A", o.A, v.A], ["B", o.B, v.B], ["除息前一天賣", Object.keys(o.b_by || {}), Object.keys(v.b_by)], ["開始日", iso(o.start_date), v.start_date],
     ["長抱", o.locked || {}, v.locked], ["每次買進", String(o.amount ?? o.max_amount ?? "max"), String(v.amount)], ["API 到期", iso(o.api_expires), v.api_expires],
     ["保留現金", String(o.reserve || 0), String(v.reserve || 0)], ["獲利提撥%", String(o.payout_pct || 0), String(v.payout_pct || 0)],
-    ["已轉帳累計", String(o.payout_paid || 0), String(Math.round(v.payout_paid || 0))]];
+    ["已轉帳累計", String(o.payout_paid || 0), String(Math.round(v.payout_paid || 0))],
+    ["暫緩買進", o.hold_buy ? "是" : "否", v.hold_buy ? "是" : "否"]];
   pairs.forEach(([k, a, b]) => {
     const sa = k === "輪動" ? [...a].sort().join() : show(a), sb = k === "輪動" ? [...b].sort().join() : show(b);
     if (sa !== sb) out.push(`<div><span class="k">${k}</span>${show(a) || "—"} → <b>${show(b) || "—"}</b></div>`);
@@ -731,6 +745,7 @@ $("stkIn").addEventListener("keydown", e => { if (e.key === "Enter") addStock($(
 $("acct").onchange = () => { if (dirty && !confirm("有未儲存的修改,確定切換帳戶?")) { $("acct").value = file; return; } openAcct(); };
 $("reload").onclick = () => { if (dirty && !confirm("放棄未儲存的修改?")) return; openAcct(); };
 $("pauseBtn").onclick = togglePause;
+$("holdBtn").onclick = toggleHold;
 $("keepMode").onclick = e => { const b = e.target.closest("button"); if (!b) return; keepMode = b.dataset.v; showKeep(); check(); setDirty(true); };
 $("payBtn").onclick = () => {
   if (dirty) { $("statMsg").textContent = "請先儲存或重新載入目前的修改"; $("statMsg").className = "msg warn"; return; }
