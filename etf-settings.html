@@ -129,6 +129,7 @@ table.cand tr.cur td{font-weight:700}
         <button class="btn ghost" id="pauseBtn">暫停</button>
         <button class="btn ghost" id="holdBtn" title="賣出照做、先不買,錢留在交割戶;取消後下一個交易日 13:25 自動買進">⏸ 暫緩買進</button>
         <button class="btn ghost" id="pingBtn">立即發送狀態到 Telegram</button>
+        <button class="btn ghost" id="sellBtn" style="color:var(--bad);border-color:var(--bad)" title="盤中(平日 09:00–13:29)立即賣出程式管理的持股,並開啟暫緩買進">⚡ 一鍵出清</button>
       </div>
       <div class="msg" id="statMsg"></div>
     </section>
@@ -228,6 +229,7 @@ table.cand tr.cur td{font-weight:700}
         <ul class="tl" style="margin-top:8px">
           <li><b>輪動</b>:每組月份一檔。除息前第 A 個交易日買進、除息後第 B 個交易日賣出,接著換下一檔。</li>
           <li><b>賣出時機</b>:「除息當天賣」領得到配息(B 依上方設定);「除息前一天賣」在除息前一天收盤賣出、<b>不領配息</b>,避開除息日的漲跌,但這一檔就沒有零用錢。</li>
+          <li><b>⚡ 一鍵出清</b>:盤中(平日 09:00–13:29)立即以市場買價賣出程式管理的全部持股(長抱 locked、清單外的股票不動),整張走盤中整股、零股走盤中零股;賣完自動開啟「暫緩買進」,要恢復輪動按「恢復買進」。帳戶暫停中也能用。</li>
           <li><b>建議名單以外的代號</b>:都可以填。ETF 欄位可填任何 ETF(含月配息,只會用這組月份的那幾次除息);個股區可填任何個股,沒回測過的會標「不在推薦名單」。請自行確認除息月份與成交量。</li>
           <li><b>個股</b>:加在「個股」區,不放進 ETF 欄位。程式用它自己真正的除息日:除息前第 A 個交易日買、除息前一天收盤賣,只賺價差、不領股利;它除息那個月,同月的 ETF 那一輪由它替換。不用了記得移除(年配股明年同月還會再買)。單一個股波動比 ETF 大,請小心使用。</li>
           <li><b>開始日</b>:程式從這天起接手,會自動判斷當天應該持有哪一檔。開始前帳上的其他股票要自己先處理。</li>
@@ -422,6 +424,21 @@ async function togglePause() {
     $("start").value = new Date().toISOString().slice(0, 10);
   }
   check(); setDirty(true); save();
+}
+
+async function sellNow() {
+  const id = orig.id || file.replace(/\.yaml$/, ""), now = new Date();
+  const hm = now.getHours() * 60 + now.getMinutes(), wd = now.getDay();
+  if (wd === 0 || wd === 6 || hm < 540 || hm > 809) { $("statMsg").textContent = "一鍵出清只能在盤中(平日 09:00–13:29)使用"; $("statMsg").className = "msg warn"; return; }
+  if (!confirm("⚡ 一鍵出清\n\n現在以盤中市價立即賣出這個帳戶「程式管理」的全部持股(長抱 locked 不賣、其他股票不碰),並自動開啟「暫緩買進」。\n\n約 1~2 分鐘內下單,結果發到 Telegram。確定要賣嗎?")) return;
+  $("statMsg").textContent = "送出中…"; $("statMsg").className = "msg";
+  try {
+    await gh("actions/workflows/rotation.yml/dispatches", {method: "POST", body: JSON.stringify({ref: "main", inputs: {mode: "sellnow", account: id, codes: ""}})});
+    $("statMsg").textContent = "✓ 已送出:約 1~2 分鐘內下單,成交結果會發到 Telegram"; $("statMsg").className = "msg ok";
+  } catch (e) {
+    $("statMsg").textContent = e.status === 403 || e.status === 404 ? "權杖沒有 Actions 權限:到 GitHub 權杖設定加上 Actions:Read and write" : "送出失敗:" + e.message;
+    $("statMsg").className = "msg bad";
+  }
 }
 
 async function ping() {
@@ -746,6 +763,7 @@ $("acct").onchange = () => { if (dirty && !confirm("有未儲存的修改,確定
 $("reload").onclick = () => { if (dirty && !confirm("放棄未儲存的修改?")) return; openAcct(); };
 $("pauseBtn").onclick = togglePause;
 $("holdBtn").onclick = toggleHold;
+$("sellBtn").onclick = sellNow;
 $("keepMode").onclick = e => { const b = e.target.closest("button"); if (!b) return; keepMode = b.dataset.v; showKeep(); check(); setDirty(true); };
 $("payBtn").onclick = () => {
   if (dirty) { $("statMsg").textContent = "請先儲存或重新載入目前的修改"; $("statMsg").className = "msg warn"; return; }
