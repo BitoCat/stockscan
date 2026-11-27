@@ -1263,22 +1263,52 @@ async function renderHolders(sym) {
     var big = rows.map(function (r) { return Number(r.big400_pct) || 0; });
     var sml = rows.map(function (r) { return Number(r.small_pct) || 0; });
 
-    var W_LOOK = 4;
-    var baseIdx = Math.max(0, big.length - 1 - W_LOOK);
-    var baseIdx = Math.max(0, big.length - 2);   // 前一週
+    var baseIdx = big.length - 2;   // 前一筆
     var bigChg = big[big.length - 1] - big[baseIdx];
     var smlChg = sml[sml.length - 1] - sml[baseIdx];
-    
-    var verdict, vcolor;
-    if (Math.abs(bigChg) < 0.2 && Math.abs(smlChg) < 0.2) { vcolor = 'var(--muted)'; verdict = '近一週大戶散戶持股變化不大 → 持平'; }
-    else if (bigChg > 0 && smlChg <= 0) { vcolor = '#31d071'; verdict = '近一週大戶增持、散戶退場 → 籌碼向大戶集中(偏多)'; }
-    else if (bigChg < 0 && smlChg >= 0) { vcolor = '#ff5470'; verdict = '近一週大戶減持、散戶承接 → 籌碼流向散戶(偏空)'; }
-    else { vcolor = 'var(--muted)'; verdict = '近一週大戶散戶變動方向不一致 → 中性'; }
-    
-    var arw = function (c) { return c > 0 ? '▲' : (c < 0 ? '▼' : '—'); };
+    var bigRel = big[baseIdx] > 0 ? bigChg / big[baseIdx] * 100 : 0;      // 相對變化 %
+    var sh0 = Number(rows[baseIdx].small_holders) || 0, sh1 = Number(last.small_holders) || 0;
+    var shRel = sh0 > 0 ? (sh1 - sh0) / sh0 * 100 : 0;                   // 散戶人數變化 %
+    var toD = function (d) { return new Date(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8)); };
+    var gapDays = Math.round((toD(dates[dates.length - 1]) - toD(dates[baseIdx])) / 864e5);
+    var span = gapDays > 8 ? '近兩週' : '近一週';
     var r2 = function (x) { return Math.round(x * 100) / 100; };
-    var chgLine = '大戶 ' + arw(bigChg) + ' ' + (bigChg >= 0 ? '+' : '') + r2(bigChg) +
-      ' pt · 散戶 ' + arw(smlChg) + ' ' + (smlChg >= 0 ? '+' : '') + r2(smlChg) + ' pt 近一週)';
+    var sg = function (x) { return (x >= 0 ? '+' : '') + r2(x); };
+
+    // 依集保回測（2026/08~11，約 1 萬檔週，超額報酬=個股 − 同週平均）
+    var verdict, vcolor, note = '';
+    if (bigRel <= -3) {
+      vcolor = '#ff5470';
+      verdict = '⚠️ ' + span + '大戶持股大減 ' + sg(bigRel) + '%(相對) → 籌碼明顯鬆動';
+      note = '回測：大戶一週相對減少 3% 以上(約每 20 週才遇到 1 次)，之後 20 個交易日有 73% 跑輸大盤，平均落後約 8%。';
+    } else if (bigRel <= -1) {
+      vcolor = '#ff8c5a';
+      verdict = span + '大戶持股減少 ' + sg(bigRel) + '%(相對) → 籌碼偏鬆，留意';
+      note = '回測：相對減少 1~3%，之後 20 個交易日約 64% 跑輸大盤，平均落後約 3.6%。';
+    } else if (bigRel >= 3) {
+      vcolor = '#31d071';
+      verdict = span + '大戶大舉加碼 ' + sg(bigRel) + '%(相對) → 短線偏多';
+      note = '回測：大戶一週大增 3% 以上，之後 5 日平均多漲 1.4%，但 20 日後優勢消失(常是短線資金)，別當長抱理由。';
+    } else if (bigRel >= 0.3 && shRel < -0.5) {
+      vcolor = '#31d071';
+      verdict = span + '大戶增持、散戶人數減少 → 籌碼向大戶集中(偏多)';
+      note = '回測：這種組合之後 5 日平均多漲約 0.9%，偏短線參考。';
+    } else if (Math.abs(bigRel) < 0.3) {
+      vcolor = 'var(--muted)';
+      verdict = span + '大戶持股變化不大 → 持平';
+    } else {
+      vcolor = 'var(--muted)';
+      verdict = span + '大戶小幅' + (bigRel > 0 ? '增持' : '減持') + ' ' + sg(bigRel) + '% → 中性';
+    }
+    // 倒貨給散戶：大戶減 + 散戶人數增
+    var dump = bigRel <= -0.3 && shRel > 0.5;
+    if (dump) {
+      note += (note ? '<br>' : '') + '🔻 同時散戶人數增加 ' + sg(shRel) + '% → 像是大戶把股票賣給散戶。回測此組合之後 20 日約 68% 跑輸大盤，平均落後約 5.6%。';
+    }
+
+    var arw = function (c) { return c > 0 ? '▲' : (c < 0 ? '▼' : '—'); };
+    var chgLine = '大戶 ' + arw(bigChg) + ' ' + sg(bigChg) + ' 個百分點(相對 ' + sg(bigRel) + '%) · 散戶人數 ' +
+      arw(shRel) + ' ' + sg(shRel) + '%(' + span + ')';
 
     var W = 340, H = 180, padL = 10, padR = 10, padT = 14, padB = 26;
     var plotW = W - padL - padR, plotH = H - padT - padB;
@@ -1313,8 +1343,13 @@ async function renderHolders(sym) {
     box.innerHTML = HEAD + pills +
       '<div style="color:' + vcolor + ';font-weight:700;font-size:14px;margin:2px 0 4px">' + verdict + '</div>' +
       '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">' + chgLine + '</div>' +
+      (note ? '<div style="font-size:12px;color:#c8d4e6;background:rgba(255,255,255,.03);border-left:3px solid ' + vcolor + ';padding:6px 8px;border-radius:4px;margin-bottom:8px;line-height:1.6">' + note + '</div>' : '') +
       svg + legend +
-      '<div style="font-size:11px;color:#4a6080;margin-top:6px;line-height:1.5">兩線各自縮放以顯示走勢方向(非同刻度)。大戶上行、散戶下行=籌碼集中, 通常利於股價。資料每週六更新。</div>';
+      '<div style="font-size:11px;color:#4a6080;margin-top:6px;line-height:1.6">' +
+      '📖 怎麼看：資料來自集保「股權分散表」，每週五統計、週六更新。持股 400 張以上算大戶、10 張以下算散戶。' +
+      '重點看「這週比上週」的變化，不是看比例高低。「相對 −3%」例：大戶原本 60% → 58.2%。<br>' +
+      '⚠️ 融資買進的股票也記在券商專戶裡、會被算成大戶，所以大盤融資大砍的那幾週(例如斷頭潮)，大戶比例可能看起來掉得比實際多。<br>' +
+      '兩線各自縮放以顯示方向(非同刻度)。</div>';
   } catch (e) {
     box.innerHTML = HEAD + '<div style="color:var(--muted):font-size:13px;padding:4px 0">大戶資料載入失敗, 稍後再試。</div>';
   }
@@ -1384,12 +1419,16 @@ async function fetchChipContext(sym) {
       
       var bigChg = (Number(hNow.big400_pct) || 0) - (Number(hOld.big400_pct) || 0);
       var smlChg = (Number(hNow.small_pct) || 0) - (Number(hOld.small_pct) || 0);
-      var trend = (bigChg > 0 && smlChg <= 0) ? '大戶增持、散戶退場 → 籌碼向大戶集中(偏多)'
+      var bigRel = (Number(hOld.big400_pct) || 0) > 0 ? bigChg / Number(hOld.big400_pct) * 100 : 0;
+      var trend = bigRel <= -3 ? '大戶一週相對減少 ' + Math.round(bigRel * 10) / 10 + '%(≥3% 警訊；回測之後 20 日 73% 跑輸大盤、平均落後約 8%) → 偏空'
+                : bigRel <= -1 ? '大戶相對減少 ' + Math.round(bigRel * 10) / 10 + '%(回測偏弱) → 籌碼偏鬆'
+                : bigRel >= 3 ? '大戶相對大增 ' + Math.round(bigRel * 10) / 10 + '%(回測僅短線 5 日有利，20 日優勢消失)'
+                : (bigChg > 0 && smlChg <= 0) ? '大戶增持、散戶退場 → 籌碼向大戶集中(偏多)'
                 : (bigChg < 0 && smlChg >= 0) ? '大戶減持、散戶承接 → 籌碼流向散戶(偏空)'
                 : '大戶散戶變動方向不一致(中性)';
       parts.push('大戶(>400張)持股: ' + hNow.big400_pct + '%(近一週 ' + (bigChg >= 0 ? '+' : '') + Math.round(bigChg * 100) / 100 + 'pt)'
         + '  散戶(<=10張): ' + hNow.small_pct + '%(' + (smlChg >= 0 ? '+' : '') + Math.round(smlChg * 100) / 100 + 'pt)');
-      parts.push('大戶散戶趨勢: ' + trend + '（務必以「趨勢方向」判讀，不可只看當下絕對值：持股率高但趨勢在降＝籌碼鬆動偏空）');
+      parts.push('大戶散戶趨勢: ' + trend + '（註：融資專戶也算大戶，融資大砍週大戶比例可能被低估；務必以「趨勢方向」判讀，不可只看當下絕對值：持股率高但趨勢在降＝籌碼鬆動偏空）');
     }
   } catch (e) {}
   if (!parts.length) return '';
